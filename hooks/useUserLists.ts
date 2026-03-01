@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import storage from '@/lib/storage'
+import { supabase } from '@/lib/supabase/client'
 import { useUser } from './useUser'
 import type { FollowedUser } from '@/types/database'
 
@@ -20,12 +21,10 @@ interface UseUserListsReturn {
 function convertToFollowedUsers(data: string[] | FollowedUser[]): FollowedUser[] {
   if (!data || data.length === 0) return []
 
-  // Check if it's already FollowedUser[]
   if (typeof data[0] === 'object' && 'username' in data[0]) {
     return data as FollowedUser[]
   }
 
-  // Convert string[] to FollowedUser[]
   return (data as string[]).map((username) => ({
     username,
     added_at: new Date().toISOString(),
@@ -40,7 +39,6 @@ export function useUserLists(): UseUserListsReturn {
 
   const isAuthenticated = !!user
 
-  // Load users on mount and when auth state changes
   useEffect(() => {
     if (isAuthLoading) return
 
@@ -49,24 +47,25 @@ export function useUserLists(): UseUserListsReturn {
       setError(null)
 
       try {
-        if (isAuthenticated) {
-          // Load from API
-          const response = await fetch('/api/lists')
+        if (isAuthenticated && user) {
+          const { data, error: dbError } = await supabase
+            .from('user_data')
+            .select('followed_users')
+            .eq('user_id', user.id)
+            .single()
 
-          if (!response.ok) {
-            if (response.status === 401) {
-              // Session expired, treat as guest
-              await loadFromLocalforage()
+          if (dbError) {
+            // PGRST116 = no rows — new user
+            if (dbError.code === 'PGRST116') {
+              setUsers([])
               return
             }
-            throw new Error('Failed to fetch lists')
+            throw new Error(dbError.message)
           }
 
-          const data = await response.json()
-          setUsers(data.followed_users || [])
+          setUsers(data?.followed_users || [])
         } else {
-          // Load from localforage (guest mode)
-          await loadFromLocalforage()
+          await loadFromStorage()
         }
       } catch (err) {
         console.error('Error loading users:', err)
@@ -76,7 +75,7 @@ export function useUserLists(): UseUserListsReturn {
       }
     }
 
-    const loadFromLocalforage = async () => {
+    const loadFromStorage = async () => {
       const savedUsers = await storage.getItem<string[] | FollowedUser[]>(
         LOCALFORAGE_KEY
       )
@@ -88,9 +87,8 @@ export function useUserLists(): UseUserListsReturn {
     }
 
     loadUsers()
-  }, [isAuthenticated, isAuthLoading])
+  }, [isAuthenticated, isAuthLoading, user])
 
-  // Add user
   const addUser = useCallback(
     async (
       username: string
@@ -101,7 +99,6 @@ export function useUserLists(): UseUserListsReturn {
         return { success: false, error: 'Username is required' }
       }
 
-      // Check for duplicates locally first
       if (users.some((u) => u.username === normalizedUsername)) {
         return { success: false, error: 'User already in list' }
       }
@@ -109,29 +106,39 @@ export function useUserLists(): UseUserListsReturn {
       setError(null)
 
       try {
-        if (isAuthenticated) {
-          // Add via API
-          const response = await fetch('/api/lists', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: normalizedUsername }),
-          })
-
-          if (response.status === 401) {
-            return { success: false, error: 'SESSION_EXPIRED' }
+        if (isAuthenticated && user) {
+          // Validate the Letterboxd user exists by checking their RSS
+          try {
+            const rssCheck = await fetch(
+              `https://letterboxd.com/${normalizedUsername}/rss/`,
+              { method: 'HEAD' }
+            )
+            if (!rssCheck.ok) {
+              return { success: false, error: 'Letterboxd user not found' }
+            }
+          } catch {
+            return { success: false, error: 'CONNECTION_ERROR' }
           }
 
-          const data = await response.json()
-
-          if (!response.ok) {
-            return { success: false, error: data.error || 'Failed to add user' }
+          const newUser: FollowedUser = {
+            username: normalizedUsername,
+            added_at: new Date().toISOString(),
           }
+          const updatedUsers = [...users, newUser]
 
-          // Add to local state
-          setUsers((prev) => [...prev, data.user])
+          const { error: dbError } = await supabase
+            .from('user_data')
+            .upsert(
+              { user_id: user.id, followed_users: updatedUsers },
+              { onConflict: 'user_id' }
+            )
+
+          if (dbError) throw new Error(dbError.message)
+
+          setUsers(updatedUsers)
           return { success: true }
         } else {
-          // Guest mode - add to localforage
+          // Guest mode — save to AsyncStorage
           const newUser: FollowedUser = {
             username: normalizedUsername,
             added_at: new Date().toISOString(),
@@ -140,7 +147,6 @@ export function useUserLists(): UseUserListsReturn {
           const updatedUsers = [...users, newUser]
           setUsers(updatedUsers)
 
-          // Save usernames to localforage (backward compatible)
           await storage.setItem(
             LOCALFORAGE_KEY,
             updatedUsers.map((u) => u.username)
@@ -149,48 +155,40 @@ export function useUserLists(): UseUserListsReturn {
           return { success: true }
         }
       } catch (err) {
-        // Check if it's a network error
         if (err instanceof TypeError && err.message.includes('fetch')) {
           return { success: false, error: 'CONNECTION_ERROR' }
         }
         return { success: false, error: 'CONNECTION_ERROR' }
       }
     },
-    [isAuthenticated, users]
+    [isAuthenticated, users, user]
   )
 
-  // Remove user
   const removeUser = useCallback(
     async (username: string): Promise<void> => {
       const normalizedUsername = username.trim().toLowerCase()
       setError(null)
 
       try {
-        if (isAuthenticated) {
-          // Remove via API
-          const response = await fetch('/api/lists', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: normalizedUsername }),
-          })
-
-          if (!response.ok) {
-            const data = await response.json()
-            throw new Error(data.error || 'Failed to remove user')
-          }
-
-          // Remove from local state
-          setUsers((prev) =>
-            prev.filter((u) => u.username !== normalizedUsername)
+        if (isAuthenticated && user) {
+          const updatedUsers = users.filter(
+            (u) => u.username !== normalizedUsername
           )
+
+          const { error: dbError } = await supabase
+            .from('user_data')
+            .update({ followed_users: updatedUsers })
+            .eq('user_id', user.id)
+
+          if (dbError) throw new Error(dbError.message)
+
+          setUsers(updatedUsers)
         } else {
-          // Guest mode - remove from localforage
           const updatedUsers = users.filter(
             (u) => u.username !== normalizedUsername
           )
           setUsers(updatedUsers)
 
-          // Save usernames to localforage
           await storage.setItem(
             LOCALFORAGE_KEY,
             updatedUsers.map((u) => u.username)
@@ -201,14 +199,13 @@ export function useUserLists(): UseUserListsReturn {
         setError('Failed to remove user')
       }
     },
-    [isAuthenticated, users]
+    [isAuthenticated, users, user]
   )
 
   const clearError = useCallback(() => {
     setError(null)
   }, [])
 
-  // Extract usernames for backward compatibility (memoized to prevent infinite loops)
   const usernames = useMemo(() => users.map((u) => u.username), [users])
 
   return {

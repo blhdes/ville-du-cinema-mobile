@@ -75,6 +75,7 @@ export interface Database {
           username?: string | null
           updated_at?: string
         }
+        Relationships: []
       }
     }
     Views: {
@@ -134,6 +135,27 @@ export interface PublicProfile {
   avatar_url: string | null
   bio: string
   followed_users: FollowedUser[]
+}
+
+// ---------------------------------------------------------------------------
+// Feed types
+// ---------------------------------------------------------------------------
+
+/** A single review or watch entry parsed from a Letterboxd RSS feed. */
+export interface Review {
+  id: string
+  username: string
+  title: string
+  link: string
+  pubDate: string
+  creator: string
+  /** HTML-cleaned review text */
+  review: string
+  /** Star rating string, e.g. "★★★½" */
+  rating: string
+  /** Movie title stripped of year + rating suffix */
+  movieTitle: string
+  type: 'review' | 'watch'
 }
 
 // ---------------------------------------------------------------------------

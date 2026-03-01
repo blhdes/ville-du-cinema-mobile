@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useUser } from './useUser'
+import { supabase } from '@/lib/supabase/client'
 import type { UserProfile, DisplayPreferences } from '@/types/database'
 
 interface UseProfileReturn {
@@ -8,9 +9,21 @@ interface UseProfileReturn {
   error: string | null
   updateProfile: (data: { bio?: string; display_name?: string; username?: string }) => Promise<void>
   updateDisplayPreferences: (data: Partial<DisplayPreferences>) => Promise<void>
-  uploadAvatar: (file: File) => Promise<string>
+  uploadAvatar: (uri: string) => Promise<string>
   setAvatarUrl: (url: string) => Promise<void>
   removeAvatar: () => Promise<void>
+}
+
+const DEFAULT_PROFILE: Omit<UserProfile, 'user_id' | 'updated_at'> = {
+  avatar_url: null,
+  bio: '',
+  display_name: null,
+  followed_users: [],
+  language: 'fr',
+  hide_userlist_main: false,
+  feed_grid_columns: 1,
+  hide_watch_notifications: false,
+  username: null,
 }
 
 export function useProfile(): UseProfileReturn {
@@ -19,7 +32,6 @@ export function useProfile(): UseProfileReturn {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Fetch profile when user changes
   const fetchProfile = useCallback(async () => {
     if (!user) {
       setProfile(null)
@@ -31,19 +43,26 @@ export function useProfile(): UseProfileReturn {
     setError(null)
 
     try {
-      const res = await fetch('/api/profile')
-      if (res.status === 401) {
-        setError('Session expired')
-        setProfile(null)
-        return
+      const { data, error: dbError } = await supabase
+        .from('user_data')
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
+
+      if (dbError) {
+        // PGRST116 = no rows found — new user, return defaults
+        if (dbError.code === 'PGRST116') {
+          setProfile({
+            ...DEFAULT_PROFILE,
+            user_id: user.id,
+            updated_at: new Date().toISOString(),
+          })
+          return
+        }
+        throw new Error(dbError.message)
       }
 
-      if (!res.ok) {
-        throw new Error('Failed to fetch profile')
-      }
-
-      const data = await res.json()
-      setProfile(data.profile)
+      setProfile(data as UserProfile)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch profile')
       setProfile(null)
@@ -58,155 +77,140 @@ export function useProfile(): UseProfileReturn {
     }
   }, [user, isUserLoading, fetchProfile])
 
-  // Update profile (bio, display_name, username)
   const updateProfile = useCallback(
     async (data: { bio?: string; display_name?: string; username?: string }) => {
+      if (!user) return
       setError(null)
 
       try {
-        const res = await fetch('/api/profile', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        })
+        const { data: updated, error: dbError } = await supabase
+          .from('user_data')
+          .upsert({ user_id: user.id, ...data }, { onConflict: 'user_id' })
+          .select('*')
+          .single()
 
-        if (res.status === 401) {
-          setError('Session expired')
-          return
+        if (dbError) {
+          // Unique constraint violation on username
+          if (dbError.code === '23505') {
+            throw new Error('Username is already taken')
+          }
+          throw new Error(dbError.message)
         }
 
-        if (!res.ok) {
-          const errData = await res.json()
-          throw new Error(errData.error || 'Failed to update profile')
-        }
-
-        const responseData = await res.json()
-        setProfile(responseData.profile)
+        setProfile(updated as UserProfile)
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to update profile'
         setError(message)
         throw err
       }
     },
-    []
+    [user]
   )
 
-  // Update display preferences
   const updateDisplayPreferences = useCallback(
     async (data: Partial<DisplayPreferences>) => {
+      if (!user) return
       setError(null)
 
       try {
-        const res = await fetch('/api/profile/display', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        })
+        const { data: updated, error: dbError } = await supabase
+          .from('user_data')
+          .upsert({ user_id: user.id, ...data }, { onConflict: 'user_id' })
+          .select('*')
+          .single()
 
-        if (res.status === 401) {
-          setError('Session expired')
-          return
-        }
+        if (dbError) throw new Error(dbError.message)
 
-        if (!res.ok) {
-          const errData = await res.json()
-          throw new Error(errData.error || 'Failed to update display preferences')
-        }
-
-        const responseData = await res.json()
-        setProfile((prev) =>
-          prev ? { ...prev, ...responseData.preferences } : null
-        )
+        setProfile(updated as UserProfile)
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to update display preferences'
         setError(message)
         throw err
       }
     },
-    []
+    [user]
   )
 
-  // Upload avatar file
-  const uploadAvatar = useCallback(async (file: File): Promise<string> => {
+  // Upload avatar from a local file URI (React Native)
+  const uploadAvatar = useCallback(async (uri: string): Promise<string> => {
+    if (!user) throw new Error('Not authenticated')
     setError(null)
 
-    const formData = new FormData()
-    formData.append('avatar', file)
-
     try {
-      const res = await fetch('/api/profile/avatar', {
-        method: 'POST',
-        body: formData,
-      })
+      const ext = uri.split('.').pop() || 'jpg'
+      const fileName = `${user.id}/avatar.${ext}`
 
-      if (res.status === 401) {
-        setError('Session expired')
-        throw new Error('Session expired')
-      }
+      // Read file as blob for upload
+      const response = await fetch(uri)
+      const blob = await response.blob()
 
-      if (!res.ok) {
-        const errData = await res.json()
-        throw new Error(errData.error || 'Failed to upload avatar')
-      }
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, blob, { upsert: true, contentType: `image/${ext}` })
 
-      const data = await res.json()
-      setProfile((prev) => (prev ? { ...prev, avatar_url: data.avatar_url } : null))
-      return data.avatar_url
+      if (uploadError) throw new Error(uploadError.message)
+
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName)
+
+      const avatarUrl = urlData.publicUrl
+
+      // Update profile with new avatar URL
+      const { error: dbError } = await supabase
+        .from('user_data')
+        .upsert({ user_id: user.id, avatar_url: avatarUrl }, { onConflict: 'user_id' })
+
+      if (dbError) throw new Error(dbError.message)
+
+      setProfile((prev) => (prev ? { ...prev, avatar_url: avatarUrl } : null))
+      return avatarUrl
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to upload avatar'
       setError(message)
       throw err
     }
-  }, [])
+  }, [user])
 
-  // Set avatar URL directly (for external URLs)
   const setAvatarUrl = useCallback(async (url: string) => {
+    if (!user) return
     setError(null)
 
     try {
-      const res = await fetch('/api/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ avatar_url: url }),
-      })
+      const { data: updated, error: dbError } = await supabase
+        .from('user_data')
+        .upsert({ user_id: user.id, avatar_url: url }, { onConflict: 'user_id' })
+        .select('*')
+        .single()
 
-      if (res.status === 401) {
-        setError('Session expired')
-        return
-      }
-
-      if (!res.ok) {
-        const errData = await res.json()
-        throw new Error(errData.error || 'Failed to set avatar URL')
-      }
-
-      const data = await res.json()
-      setProfile(data.profile)
+      if (dbError) throw new Error(dbError.message)
+      setProfile(updated as UserProfile)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to set avatar URL'
       setError(message)
       throw err
     }
-  }, [])
+  }, [user])
 
-  // Remove avatar
   const removeAvatar = useCallback(async () => {
+    if (!user) return
     setError(null)
 
     try {
-      const res = await fetch('/api/profile/avatar', {
-        method: 'DELETE',
-      })
+      // Remove file from storage
+      const { error: removeError } = await supabase.storage
+        .from('avatars')
+        .remove([`${user.id}/avatar.jpg`, `${user.id}/avatar.png`])
 
-      if (res.status === 401) {
-        setError('Session expired')
-        return
-      }
+      if (removeError) throw new Error(removeError.message)
 
-      if (!res.ok) {
-        const errData = await res.json()
-        throw new Error(errData.error || 'Failed to remove avatar')
-      }
+      // Null out avatar_url in profile
+      const { error: dbError } = await supabase
+        .from('user_data')
+        .update({ avatar_url: null })
+        .eq('user_id', user.id)
+
+      if (dbError) throw new Error(dbError.message)
 
       setProfile((prev) => (prev ? { ...prev, avatar_url: null } : null))
     } catch (err) {
@@ -214,7 +218,7 @@ export function useProfile(): UseProfileReturn {
       setError(message)
       throw err
     }
-  }, [])
+  }, [user])
 
   return {
     profile,
