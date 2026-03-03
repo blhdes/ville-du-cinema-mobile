@@ -9,11 +9,11 @@ interface ColumnSelectorProps {
 
 function ColumnIcon({ count, active }: { count: number; active: boolean }) {
   return (
-    <View style={styles.iconContainer}>
+    <View style={iconStyles.container}>
       {Array.from({ length: count }).map((_, i) => (
         <View
           key={i}
-          style={[styles.bar, active && styles.barActive]}
+          style={[iconStyles.bar, active && iconStyles.barActive]}
         />
       ))}
     </View>
@@ -44,6 +44,22 @@ export default function ColumnSelector({ value, onValueChange, disabled }: Colum
   )
 }
 
+const iconStyles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    gap: 3,
+  },
+  bar: {
+    width: 4,
+    height: 16,
+    borderRadius: 1,
+    backgroundColor: colors.border,
+  },
+  barActive: {
+    backgroundColor: colors.blue,
+  },
+})
+
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
@@ -52,26 +68,17 @@ const styles = StyleSheet.create({
   option: {
     width: 40,
     height: 32,
-    borderWidth: 2,
-    borderColor: colors.black,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.cream,
+    backgroundColor: colors.backgroundSecondary,
   },
   optionActive: {
-    backgroundColor: colors.yellow,
-  },
-  iconContainer: {
-    flexDirection: 'row',
-    gap: 3,
-  },
-  bar: {
-    width: 4,
-    height: 16,
-    backgroundColor: colors.sepiaLight,
-  },
-  barActive: {
-    backgroundColor: colors.black,
+    backgroundColor: colors.background,
+    borderColor: colors.blue,
+    borderWidth: 1.5,
   },
   disabled: {
     opacity: 0.4,

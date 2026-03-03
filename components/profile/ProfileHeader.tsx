@@ -1,6 +1,6 @@
 import { Image, StyleSheet, Text, View } from 'react-native'
 import type { UserProfile } from '@/types/database'
-import { colors, fonts, spacing, common } from '@/theme'
+import { colors, fonts, spacing, typography } from '@/theme'
 
 interface ProfileHeaderProps {
   profile: UserProfile
@@ -24,9 +24,7 @@ export default function ProfileHeader({ profile }: ProfileHeaderProps) {
 
       {/* Bio */}
       {profile.bio ? (
-        <View style={styles.bioBox}>
-          <Text style={styles.bioText}>{profile.bio}</Text>
-        </View>
+        <Text style={styles.bioText}>{profile.bio}</Text>
       ) : null}
     </View>
   )
@@ -42,32 +40,25 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   avatar: {
-    width: 120,
-    height: 120,
-    borderWidth: 2,
-    borderColor: colors.black,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
   avatarPlaceholder: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.backgroundSecondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarInitial: {
     fontFamily: fonts.heading,
-    fontSize: 48,
-    color: colors.sepia,
-  },
-  bioBox: {
-    width: '100%',
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.sepiaLight,
+    fontSize: 40,
+    color: colors.secondaryText,
   },
   bioText: {
     fontFamily: fonts.body,
-    fontSize: 15,
-    color: colors.black,
-    lineHeight: 22,
+    fontSize: typography.body.fontSize,
+    lineHeight: typography.body.lineHeight,
+    color: colors.foreground,
     textAlign: 'center',
   },
 })

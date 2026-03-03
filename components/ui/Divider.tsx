@@ -11,7 +11,7 @@ export default function Divider({ marginVertical = spacing.md }: DividerProps) {
 
 const styles = StyleSheet.create({
   line: {
-    height: 1,
-    backgroundColor: colors.sepiaLight,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
   },
 })

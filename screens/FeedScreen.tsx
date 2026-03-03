@@ -2,27 +2,28 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
   View,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useNavigation, DrawerActions } from '@react-navigation/native'
 import { useUserLists } from '@/hooks/useUserLists'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { fetchFeed, type FeedResult } from '@/services/feed'
 import type { Review } from '@/types/database'
-import { colors, fonts, spacing } from '@/theme'
-import SectionHeader from '@/components/ui/SectionHeader'
+import { colors, fonts, spacing, typography } from '@/theme'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import ReviewCard from '@/components/ReviewCard'
 import WatchNotification from '@/components/WatchNotification'
 import QuoteOfTheDay from '@/components/QuoteOfTheDay'
-import UserListPanel from '@/components/UserListPanel'
 
 export default function FeedScreen() {
   const insets = useSafeAreaInsets()
-  const { users, usernames, isLoading: isListLoading, error: listError, addUser, removeUser, isAuthenticated, clearError } = useUserLists()
+  const navigation = useNavigation()
+  const { users, usernames, isLoading: isListLoading, error: listError, clearError } = useUserLists()
   const { preferences } = useDisplayPreferences()
 
   const [reviews, setReviews] = useState<Review[]>([])
@@ -78,6 +79,10 @@ export default function FeedScreen() {
     }
   }, [hasMore, isLoading, page, loadFeed])
 
+  const openDrawer = useCallback(() => {
+    navigation.dispatch(DrawerActions.openDrawer())
+  }, [navigation])
+
   // Filter watch notifications if preference is set
   const filteredReviews = preferences.hideWatchNotifications
     ? reviews.filter((r) => r.type !== 'watch')
@@ -96,9 +101,9 @@ export default function FeedScreen() {
     if (usernames.length === 0) {
       return (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>VILLAGE DU CINEMA</Text>
+          <Text style={styles.emptyTitle}>Village du Cin{'\u00E9'}ma</Text>
           <Text style={styles.emptySubtitle}>
-            Add Letterboxd users above to see their recent activity
+            Tap the Users button to add Letterboxd accounts and see their recent activity.
           </Text>
           <QuoteOfTheDay />
         </View>
@@ -116,7 +121,7 @@ export default function FeedScreen() {
     if (isLoading && page > 1) {
       return (
         <View style={styles.footerLoader}>
-          <ActivityIndicator size="small" color={colors.black} />
+          <ActivityIndicator size="small" color={colors.secondaryText} />
         </View>
       )
     }
@@ -132,22 +137,31 @@ export default function FeedScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <SectionHeader title="FEED" />
+      {/* Header bar */}
+      <View style={styles.header}>
+        <Pressable
+          onPress={openDrawer}
+          style={styles.usersButton}
+          hitSlop={8}
+        >
+          <Text style={styles.usersButtonText}>Users</Text>
+          {users.length > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{users.length}</Text>
+            </View>
+          )}
+        </Pressable>
+        <Text style={styles.headerTitle}>Feed</Text>
+        <View style={styles.headerSpacer} />
+      </View>
 
       {error && (
         <ErrorBanner message={error} onDismiss={clearError} />
       )}
 
-      <UserListPanel
-        users={users}
-        isAuthenticated={isAuthenticated}
-        onAdd={addUser}
-        onRemove={removeUser}
-      />
-
       {isLoading && page === 1 ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.black} />
+          <ActivityIndicator size="large" color={colors.secondaryText} />
           <Text style={styles.loadingText}>Loading feed...</Text>
         </View>
       ) : (
@@ -163,8 +177,8 @@ export default function FeedScreen() {
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={handleRefresh}
-              tintColor={colors.black}
-              colors={[colors.black]}
+              tintColor={colors.secondaryText}
+              colors={[colors.secondaryText]}
             />
           }
           contentContainerStyle={filteredReviews.length === 0 ? styles.emptyList : styles.list}
@@ -177,7 +191,48 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.cream,
+    backgroundColor: colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  usersButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  usersButtonText: {
+    fontFamily: fonts.body,
+    fontSize: typography.body.fontSize,
+    color: colors.blue,
+  },
+  badge: {
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  badgeText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 12,
+    color: colors.secondaryText,
+  },
+  headerTitle: {
+    fontFamily: fonts.heading,
+    fontSize: typography.title3.fontSize,
+    color: colors.foreground,
+  },
+  headerSpacer: {
+    width: 60,
   },
   list: {
     paddingTop: spacing.md,
@@ -194,9 +249,8 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontFamily: fonts.body,
-    fontSize: 14,
-    color: colors.sepia,
-    fontStyle: 'italic',
+    fontSize: typography.caption.fontSize,
+    color: colors.secondaryText,
   },
   emptyContainer: {
     flex: 1,
@@ -206,15 +260,16 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontFamily: fonts.heading,
-    fontSize: 24,
-    color: colors.black,
-    letterSpacing: 3,
+    fontSize: typography.title1.fontSize,
+    lineHeight: typography.title1.lineHeight,
+    color: colors.foreground,
     marginBottom: spacing.sm,
   },
   emptySubtitle: {
-    fontFamily: fonts.bodyItalic,
-    fontSize: 16,
-    color: colors.sepia,
+    fontFamily: fonts.body,
+    fontSize: typography.body.fontSize,
+    lineHeight: typography.body.lineHeight,
+    color: colors.secondaryText,
     textAlign: 'center',
   },
   footerLoader: {

@@ -1,6 +1,7 @@
+import { StyleSheet } from 'react-native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import type { AppTabsParamList } from '@/navigation/types'
-import FeedScreen from '@/screens/FeedScreen'
+import FeedDrawerNavigator from '@/navigation/FeedDrawerNavigator'
 import ProfileScreen from '@/screens/ProfileScreen'
 import SettingsScreen from '@/screens/SettingsScreen'
 import { colors, fonts } from '@/theme'
@@ -12,25 +13,24 @@ export default function AppTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.black,
-        tabBarInactiveTintColor: colors.sepia,
+        tabBarActiveTintColor: colors.foreground,
+        tabBarInactiveTintColor: colors.secondaryText,
         tabBarStyle: {
-          backgroundColor: colors.cream,
-          borderTopColor: colors.black,
-          borderTopWidth: 2,
+          backgroundColor: colors.background,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: colors.border,
         },
         tabBarLabelStyle: {
           fontFamily: fonts.heading,
           fontWeight: '600',
           fontSize: 11,
-          letterSpacing: 1,
-          textTransform: 'uppercase',
+          letterSpacing: 0.5,
         },
       }}
     >
       <Tab.Screen
         name="Feed"
-        component={FeedScreen}
+        component={FeedDrawerNavigator}
         options={{ tabBarLabel: 'Feed' }}
       />
       <Tab.Screen

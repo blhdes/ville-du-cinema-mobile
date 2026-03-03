@@ -1,20 +1,67 @@
-import { useState } from 'react'
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
+import { useState, useMemo } from 'react'
+import { Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import RenderHtml from 'react-native-render-html'
 import type { Review } from '@/types/database'
-import { colors, fonts, spacing, common } from '@/theme'
+import { colors, fonts, spacing, typography } from '@/theme'
 
 interface ReviewCardProps {
   review: Review
 }
 
-const MAX_PREVIEW_LENGTH = 200
+const MAX_PREVIEW_LENGTH = 280
+
+/** Rough plain-text length of an HTML string (strip tags). */
+function htmlTextLength(html: string): number {
+  return html.replace(/<[^>]*>/g, '').length
+}
+
+/** Truncate HTML to approximately `max` visible characters, closing open tags. */
+function truncateHtml(html: string, max: number): string {
+  let visible = 0
+  let inTag = false
+  let i = 0
+  for (; i < html.length && visible < max; i++) {
+    if (html[i] === '<') { inTag = true; continue }
+    if (html[i] === '>') { inTag = false; continue }
+    if (!inTag) visible++
+  }
+  // Find the end of any partially-opened tag
+  if (inTag) {
+    const close = html.indexOf('>', i)
+    if (close !== -1) i = close + 1
+  }
+  // Close any open tags naively (good enough for simple inline HTML)
+  const openTags = (html.slice(0, i).match(/<([a-z]+)\b[^>]*>/gi) || [])
+    .map(t => t.match(/<([a-z]+)/i)?.[1] || '')
+    .filter(Boolean)
+  const closedTags = (html.slice(0, i).match(/<\/([a-z]+)>/gi) || [])
+    .map(t => t.match(/<\/([a-z]+)>/i)?.[1] || '')
+    .filter(Boolean)
+  let suffix = '…'
+  for (let j = openTags.length - 1; j >= 0; j--) {
+    const tag = openTags[j]
+    const closedIdx = closedTags.lastIndexOf(tag)
+    if (closedIdx === -1) {
+      suffix += `</${tag}>`
+    } else {
+      closedTags.splice(closedIdx, 1)
+    }
+  }
+  return html.slice(0, i) + suffix
+}
 
 export default function ReviewCard({ review }: ReviewCardProps) {
   const [expanded, setExpanded] = useState(false)
-  const isLong = review.review.length > MAX_PREVIEW_LENGTH
-  const displayText = expanded || !isLong
-    ? review.review
-    : review.review.slice(0, MAX_PREVIEW_LENGTH) + '...'
+  const { width } = useWindowDimensions()
+  const contentWidth = width - spacing.md * 4 // outer margin + inner padding
+
+  const textLength = useMemo(() => htmlTextLength(review.review), [review.review])
+  const isLong = textLength > MAX_PREVIEW_LENGTH
+
+  const displayHtml = useMemo(
+    () => expanded || !isLong ? review.review : truncateHtml(review.review, MAX_PREVIEW_LENGTH),
+    [expanded, isLong, review.review],
+  )
 
   const dateStr = review.pubDate
     ? new Date(review.pubDate).toLocaleDateString('en-US', {
@@ -24,8 +71,34 @@ export default function ReviewCard({ review }: ReviewCardProps) {
       })
     : ''
 
+  const tagsStyles = useMemo(() => ({
+    body: {
+      fontFamily: fonts.body,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
+      color: colors.foreground,
+    },
+    p: {
+      marginTop: 0,
+      marginBottom: spacing.xs,
+    },
+    a: {
+      color: colors.blue,
+      textDecorationLine: 'none' as const,
+    },
+    i: { fontFamily: fonts.bodyItalic },
+    em: { fontFamily: fonts.bodyItalic },
+  }), [])
+
+  const renderersProps = useMemo(() => ({
+    a: {
+      onPress: (_event: unknown, href: string) => Linking.openURL(href),
+    },
+  }), [])
+
   return (
     <View style={styles.card}>
+      {/* Title row */}
       <View style={styles.header}>
         <Text style={styles.movieTitle} numberOfLines={2}>
           {review.movieTitle}
@@ -35,14 +108,23 @@ export default function ReviewCard({ review }: ReviewCardProps) {
         ) : null}
       </View>
 
+      {/* Author & date */}
       <View style={styles.meta}>
         <Text style={styles.creator}>{review.creator}</Text>
+        <Text style={styles.dot}>{'\u00B7'}</Text>
         <Text style={styles.date}>{dateStr}</Text>
       </View>
 
+      {/* Review body (rich HTML) */}
       {review.review ? (
         <Pressable onPress={() => isLong && setExpanded(!expanded)} disabled={!isLong}>
-          <Text style={styles.reviewText}>{displayText}</Text>
+          <RenderHtml
+            contentWidth={contentWidth}
+            source={{ html: displayHtml }}
+            tagsStyles={tagsStyles}
+            renderersProps={renderersProps}
+            defaultTextProps={{ selectable: true }}
+          />
           {isLong && (
             <Text style={styles.expandToggle}>
               {expanded ? 'Show less' : 'Read more'}
@@ -51,11 +133,12 @@ export default function ReviewCard({ review }: ReviewCardProps) {
         </Pressable>
       ) : null}
 
+      {/* External link */}
       <Pressable
         onPress={() => Linking.openURL(review.link)}
         style={styles.linkButton}
       >
-        <Text style={styles.linkText}>VIEW ON LETTERBOXD</Text>
+        <Text style={styles.linkText}>View on Letterboxd</Text>
       </Pressable>
     </View>
   )
@@ -66,10 +149,8 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.md,
     marginBottom: spacing.md,
     padding: spacing.md,
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderColor: colors.black,
-    ...common.dropShadow,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: 12,
   },
   header: {
     flexDirection: 'row',
@@ -79,45 +160,44 @@ const styles = StyleSheet.create({
   },
   movieTitle: {
     fontFamily: fonts.heading,
-    fontSize: 18,
-    color: colors.black,
+    fontSize: typography.title3.fontSize,
+    lineHeight: typography.title3.lineHeight,
+    color: colors.foreground,
     flex: 1,
     marginRight: spacing.sm,
   },
   rating: {
-    fontSize: 16,
-    color: colors.yellow,
+    fontSize: typography.body.fontSize,
+    lineHeight: typography.title3.lineHeight,
+    color: colors.accent,
   },
   meta: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: spacing.sm,
   },
   creator: {
     fontFamily: fonts.bodyBold,
-    fontSize: 13,
-    color: colors.sepia,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    fontSize: typography.caption.fontSize,
+    lineHeight: typography.caption.lineHeight,
+    color: colors.secondaryText,
+  },
+  dot: {
+    fontSize: typography.caption.fontSize,
+    color: colors.secondaryText,
+    marginHorizontal: spacing.xs,
   },
   date: {
     fontFamily: fonts.body,
-    fontSize: 13,
-    color: colors.sepia,
-  },
-  reviewText: {
-    fontFamily: fonts.body,
-    fontSize: 15,
-    color: colors.black,
-    lineHeight: 22,
+    fontSize: typography.caption.fontSize,
+    lineHeight: typography.caption.lineHeight,
+    color: colors.secondaryText,
   },
   expandToggle: {
     fontFamily: fonts.bodyBold,
-    fontSize: 13,
+    fontSize: typography.caption.fontSize,
     color: colors.blue,
     marginTop: spacing.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
   },
   linkButton: {
     marginTop: spacing.sm,
@@ -126,10 +206,8 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontFamily: fonts.bodyBold,
-    fontSize: 11,
-    color: colors.sepia,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    textDecorationLine: 'underline',
+    fontSize: typography.caption.fontSize,
+    lineHeight: typography.caption.lineHeight,
+    color: colors.secondaryText,
   },
 })

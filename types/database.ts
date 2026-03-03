@@ -149,7 +149,7 @@ export interface Review {
   link: string
   pubDate: string
   creator: string
-  /** HTML-cleaned review text */
+  /** Review body — sanitised HTML with inline formatting preserved */
   review: string
   /** Star rating string, e.g. "★★★½" */
   rating: string

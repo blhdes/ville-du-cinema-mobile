@@ -6,6 +6,8 @@ const PAGE_SIZE = 50
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
+  // Preserve HTML inside CDATA sections (Letterboxd wraps descriptions in CDATA)
+  htmlEntities: true,
 })
 
 function extractRating(title: string): string {
@@ -18,15 +20,27 @@ function extractMovieTitle(title: string): string {
   return title.replace(/,\s*\d{4}\s*(-\s*[★½]+)?$/, '').trim()
 }
 
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, '').trim()
-}
-
+/**
+ * Sanitise Letterboxd RSS description HTML.
+ * Removes poster `<img>` blocks but keeps inline formatting tags
+ * (<i>, <b>, <em>, <strong>, <a>) so the original author emphasis
+ * and links are preserved for the HTML renderer.
+ */
 function cleanDescription(description: string): string {
   if (!description) return ''
-  // Remove the poster <img> tag first, then strip remaining HTML
+  // Remove the poster <img> block
   const withoutPoster = description.replace(/<p>\s*<img[^>]*>\s*<\/p>/i, '')
-  return stripHtml(withoutPoster)
+  // Strip tags we don't want (everything except i, b, em, strong, a, p, br)
+  const allowed = withoutPoster.replace(
+    /<\/?(?!i\b|b\b|em\b|strong\b|a\b|p\b|br\b)[a-z][a-z0-9]*\b[^>]*>/gi,
+    '',
+  )
+  return allowed.trim()
+}
+
+/** Strip ALL HTML — used only to detect "Watched on" plain-text prefix. */
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, '').trim()
 }
 
 async function fetchUserFeed(username: string): Promise<Review[]> {
@@ -55,11 +69,11 @@ async function fetchUserFeed(username: string): Promise<Review[]> {
 
       const title = item.title || ''
       const description = item.description || ''
-      const cleanedReview = cleanDescription(description)
+      const htmlReview = cleanDescription(description)
+      const plainText = stripHtml(htmlReview)
 
       // Determine type: empty review or "Watched on" → watch
-      const isWatch =
-        !cleanedReview || cleanedReview.startsWith('Watched on')
+      const isWatch = !plainText || plainText.startsWith('Watched on')
 
       reviews.push({
         id: `${username}-${link}`,
@@ -68,7 +82,7 @@ async function fetchUserFeed(username: string): Promise<Review[]> {
         link,
         pubDate: item.pubDate || '',
         creator: item['dc:creator'] || username,
-        review: isWatch ? '' : cleanedReview,
+        review: isWatch ? '' : htmlReview,
         rating: extractRating(title),
         movieTitle: extractMovieTitle(title),
         type: isWatch ? 'watch' : 'review',

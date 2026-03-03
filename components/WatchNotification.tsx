@@ -1,6 +1,6 @@
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import type { Review } from '@/types/database'
-import { colors, fonts, spacing } from '@/theme'
+import { colors, fonts, spacing, typography } from '@/theme'
 
 interface WatchNotificationProps {
   review: Review
@@ -9,16 +9,20 @@ interface WatchNotificationProps {
 export default function WatchNotification({ review }: WatchNotificationProps) {
   return (
     <Pressable
-      style={styles.container}
+      style={({ pressed }) => [styles.container, pressed && styles.pressed]}
       onPress={() => Linking.openURL(review.link)}
     >
-      <View style={styles.dot} />
-      <Text style={styles.text} numberOfLines={1}>
-        <Text style={styles.username}>{review.creator}</Text>
-        {' watched '}
-        <Text style={styles.movie}>{review.movieTitle}</Text>
-        {review.rating ? ` ${review.rating}` : ''}
-      </Text>
+      <View style={styles.indicator} />
+      <View style={styles.content}>
+        <Text style={styles.text} numberOfLines={1}>
+          <Text style={styles.username}>{review.creator}</Text>
+          {' watched '}
+          <Text style={styles.movie}>{review.movieTitle}</Text>
+        </Text>
+        {review.rating ? (
+          <Text style={styles.rating}>{review.rating}</Text>
+        ) : null}
+      </View>
     </Pressable>
   )
 }
@@ -28,27 +32,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.sepiaLight,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
-  dot: {
+  pressed: {
+    backgroundColor: colors.backgroundSecondary,
+  },
+  indicator: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: colors.sepia,
+    backgroundColor: colors.secondaryText,
     marginRight: spacing.sm,
+  },
+  content: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   text: {
     fontFamily: fonts.body,
-    fontSize: 14,
-    color: colors.black,
+    fontSize: typography.callout.fontSize,
+    lineHeight: typography.callout.lineHeight,
+    color: colors.foreground,
     flex: 1,
+    marginRight: spacing.sm,
   },
   username: {
     fontFamily: fonts.bodyBold,
   },
   movie: {
     fontFamily: fonts.bodyItalic,
+  },
+  rating: {
+    fontSize: typography.callout.fontSize,
+    color: colors.accent,
   },
 })

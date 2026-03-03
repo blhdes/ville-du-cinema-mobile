@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native'
 import Toggle from '@/components/ui/Toggle'
 import ColumnSelector from '@/components/ui/ColumnSelector'
-import { colors, fonts, spacing } from '@/theme'
+import { colors, fonts, spacing, typography } from '@/theme'
 
 interface DisplaySettingsProps {
   hideUserlistMain: boolean
@@ -23,9 +23,9 @@ export default function DisplaySettings({
   disabled,
 }: DisplaySettingsProps) {
   return (
-    <View style={styles.container}>
+    <View style={styles.card}>
       {/* Hide user list */}
-      <View style={styles.row}>
+      <View style={[styles.row, styles.rowBorder]}>
         <View style={styles.labelContainer}>
           <Text style={styles.label}>Hide User List</Text>
           <Text style={styles.description}>Hide the following panel on the feed</Text>
@@ -38,7 +38,7 @@ export default function DisplaySettings({
       </View>
 
       {/* Feed columns */}
-      <View style={styles.row}>
+      <View style={[styles.row, styles.rowBorder]}>
         <View style={styles.labelContainer}>
           <Text style={styles.label}>Feed Columns</Text>
           <Text style={styles.description}>Number of columns in the feed grid</Text>
@@ -67,30 +67,36 @@ export default function DisplaySettings({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: spacing.md,
+  card: {
+    backgroundColor: colors.background,
+    borderRadius: 10,
+    overflow: 'hidden',
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.sepiaLight,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    minHeight: 44,
+  },
+  rowBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
   labelContainer: {
     flex: 1,
     marginRight: spacing.md,
   },
   label: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 15,
-    color: colors.black,
+    fontFamily: fonts.body,
+    fontSize: typography.body.fontSize,
+    color: colors.foreground,
   },
   description: {
     fontFamily: fonts.body,
-    fontSize: 13,
-    color: colors.sepia,
+    fontSize: typography.caption.fontSize,
+    color: colors.secondaryText,
     marginTop: 2,
   },
 })

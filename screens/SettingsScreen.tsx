@@ -3,9 +3,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useUser } from '@/hooks/useUser'
 import { useGuestMode } from '@/contexts/GuestModeContext'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
-import { colors, fonts, spacing } from '@/theme'
-import SectionHeader from '@/components/ui/SectionHeader'
-import Divider from '@/components/ui/Divider'
+import { colors, fonts, spacing, typography } from '@/theme'
 import DisplaySettings from '@/components/settings/DisplaySettings'
 
 export default function SettingsScreen() {
@@ -27,31 +25,33 @@ export default function SettingsScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <SectionHeader title="SETTINGS" />
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Settings</Text>
+      </View>
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* Account section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ACCOUNT</Text>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Status</Text>
-            <Text style={styles.infoValue}>
+        <Text style={styles.sectionLabel}>Account</Text>
+        <View style={styles.card}>
+          <View style={[styles.row, styles.rowBorder]}>
+            <Text style={styles.rowLabel}>Status</Text>
+            <Text style={styles.rowValue}>
               {user ? 'Signed in' : 'Guest mode'}
             </Text>
           </View>
           {user && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Email</Text>
-              <Text style={styles.infoValue}>{user.email}</Text>
+            <View style={styles.row}>
+              <Text style={styles.rowLabel}>Email</Text>
+              <Text style={[styles.rowValue, styles.rowValueFlex]} numberOfLines={1}>
+                {user.email}
+              </Text>
             </View>
           )}
         </View>
 
-        <Divider />
-
         {/* Display preferences */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>DISPLAY</Text>
+        <Text style={styles.sectionLabel}>Display</Text>
+        <View style={styles.cardWrapper}>
           <DisplaySettings
             hideUserlistMain={preferences.hideUserlistMain}
             feedGridColumns={preferences.feedGridColumns}
@@ -61,20 +61,21 @@ export default function SettingsScreen() {
             onSetHideWatchNotifications={setHideWatchNotifications}
             disabled={!isAuthenticated}
           />
-          {!isAuthenticated && (
-            <Text style={styles.disabledNote}>
-              Sign in to save display preferences
-            </Text>
-          )}
         </View>
+        {!isAuthenticated && (
+          <Text style={styles.sectionFooter}>
+            Sign in to save display preferences across devices.
+          </Text>
+        )}
 
-        <Divider />
-
-        {/* Sign out / Exit */}
+        {/* Sign out */}
         <View style={styles.signOutSection}>
-          <Pressable style={styles.signOutButton} onPress={handleSignOut}>
+          <Pressable
+            onPress={handleSignOut}
+            style={({ pressed }) => pressed && styles.signOutPressed}
+          >
             <Text style={styles.signOutText}>
-              {user ? 'SIGN OUT' : 'EXIT GUEST MODE'}
+              {user ? 'Sign Out' : 'Exit Guest Mode'}
             </Text>
           </Pressable>
         </View>
@@ -86,62 +87,88 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.cream,
+    backgroundColor: colors.backgroundSecondary,
+  },
+  header: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    backgroundColor: colors.background,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontFamily: fonts.heading,
+    fontSize: typography.title3.fontSize,
+    color: colors.foreground,
   },
   content: {
     paddingBottom: spacing.xxl,
   },
-  section: {
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-  },
-  sectionTitle: {
-    fontFamily: fonts.heading,
-    fontSize: 12,
-    color: colors.sepia,
-    letterSpacing: 2,
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  infoLabel: {
+  sectionLabel: {
     fontFamily: fonts.bodyBold,
-    fontSize: 15,
-    color: colors.black,
-  },
-  infoValue: {
-    fontFamily: fonts.body,
-    fontSize: 15,
-    color: colors.sepia,
-  },
-  disabledNote: {
-    fontFamily: fonts.bodyItalic,
-    fontSize: 13,
-    color: colors.sepia,
-    textAlign: 'center',
-    paddingVertical: spacing.sm,
-  },
-  signOutSection: {
+    fontSize: typography.caption.fontSize,
+    lineHeight: typography.caption.lineHeight,
+    color: colors.secondaryText,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.lg,
-    alignItems: 'center',
+    paddingBottom: spacing.sm,
   },
-  signOutButton: {
-    backgroundColor: colors.red,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm + 4,
-    borderWidth: 2,
-    borderColor: colors.black,
+  sectionFooter: {
+    fontFamily: fonts.body,
+    fontSize: typography.caption.fontSize,
+    color: colors.secondaryText,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xs,
+  },
+  card: {
+    marginHorizontal: spacing.md,
+    backgroundColor: colors.background,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  cardWrapper: {
+    marginHorizontal: spacing.md,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    minHeight: 44,
+  },
+  rowBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  rowLabel: {
+    fontFamily: fonts.body,
+    fontSize: typography.body.fontSize,
+    color: colors.foreground,
+  },
+  rowValue: {
+    fontFamily: fonts.body,
+    fontSize: typography.body.fontSize,
+    color: colors.secondaryText,
+  },
+  rowValueFlex: {
+    flex: 1,
+    textAlign: 'right',
+    marginLeft: spacing.md,
+  },
+  signOutSection: {
+    alignItems: 'center',
+    paddingTop: spacing.xl,
   },
   signOutText: {
-    fontFamily: fonts.heading,
-    fontSize: 14,
-    color: colors.white,
-    letterSpacing: 2,
+    fontFamily: fonts.body,
+    fontSize: typography.body.fontSize,
+    color: colors.accent,
+  },
+  signOutPressed: {
+    opacity: 0.6,
   },
 })

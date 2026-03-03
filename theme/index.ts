@@ -1,20 +1,34 @@
 import { StyleSheet, Platform } from 'react-native'
 
 // ---------------------------------------------------------------------------
-// Colors — "Cahiers du Cinéma" brutalist palette
+// Colors — Apple HIG-inspired flat palette
 // ---------------------------------------------------------------------------
 export const colors = {
-  cream: '#fdfaf3',
-  black: '#1a1a1a',
-  sepia: '#8c7851',
-  yellow: '#FFD600',
-  red: '#E63946',
+  // ---- Semantic tokens (primary API) ----
+  background: '#FFFFFF',
+  backgroundSecondary: '#F2F2F7',
+  foreground: '#1C1C1E',
+  secondaryText: '#8E8E93',
+  border: '#C6C6C8',
+  accent: '#FF2D55',
   blue: '#2E86AB',
   white: '#FFFFFF',
-  /** Lighter sepia for secondary text / borders */
-  sepiaLight: '#b5a58a',
-  /** Card / surface background (slightly off-cream) */
-  surface: '#f8f4eb',
+
+  // ---- Legacy aliases (keep consumers compiling) ----
+  /** @deprecated use `background` */
+  cream: '#FFFFFF',
+  /** @deprecated use `foreground` */
+  black: '#1C1C1E',
+  /** @deprecated use `secondaryText` */
+  sepia: '#8E8E93',
+  /** @deprecated use `accent` */
+  yellow: '#FFD600',
+  /** @deprecated use `accent` */
+  red: '#FF2D55',
+  /** @deprecated use `secondaryText` */
+  sepiaLight: '#C6C6C8',
+  /** @deprecated use `backgroundSecondary` */
+  surface: '#F2F2F7',
 } as const
 
 // ---------------------------------------------------------------------------
@@ -22,12 +36,29 @@ export const colors = {
 // ---------------------------------------------------------------------------
 export const fonts = {
   heading: Platform.select({ ios: 'PlayfairDisplay_700Bold', default: 'PlayfairDisplay_700Bold' }),
-  headingItalic: Platform.select({ ios: 'PlayfairDisplay_700Bold_Italic', default: 'PlayfairDisplay_700Bold_Italic' }),
   body: Platform.select({ ios: 'EBGaramond_400Regular', default: 'EBGaramond_400Regular' }),
-  bodyItalic: Platform.select({ ios: 'EBGaramond_400Regular_Italic', default: 'EBGaramond_400Regular_Italic' }),
   bodyBold: Platform.select({ ios: 'EBGaramond_700Bold', default: 'EBGaramond_700Bold' }),
   /** Fallback while custom fonts load */
   serif: Platform.select({ ios: 'Georgia', default: 'serif' }),
+
+  // ---- Legacy aliases ----
+  /** @deprecated use `heading` — italic should be applied explicitly */
+  headingItalic: Platform.select({ ios: 'PlayfairDisplay_700Bold_Italic', default: 'PlayfairDisplay_700Bold_Italic' }),
+  /** @deprecated apply italic style explicitly when needed */
+  bodyItalic: Platform.select({ ios: 'EBGaramond_400Regular_Italic', default: 'EBGaramond_400Regular_Italic' }),
+} as const
+
+// ---------------------------------------------------------------------------
+// Font sizes & line heights (HIG-aligned)
+// ---------------------------------------------------------------------------
+export const typography = {
+  largeTitle: { fontSize: 34, lineHeight: 41 },
+  title1: { fontSize: 28, lineHeight: 34 },
+  title2: { fontSize: 22, lineHeight: 28 },
+  title3: { fontSize: 20, lineHeight: 25 },
+  body: { fontSize: 16, lineHeight: 24 },
+  callout: { fontSize: 15, lineHeight: 21 },
+  caption: { fontSize: 13, lineHeight: 18 },
 } as const
 
 // ---------------------------------------------------------------------------
@@ -46,27 +77,44 @@ export const spacing = {
 // Common reusable styles
 // ---------------------------------------------------------------------------
 export const common = StyleSheet.create({
-  /** Full-screen cream background */
+  /** Full-screen white background */
   screen: {
     flex: 1,
-    backgroundColor: colors.cream,
+    backgroundColor: colors.background,
   },
-  /** Thick black border (brutalist) */
-  brutalistBorder: {
-    borderWidth: 2,
-    borderColor: colors.black,
+  /** Subtle card border */
+  cardBorder: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    borderRadius: 12,
   },
-  /** Hard drop shadow — right + bottom */
-  dropShadow: {
-    shadowColor: colors.black,
-    shadowOffset: { width: 3, height: 3 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 4,
+  /** Soft elevation shadow (iOS-style) */
+  shadow: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  /** Uppercase tracking text */
+  /** Section header style */
   uppercase: {
     textTransform: 'uppercase',
-    letterSpacing: 2,
+    letterSpacing: 1,
+  },
+
+  // ---- Legacy aliases ----
+  /** @deprecated use `cardBorder` */
+  brutalistBorder: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    borderRadius: 12,
+  },
+  /** @deprecated use `shadow` */
+  dropShadow: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
 })

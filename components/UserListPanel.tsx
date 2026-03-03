@@ -1,15 +1,14 @@
 import { useState } from 'react'
 import {
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
-  ScrollView,
 } from 'react-native'
 import { DISCOVERY_USERS } from '@/constants/discoveryUsers'
-import { colors, fonts, spacing, common } from '@/theme'
-import SectionHeader from '@/components/ui/SectionHeader'
+import { colors, fonts, spacing, typography } from '@/theme'
 import type { FollowedUser } from '@/types/database'
 
 interface UserListPanelProps {
@@ -25,7 +24,6 @@ export default function UserListPanel({
   onAdd,
   onRemove,
 }: UserListPanelProps) {
-  const [expanded, setExpanded] = useState(false)
   const [input, setInput] = useState('')
   const [addError, setAddError] = useState<string | null>(null)
   const [isAdding, setIsAdding] = useState(false)
@@ -50,92 +48,100 @@ export default function UserListPanel({
     .slice(0, 3)
 
   return (
-    <View>
-      <Pressable onPress={() => setExpanded(!expanded)}>
-        <SectionHeader
-          title={`FOLLOWING (${users.length})  ${expanded ? '▲' : '▼'}`}
-          color="yellow"
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Add input */}
+      <View style={styles.inputRow}>
+        <TextInput
+          style={styles.input}
+          placeholder="Add Letterboxd username"
+          placeholderTextColor={colors.secondaryText}
+          value={input}
+          onChangeText={setInput}
+          autoCapitalize="none"
+          autoCorrect={false}
+          onSubmitEditing={handleAdd}
+          editable={!isAdding}
+          returnKeyType="done"
         />
-      </Pressable>
+        <Pressable
+          style={({ pressed }) => [
+            styles.addButton,
+            isAdding && styles.disabled,
+            pressed && styles.addButtonPressed,
+          ]}
+          onPress={handleAdd}
+          disabled={isAdding}
+        >
+          <Text style={styles.addButtonText}>Add</Text>
+        </Pressable>
+      </View>
 
-      {expanded && (
-        <View style={styles.content}>
-          {/* Add input */}
-          <View style={styles.inputRow}>
-            <TextInput
-              style={styles.input}
-              placeholder="Letterboxd username"
-              placeholderTextColor={colors.sepiaLight}
-              value={input}
-              onChangeText={setInput}
-              autoCapitalize="none"
-              autoCorrect={false}
-              onSubmitEditing={handleAdd}
-              editable={!isAdding}
-            />
-            <Pressable
-              style={[styles.addButton, isAdding && styles.disabled]}
-              onPress={handleAdd}
-              disabled={isAdding}
-            >
-              <Text style={styles.addButtonText}>ADD</Text>
-            </Pressable>
-          </View>
+      {addError && (
+        <Text style={styles.errorText}>{addError}</Text>
+      )}
 
-          {addError && (
-            <Text style={styles.errorText}>{addError}</Text>
-          )}
+      {/* Mode indicator */}
+      <Text style={styles.modeText}>
+        {isAuthenticated ? 'Synced with your account' : 'Guest mode — saved locally'}
+      </Text>
 
-          {/* Mode indicator */}
-          <Text style={styles.modeText}>
-            {isAuthenticated ? 'Synced with your account' : 'Guest mode — saved locally'}
-          </Text>
+      {/* Following section */}
+      <Text style={styles.sectionLabel}>
+        Following ({users.length})
+      </Text>
 
-          {/* Current users */}
-          {users.length > 0 ? (
-            <ScrollView style={styles.userList} nestedScrollEnabled>
-              {users.map((u) => (
-                <View key={u.username} style={styles.userRow}>
-                  <Text style={styles.username}>{u.username}</Text>
-                  <Pressable onPress={() => onRemove(u.username)} hitSlop={8}>
-                    <Text style={styles.removeText}>✕</Text>
-                  </Pressable>
-                </View>
-              ))}
-            </ScrollView>
-          ) : (
-            <Text style={styles.emptyText}>
-              Add Letterboxd users to see their activity
-            </Text>
-          )}
-
-          {/* Discovery suggestions */}
-          {suggestions.length > 0 && (
-            <View style={styles.discovery}>
-              <Text style={styles.discoveryTitle}>DISCOVER</Text>
-              {suggestions.map((username) => (
-                <Pressable
-                  key={username}
-                  style={styles.suggestionRow}
-                  onPress={() => onAdd(username)}
-                >
-                  <Text style={styles.suggestionText}>+ {username}</Text>
-                </Pressable>
-              ))}
+      {users.length > 0 ? (
+        <View style={styles.userList}>
+          {users.map((u) => (
+            <View key={u.username} style={styles.userRow}>
+              <Text style={styles.username}>{u.username}</Text>
+              <Pressable
+                onPress={() => onRemove(u.username)}
+                hitSlop={8}
+                style={styles.removeButton}
+              >
+                <Text style={styles.removeText}>Remove</Text>
+              </Pressable>
             </View>
-          )}
+          ))}
+        </View>
+      ) : (
+        <Text style={styles.emptyText}>
+          Add Letterboxd users to see their activity in your feed.
+        </Text>
+      )}
+
+      {/* Discovery suggestions */}
+      {suggestions.length > 0 && (
+        <View style={styles.discovery}>
+          <Text style={styles.sectionLabel}>Discover</Text>
+          <View style={styles.suggestionList}>
+            {suggestions.map((username) => (
+              <Pressable
+                key={username}
+                style={({ pressed }) => [
+                  styles.suggestionRow,
+                  pressed && styles.suggestionPressed,
+                ]}
+                onPress={() => onAdd(username)}
+              >
+                <Text style={styles.suggestionText}>{username}</Text>
+                <Text style={styles.suggestionAction}>Add</Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
       )}
-    </View>
+    </ScrollView>
   )
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   content: {
     padding: spacing.md,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 2,
-    borderBottomColor: colors.black,
   },
   inputRow: {
     flexDirection: 'row',
@@ -143,91 +149,122 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    height: 40,
-    borderWidth: 2,
-    borderColor: colors.black,
-    paddingHorizontal: spacing.sm,
+    height: 44,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
     fontFamily: fonts.body,
-    fontSize: 15,
-    color: colors.black,
-    backgroundColor: colors.cream,
+    fontSize: typography.body.fontSize,
+    color: colors.foreground,
+    backgroundColor: colors.backgroundSecondary,
   },
   addButton: {
-    height: 40,
+    height: 44,
     paddingHorizontal: spacing.md,
-    backgroundColor: colors.black,
+    backgroundColor: colors.blue,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  addButtonPressed: {
+    opacity: 0.8,
+  },
   addButtonText: {
-    fontFamily: fonts.heading,
-    fontSize: 13,
-    color: colors.yellow,
-    letterSpacing: 2,
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.body.fontSize,
+    color: colors.white,
   },
   disabled: {
     opacity: 0.5,
   },
   errorText: {
     fontFamily: fonts.body,
-    fontSize: 13,
-    color: colors.red,
+    fontSize: typography.caption.fontSize,
+    color: colors.accent,
     marginTop: spacing.xs,
   },
   modeText: {
     fontFamily: fonts.body,
-    fontSize: 12,
-    color: colors.sepia,
-    fontStyle: 'italic',
+    fontSize: typography.caption.fontSize,
+    lineHeight: typography.caption.lineHeight,
+    color: colors.secondaryText,
     marginTop: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  sectionLabel: {
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.caption.fontSize,
+    lineHeight: typography.caption.lineHeight,
+    color: colors.secondaryText,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     marginBottom: spacing.sm,
   },
   userList: {
-    maxHeight: 200,
+    borderRadius: 10,
+    backgroundColor: colors.backgroundSecondary,
+    overflow: 'hidden',
   },
   userRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: spacing.xs,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.sepiaLight,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
   username: {
     fontFamily: fonts.body,
-    fontSize: 15,
-    color: colors.black,
+    fontSize: typography.body.fontSize,
+    color: colors.foreground,
+  },
+  removeButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
   },
   removeText: {
-    fontSize: 14,
-    color: colors.sepia,
+    fontFamily: fonts.body,
+    fontSize: typography.caption.fontSize,
+    color: colors.accent,
   },
   emptyText: {
-    fontFamily: fonts.bodyItalic,
-    fontSize: 14,
-    color: colors.sepia,
+    fontFamily: fonts.body,
+    fontSize: typography.body.fontSize,
+    lineHeight: typography.body.lineHeight,
+    color: colors.secondaryText,
     textAlign: 'center',
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.lg,
   },
   discovery: {
-    marginTop: spacing.md,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.sepiaLight,
+    marginTop: spacing.lg,
   },
-  discoveryTitle: {
-    fontFamily: fonts.heading,
-    fontSize: 11,
-    color: colors.sepia,
-    letterSpacing: 2,
-    marginBottom: spacing.xs,
+  suggestionList: {
+    borderRadius: 10,
+    backgroundColor: colors.backgroundSecondary,
+    overflow: 'hidden',
   },
   suggestionRow: {
-    paddingVertical: spacing.xs,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  suggestionPressed: {
+    backgroundColor: colors.border,
   },
   suggestionText: {
     fontFamily: fonts.body,
-    fontSize: 14,
+    fontSize: typography.body.fontSize,
+    color: colors.foreground,
+  },
+  suggestionAction: {
+    fontFamily: fonts.body,
+    fontSize: typography.body.fontSize,
     color: colors.blue,
   },
 })

@@ -4,6 +4,10 @@ export type AuthStackParamList = {
   Signup: undefined
 }
 
+export type FeedDrawerParamList = {
+  FeedMain: undefined
+}
+
 export type AppTabsParamList = {
   Feed: undefined
   Profile: undefined

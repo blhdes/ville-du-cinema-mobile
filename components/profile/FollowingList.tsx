@@ -1,67 +1,107 @@
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import type { FollowedUser } from '@/types/database'
-import { colors, fonts, spacing } from '@/theme'
-import SectionHeader from '@/components/ui/SectionHeader'
+import { colors, fonts, spacing, typography } from '@/theme'
 
 interface FollowingListProps {
   users: FollowedUser[]
 }
 
 export default function FollowingList({ users }: FollowingListProps) {
-  if (users.length === 0) {
-    return (
-      <View>
-        <SectionHeader title="FOLLOWING" />
-        <Text style={styles.emptyText}>No users followed yet</Text>
-      </View>
-    )
-  }
-
   return (
-    <View>
-      <SectionHeader title={`FOLLOWING (${users.length})`} />
-      {users.map((user) => (
-        <Pressable
-          key={user.username}
-          style={styles.row}
-          onPress={() =>
-            Linking.openURL(`https://letterboxd.com/${user.username}/`)
-          }
-        >
-          <Text style={styles.username}>
-            {user.display_name || user.username}
-          </Text>
-          <Text style={styles.handle}>@{user.username}</Text>
-        </Pressable>
-      ))}
+    <View style={styles.section}>
+      <Text style={styles.sectionLabel}>
+        Following ({users.length})
+      </Text>
+
+      {users.length === 0 ? (
+        <View style={styles.card}>
+          <Text style={styles.emptyText}>No users followed yet</Text>
+        </View>
+      ) : (
+        <View style={styles.card}>
+          {users.map((user, index) => (
+            <Pressable
+              key={user.username}
+              style={({ pressed }) => [
+                styles.row,
+                index < users.length - 1 && styles.rowBorder,
+                pressed && styles.rowPressed,
+              ]}
+              onPress={() =>
+                Linking.openURL(`https://letterboxd.com/${user.username}/`)
+              }
+            >
+              <View style={styles.rowContent}>
+                <Text style={styles.username}>
+                  {user.display_name || user.username}
+                </Text>
+                <Text style={styles.handle}>@{user.username}</Text>
+              </View>
+              <Text style={styles.chevron}>{'\u203A'}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
     </View>
   )
 }
 
 const styles = StyleSheet.create({
+  section: {
+    paddingHorizontal: spacing.md,
+  },
+  sectionLabel: {
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.caption.fontSize,
+    lineHeight: typography.caption.lineHeight,
+    color: colors.secondaryText,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: spacing.sm,
+  },
+  card: {
+    backgroundColor: colors.background,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.sepiaLight,
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  rowBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  rowPressed: {
+    backgroundColor: colors.backgroundSecondary,
+  },
+  rowContent: {
+    flex: 1,
+    marginRight: spacing.sm,
   },
   username: {
     fontFamily: fonts.body,
-    fontSize: 15,
-    color: colors.black,
+    fontSize: typography.body.fontSize,
+    color: colors.foreground,
   },
   handle: {
     fontFamily: fonts.body,
-    fontSize: 13,
-    color: colors.sepia,
+    fontSize: typography.caption.fontSize,
+    color: colors.secondaryText,
+    marginTop: 2,
+  },
+  chevron: {
+    fontSize: 22,
+    color: colors.secondaryText,
+    fontWeight: '300',
   },
   emptyText: {
-    fontFamily: fonts.bodyItalic,
-    fontSize: 14,
-    color: colors.sepia,
+    fontFamily: fonts.body,
+    fontSize: typography.body.fontSize,
+    color: colors.secondaryText,
     textAlign: 'center',
     paddingVertical: spacing.lg,
   },

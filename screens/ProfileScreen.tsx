@@ -2,9 +2,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useUser } from '@/hooks/useUser'
 import { useProfile } from '@/hooks/useProfile'
-import { colors, fonts, spacing } from '@/theme'
-import SectionHeader from '@/components/ui/SectionHeader'
-import Divider from '@/components/ui/Divider'
+import { colors, fonts, spacing, typography } from '@/theme'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import ProfileHeader from '@/components/profile/ProfileHeader'
 import FollowingList from '@/components/profile/FollowingList'
@@ -18,9 +16,11 @@ export default function ProfileScreen() {
   if (!user) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
-        <SectionHeader title="PROFILE" />
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Profile</Text>
+        </View>
         <View style={styles.guestContainer}>
-          <Text style={styles.guestTitle}>GUEST MODE</Text>
+          <Text style={styles.guestTitle}>Guest Mode</Text>
           <Text style={styles.guestText}>
             Sign in to access your profile, sync your followed users across devices, and customize your display preferences.
           </Text>
@@ -32,9 +32,11 @@ export default function ProfileScreen() {
   if (isLoading) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
-        <SectionHeader title="MY PROFILE" />
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Profile</Text>
+        </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.black} />
+          <ActivityIndicator size="large" color={colors.secondaryText} />
         </View>
       </View>
     )
@@ -42,12 +44,16 @@ export default function ProfileScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <SectionHeader title="MY PROFILE" />
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Profile</Text>
+      </View>
 
       {error && <ErrorBanner message={error} />}
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Name + username */}
+        {profile && <ProfileHeader profile={profile} />}
+
+        {/* Name & info */}
         <View style={styles.nameSection}>
           {profile?.display_name && (
             <Text style={styles.displayName}>{profile.display_name}</Text>
@@ -58,11 +64,11 @@ export default function ProfileScreen() {
           <Text style={styles.email}>{user.email}</Text>
         </View>
 
-        {profile && <ProfileHeader profile={profile} />}
-
-        <Divider />
-
-        {profile && <FollowingList users={profile.followed_users} />}
+        {profile && (
+          <View style={styles.followingSection}>
+            <FollowingList users={profile.followed_users} />
+          </View>
+        )}
       </ScrollView>
     </View>
   )
@@ -71,7 +77,20 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.cream,
+    backgroundColor: colors.backgroundSecondary,
+  },
+  header: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    backgroundColor: colors.background,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontFamily: fonts.heading,
+    fontSize: typography.title3.fontSize,
+    color: colors.foreground,
   },
   content: {
     paddingBottom: spacing.xxl,
@@ -83,25 +102,29 @@ const styles = StyleSheet.create({
   },
   nameSection: {
     alignItems: 'center',
-    paddingTop: spacing.lg,
     paddingHorizontal: spacing.md,
+    paddingBottom: spacing.lg,
   },
   displayName: {
     fontFamily: fonts.heading,
-    fontSize: 24,
-    color: colors.black,
+    fontSize: typography.title2.fontSize,
+    lineHeight: typography.title2.lineHeight,
+    color: colors.foreground,
   },
   username: {
     fontFamily: fonts.body,
-    fontSize: 16,
-    color: colors.sepia,
+    fontSize: typography.body.fontSize,
+    color: colors.secondaryText,
     marginTop: spacing.xs,
   },
   email: {
     fontFamily: fonts.body,
-    fontSize: 13,
-    color: colors.sepiaLight,
+    fontSize: typography.caption.fontSize,
+    color: colors.secondaryText,
     marginTop: spacing.xs,
+  },
+  followingSection: {
+    paddingTop: spacing.sm,
   },
   guestContainer: {
     flex: 1,
@@ -111,16 +134,16 @@ const styles = StyleSheet.create({
   },
   guestTitle: {
     fontFamily: fonts.heading,
-    fontSize: 20,
-    color: colors.black,
-    letterSpacing: 3,
+    fontSize: typography.title2.fontSize,
+    lineHeight: typography.title2.lineHeight,
+    color: colors.foreground,
     marginBottom: spacing.md,
   },
   guestText: {
-    fontFamily: fonts.bodyItalic,
-    fontSize: 16,
-    color: colors.sepia,
+    fontFamily: fonts.body,
+    fontSize: typography.body.fontSize,
+    lineHeight: typography.body.lineHeight,
+    color: colors.secondaryText,
     textAlign: 'center',
-    lineHeight: 24,
   },
 })
