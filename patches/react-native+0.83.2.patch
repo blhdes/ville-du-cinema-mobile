@@ -1,0 +1,13 @@
+diff --git a/node_modules/react-native/ReactCommon/jsi/jsi/jsi.h b/node_modules/react-native/ReactCommon/jsi/jsi/jsi.h
+index 08edcd2..5e0dfeb 100644
+--- a/node_modules/react-native/ReactCommon/jsi/jsi/jsi.h
++++ b/node_modules/react-native/ReactCommon/jsi/jsi/jsi.h
+@@ -77,7 +77,7 @@ class JSI_EXPORT UUID {
+   std::string toString() const {
+     std::string buffer(36, ' ');
+     std::snprintf(
+-        buffer.data(),
++        (char *)buffer.data(),
+         buffer.size() + 1,
+         "%08x-%04x-%04x-%04x-%012llx",
+         getTimeLow(),
