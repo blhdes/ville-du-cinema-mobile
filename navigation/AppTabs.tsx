@@ -15,14 +15,17 @@ import { colors } from '@/theme'
 
 const AVATAR_SIZE = 28
 
-function ProfileTabIcon({ color }: { color: string }) {
+function ProfileTabIcon({ color, focused }: { color: string; focused: boolean }) {
   const { profile } = useProfile()
 
   if (profile?.avatar_url) {
     return (
       <Image
         source={{ uri: profile.avatar_url }}
-        style={styles.avatar}
+        style={[
+          styles.avatar,
+          focused && styles.avatarFocused,
+        ]}
       />
     )
   }
@@ -79,7 +82,7 @@ function AppTabsInner() {
         name="Profile"
         component={ProfileScreen}
         options={{
-          tabBarIcon: ({ color }) => <ProfileTabIcon color={color} />,
+          tabBarIcon: ({ color, focused }) => <ProfileTabIcon color={color} focused={focused} />,
         }}
       />
       <Tab.Screen
@@ -108,6 +111,10 @@ const styles = StyleSheet.create({
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
     borderRadius: AVATAR_SIZE / 2,
+  },
+  avatarFocused: {
+    borderWidth: 1,
+    borderColor: colors.foreground,
   },
   tabBarWrapper: {
     position: 'absolute',
