@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   ActivityIndicator,
+  type LayoutChangeEvent,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -9,8 +10,8 @@ import {
 } from 'react-native'
 import Animated, {
   useAnimatedScrollHandler,
-  withTiming,
-  Easing,
+  useAnimatedStyle,
+  useSharedValue,
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
@@ -26,36 +27,75 @@ import ReviewCard from '@/components/ReviewCard'
 import WatchNotification from '@/components/WatchNotification'
 import QuoteOfTheDay from '@/components/QuoteOfTheDay'
 
-const SCROLL_THRESHOLD = 10
+// Deadzone: header only starts hiding after this many px of continuous downward scroll.
+// Scrolling up has 0px threshold — the header reveals immediately.
+const DOWN_DEADZONE = 8
 
 export default function FeedScreen() {
   const insets = useSafeAreaInsets()
   const tabBarHeight = useBottomTabBarHeight()
+  const tabBarMax = tabBarHeight + insets.bottom
   const navigation = useNavigation()
   const { users, usernames, isLoading: isListLoading, error: listError, clearError } = useUserLists()
   const { preferences } = useDisplayPreferences()
   const { translateY } = useTabBar()
 
+  // Header hide/show
+  const [headerHeight, setHeaderHeight] = useState(0)
+  const headerTranslateY = useSharedValue(0)
+  const downAccumulator = useSharedValue(0)
+
+  const onHeaderLayout = useCallback((e: LayoutChangeEvent) => {
+    setHeaderHeight(e.nativeEvent.layout.height)
+  }, [])
+
+  const headerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: headerTranslateY.value }],
+  }))
+
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event, ctx: { prevY: number }) => {
       const currentY = event.contentOffset.y
-      const diff = currentY - ctx.prevY
+      const delta = currentY - ctx.prevY
+      ctx.prevY = currentY
 
       if (currentY <= 0) {
-        // At the top — always show
-        translateY.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.ease) })
-      } else if (diff > SCROLL_THRESHOLD) {
-        // Scrolling down — hide
-        translateY.value = withTiming(tabBarHeight + insets.bottom, { duration: 200, easing: Easing.out(Easing.ease) })
-      } else if (diff < -SCROLL_THRESHOLD) {
-        // Scrolling up — show
-        translateY.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.ease) })
+        // At the top — always fully visible
+        headerTranslateY.value = 0
+        translateY.value = 0
+        downAccumulator.value = 0
+        return
       }
 
-      ctx.prevY = currentY
+      if (delta > 0) {
+        // Scrolling down — apply deadzone, then 1:1
+        downAccumulator.value += delta
+        if (downAccumulator.value > DOWN_DEADZONE) {
+          headerTranslateY.value = Math.max(
+            -headerHeight,
+            Math.min(0, headerTranslateY.value - delta),
+          )
+          translateY.value = Math.min(
+            tabBarMax,
+            Math.max(0, translateY.value + delta),
+          )
+        }
+      } else if (delta < 0) {
+        // Scrolling up — immediate 1:1 (0px threshold)
+        downAccumulator.value = 0
+        headerTranslateY.value = Math.max(
+          -headerHeight,
+          Math.min(0, headerTranslateY.value - delta),
+        )
+        translateY.value = Math.min(
+          tabBarMax,
+          Math.max(0, translateY.value + delta),
+        )
+      }
     },
     onBeginDrag: (event, ctx: { prevY: number }) => {
       ctx.prevY = event.contentOffset.y
+      downAccumulator.value = 0
     },
   })
 
@@ -170,24 +210,6 @@ export default function FeedScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header bar */}
-      <View style={styles.header}>
-        <Pressable
-          onPress={openDrawer}
-          style={styles.usersButton}
-          hitSlop={8}
-        >
-          <Text style={styles.usersButtonText}>Users</Text>
-          {users.length > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{users.length}</Text>
-            </View>
-          )}
-        </Pressable>
-        <Text style={styles.headerTitle}>Feed</Text>
-        <View style={styles.headerSpacer} />
-      </View>
-
       {error && (
         <ErrorBanner message={error} onDismiss={clearError} />
       )}
@@ -216,9 +238,34 @@ export default function FeedScreen() {
               colors={[colors.secondaryText]}
             />
           }
-          contentContainerStyle={filteredReviews.length === 0 ? styles.emptyList : [styles.list, { paddingBottom: tabBarHeight + 20 }]}
+          contentContainerStyle={
+            filteredReviews.length === 0
+              ? styles.emptyList
+              : [styles.list, { paddingTop: headerHeight + spacing.md, paddingBottom: tabBarHeight + 20 }]
+          }
         />
       )}
+
+      {/* Header floats above content so it can slide out of view */}
+      <Animated.View
+        onLayout={onHeaderLayout}
+        style={[styles.header, headerAnimatedStyle]}
+      >
+        <Pressable
+          onPress={openDrawer}
+          style={styles.usersButton}
+          hitSlop={8}
+        >
+          <Text style={styles.usersButtonText}>Users</Text>
+          {users.length > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{users.length}</Text>
+            </View>
+          )}
+        </Pressable>
+        <Text style={styles.headerTitle}>Feed</Text>
+        <View style={styles.headerSpacer} />
+      </Animated.View>
     </View>
   )
 }
@@ -229,13 +276,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     paddingVertical: 12,
+    backgroundColor: colors.background,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
+    zIndex: 1,
   },
   usersButton: {
     flexDirection: 'row',
@@ -269,9 +322,7 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 60,
   },
-  list: {
-    paddingTop: spacing.md,
-  },
+  list: {},
   emptyList: {
     flexGrow: 1,
   },
