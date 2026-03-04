@@ -60,6 +60,9 @@ function AppTabsInner() {
           backgroundColor: colors.background,
           borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: colors.border,
+          height: 49,
+          elevation: 0,
+          shadowOpacity: 0,
         },
       }}
     >

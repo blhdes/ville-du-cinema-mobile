@@ -1,5 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { useUser } from '@/hooks/useUser'
 import { useGuestMode } from '@/contexts/GuestModeContext'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
@@ -8,6 +9,7 @@ import DisplaySettings from '@/components/settings/DisplaySettings'
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets()
+  const tabBarHeight = useBottomTabBarHeight()
   const { user, signOut } = useUser()
   const { isGuest, exitGuestMode } = useGuestMode()
   const {
@@ -29,7 +31,7 @@ export default function SettingsScreen() {
         <Text style={styles.headerTitle}>Settings</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + 20 }]}>
         {/* Account section */}
         <Text style={styles.sectionLabel}>Account</Text>
         <View style={styles.card}>
@@ -102,9 +104,7 @@ const styles = StyleSheet.create({
     fontSize: typography.title3.fontSize,
     color: colors.foreground,
   },
-  content: {
-    paddingBottom: spacing.xxl,
-  },
+  content: {},
   sectionLabel: {
     fontFamily: fonts.bodyBold,
     fontSize: typography.caption.fontSize,

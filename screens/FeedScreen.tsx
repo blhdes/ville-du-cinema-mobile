@@ -13,6 +13,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { useNavigation, DrawerActions } from '@react-navigation/native'
 import { useUserLists } from '@/hooks/useUserLists'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
@@ -25,11 +26,11 @@ import ReviewCard from '@/components/ReviewCard'
 import WatchNotification from '@/components/WatchNotification'
 import QuoteOfTheDay from '@/components/QuoteOfTheDay'
 
-const TAB_BAR_HEIGHT = 80
 const SCROLL_THRESHOLD = 10
 
 export default function FeedScreen() {
   const insets = useSafeAreaInsets()
+  const tabBarHeight = useBottomTabBarHeight()
   const navigation = useNavigation()
   const { users, usernames, isLoading: isListLoading, error: listError, clearError } = useUserLists()
   const { preferences } = useDisplayPreferences()
@@ -45,7 +46,7 @@ export default function FeedScreen() {
         translateY.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.ease) })
       } else if (diff > SCROLL_THRESHOLD) {
         // Scrolling down — hide
-        translateY.value = withTiming(TAB_BAR_HEIGHT, { duration: 200, easing: Easing.out(Easing.ease) })
+        translateY.value = withTiming(tabBarHeight + insets.bottom, { duration: 200, easing: Easing.out(Easing.ease) })
       } else if (diff < -SCROLL_THRESHOLD) {
         // Scrolling up — show
         translateY.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.ease) })
@@ -215,7 +216,7 @@ export default function FeedScreen() {
               colors={[colors.secondaryText]}
             />
           }
-          contentContainerStyle={filteredReviews.length === 0 ? styles.emptyList : styles.list}
+          contentContainerStyle={filteredReviews.length === 0 ? styles.emptyList : [styles.list, { paddingBottom: tabBarHeight + 20 }]}
         />
       )}
     </View>
@@ -270,7 +271,6 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingTop: spacing.md,
-    paddingBottom: spacing.xxl,
   },
   emptyList: {
     flexGrow: 1,

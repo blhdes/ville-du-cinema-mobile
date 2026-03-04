@@ -1,5 +1,6 @@
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { useUser } from '@/hooks/useUser'
 import { useProfile } from '@/hooks/useProfile'
 import { colors, fonts, spacing, typography } from '@/theme'
@@ -9,6 +10,7 @@ import FollowingList from '@/components/profile/FollowingList'
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets()
+  const tabBarHeight = useBottomTabBarHeight()
   const { user } = useUser()
   const { profile, isLoading, error } = useProfile()
 
@@ -50,7 +52,7 @@ export default function ProfileScreen() {
 
       {error && <ErrorBanner message={error} />}
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + 20 }]}>
         {profile && <ProfileHeader profile={profile} />}
 
         {/* Name & info */}
@@ -92,9 +94,7 @@ const styles = StyleSheet.create({
     fontSize: typography.title3.fontSize,
     color: colors.foreground,
   },
-  content: {
-    paddingBottom: spacing.xxl,
-  },
+  content: {},
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
