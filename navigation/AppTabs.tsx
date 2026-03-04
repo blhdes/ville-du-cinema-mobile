@@ -1,18 +1,59 @@
-import { StyleSheet } from 'react-native'
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
+import { Image, StyleSheet } from 'react-native'
+import { createBottomTabNavigator, type BottomTabBarProps } from '@react-navigation/bottom-tabs'
+import { BottomTabBar } from '@react-navigation/bottom-tabs'
+import { Ionicons } from '@expo/vector-icons'
+import Animated, { useAnimatedStyle } from 'react-native-reanimated'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { AppTabsParamList } from '@/navigation/types'
 import FeedDrawerNavigator from '@/navigation/FeedDrawerNavigator'
 import ProfileScreen from '@/screens/ProfileScreen'
 import SettingsScreen from '@/screens/SettingsScreen'
-import { colors, fonts } from '@/theme'
+import LogoIcon from '@/components/ui/LogoIcon'
+import { useProfile } from '@/hooks/useProfile'
+import { TabBarProvider, useTabBar } from '@/contexts/TabBarContext'
+import { colors } from '@/theme'
+
+const AVATAR_SIZE = 28
+
+function ProfileTabIcon({ color }: { color: string }) {
+  const { profile } = useProfile()
+
+  if (profile?.avatar_url) {
+    return (
+      <Image
+        source={{ uri: profile.avatar_url }}
+        style={styles.avatar}
+      />
+    )
+  }
+
+  return <Ionicons name="person-outline" size={24} color={color} />
+}
+
+function AnimatedTabBar(props: BottomTabBarProps) {
+  const { translateY } = useTabBar()
+  const insets = useSafeAreaInsets()
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }))
+
+  return (
+    <Animated.View style={[styles.tabBarWrapper, { paddingBottom: insets.bottom }, animatedStyle]}>
+      <BottomTabBar {...props} />
+    </Animated.View>
+  )
+}
 
 const Tab = createBottomTabNavigator<AppTabsParamList>()
 
-export default function AppTabs() {
+function AppTabsInner() {
   return (
     <Tab.Navigator
+      tabBar={(props) => <AnimatedTabBar {...props} />}
       screenOptions={{
         headerShown: false,
+        tabBarShowLabel: false,
         tabBarActiveTintColor: colors.foreground,
         tabBarInactiveTintColor: colors.secondaryText,
         tabBarStyle: {
@@ -20,29 +61,56 @@ export default function AppTabs() {
           borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: colors.border,
         },
-        tabBarLabelStyle: {
-          fontFamily: fonts.heading,
-          fontWeight: '600',
-          fontSize: 11,
-          letterSpacing: 0.5,
-        },
       }}
     >
       <Tab.Screen
         name="Feed"
         component={FeedDrawerNavigator}
-        options={{ tabBarLabel: 'Feed' }}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <LogoIcon fill={color} size={size} />
+          ),
+        }}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ tabBarLabel: 'Profile' }}
+        options={{
+          tabBarIcon: ({ color }) => <ProfileTabIcon color={color} />,
+        }}
       />
       <Tab.Screen
         name="Settings"
         component={SettingsScreen}
-        options={{ tabBarLabel: 'Settings' }}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="settings-outline" size={size} color={color} />
+          ),
+        }}
       />
     </Tab.Navigator>
   )
 }
+
+export default function AppTabs() {
+  return (
+    <TabBarProvider>
+      <AppTabsInner />
+    </TabBarProvider>
+  )
+}
+
+const styles = StyleSheet.create({
+  avatar: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
+  },
+  tabBarWrapper: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: colors.background,
+  },
+})

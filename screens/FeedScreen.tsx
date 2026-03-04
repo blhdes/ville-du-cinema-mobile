@@ -1,17 +1,22 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   ActivityIndicator,
-  FlatList,
   Pressable,
   RefreshControl,
   StyleSheet,
   Text,
   View,
 } from 'react-native'
+import Animated, {
+  useAnimatedScrollHandler,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation, DrawerActions } from '@react-navigation/native'
 import { useUserLists } from '@/hooks/useUserLists'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
+import { useTabBar } from '@/contexts/TabBarContext'
 import { fetchFeed, type FeedResult } from '@/services/feed'
 import type { Review } from '@/types/database'
 import { colors, fonts, spacing, typography } from '@/theme'
@@ -20,11 +25,38 @@ import ReviewCard from '@/components/ReviewCard'
 import WatchNotification from '@/components/WatchNotification'
 import QuoteOfTheDay from '@/components/QuoteOfTheDay'
 
+const TAB_BAR_HEIGHT = 80
+const SCROLL_THRESHOLD = 10
+
 export default function FeedScreen() {
   const insets = useSafeAreaInsets()
   const navigation = useNavigation()
   const { users, usernames, isLoading: isListLoading, error: listError, clearError } = useUserLists()
   const { preferences } = useDisplayPreferences()
+  const { translateY } = useTabBar()
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event, ctx: { prevY: number }) => {
+      const currentY = event.contentOffset.y
+      const diff = currentY - ctx.prevY
+
+      if (currentY <= 0) {
+        // At the top — always show
+        translateY.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.ease) })
+      } else if (diff > SCROLL_THRESHOLD) {
+        // Scrolling down — hide
+        translateY.value = withTiming(TAB_BAR_HEIGHT, { duration: 200, easing: Easing.out(Easing.ease) })
+      } else if (diff < -SCROLL_THRESHOLD) {
+        // Scrolling up — show
+        translateY.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.ease) })
+      }
+
+      ctx.prevY = currentY
+    },
+    onBeginDrag: (event, ctx: { prevY: number }) => {
+      ctx.prevY = event.contentOffset.y
+    },
+  })
 
   const [reviews, setReviews] = useState<Review[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -165,7 +197,7 @@ export default function FeedScreen() {
           <Text style={styles.loadingText}>Loading feed...</Text>
         </View>
       ) : (
-        <FlatList
+        <Animated.FlatList
           data={filteredReviews}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
@@ -173,6 +205,8 @@ export default function FeedScreen() {
           ListFooterComponent={renderFooter}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.3}
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
