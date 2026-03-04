@@ -13,9 +13,9 @@ export default function SettingsScreen() {
   const {
     preferences,
     isAuthenticated,
-    setHideUserlistMain,
-    setFeedGridColumns,
     setHideWatchNotifications,
+    setUseDropCap,
+    setHideRatings,
   } = useDisplayPreferences()
 
   const handleSignOut = async () => {
@@ -53,13 +53,13 @@ export default function SettingsScreen() {
         <Text style={styles.sectionLabel}>Display</Text>
         <View style={styles.cardWrapper}>
           <DisplaySettings
-            hideUserlistMain={preferences.hideUserlistMain}
-            feedGridColumns={preferences.feedGridColumns}
             hideWatchNotifications={preferences.hideWatchNotifications}
-            onSetHideUserlistMain={setHideUserlistMain}
-            onSetFeedGridColumns={setFeedGridColumns}
+            useDropCap={preferences.useDropCap}
+            hideRatings={preferences.hideRatings}
             onSetHideWatchNotifications={setHideWatchNotifications}
-            disabled={!isAuthenticated}
+            onSetUseDropCap={setUseDropCap}
+            onSetHideRatings={setHideRatings}
+            disableRemote={!isAuthenticated}
           />
         </View>
         {!isAuthenticated && (

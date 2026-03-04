@@ -1,5 +1,6 @@
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import type { Review } from '@/types/database'
+import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { colors, fonts, spacing, typography } from '@/theme'
 
 interface WatchNotificationProps {
@@ -7,6 +8,8 @@ interface WatchNotificationProps {
 }
 
 export default function WatchNotification({ review }: WatchNotificationProps) {
+  const { preferences } = useDisplayPreferences()
+
   return (
     <Pressable
       style={({ pressed }) => [styles.container, pressed && styles.pressed]}
@@ -19,7 +22,7 @@ export default function WatchNotification({ review }: WatchNotificationProps) {
           {' watched '}
           <Text style={styles.movie}>{review.movieTitle}</Text>
         </Text>
-        {review.rating ? (
+        {review.rating && !preferences.hideRatings ? (
           <Text style={styles.rating}>{review.rating}</Text>
         ) : null}
       </View>

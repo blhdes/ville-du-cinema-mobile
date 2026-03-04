@@ -1,57 +1,30 @@
 import { StyleSheet, Text, View } from 'react-native'
 import Toggle from '@/components/ui/Toggle'
-import ColumnSelector from '@/components/ui/ColumnSelector'
 import { colors, fonts, spacing, typography } from '@/theme'
 
 interface DisplaySettingsProps {
-  hideUserlistMain: boolean
-  feedGridColumns: 1 | 2 | 3
   hideWatchNotifications: boolean
-  onSetHideUserlistMain: (value: boolean) => void
-  onSetFeedGridColumns: (value: 1 | 2 | 3) => void
+  useDropCap: boolean
+  hideRatings: boolean
   onSetHideWatchNotifications: (value: boolean) => void
-  disabled?: boolean
+  onSetUseDropCap: (value: boolean) => void
+  onSetHideRatings: (value: boolean) => void
+  disableRemote?: boolean
 }
 
 export default function DisplaySettings({
-  hideUserlistMain,
-  feedGridColumns,
   hideWatchNotifications,
-  onSetHideUserlistMain,
-  onSetFeedGridColumns,
+  useDropCap,
+  hideRatings,
   onSetHideWatchNotifications,
-  disabled,
+  onSetUseDropCap,
+  onSetHideRatings,
+  disableRemote,
 }: DisplaySettingsProps) {
   return (
     <View style={styles.card}>
-      {/* Hide user list */}
-      <View style={[styles.row, styles.rowBorder]}>
-        <View style={styles.labelContainer}>
-          <Text style={styles.label}>Hide User List</Text>
-          <Text style={styles.description}>Hide the following panel on the feed</Text>
-        </View>
-        <Toggle
-          value={hideUserlistMain}
-          onValueChange={onSetHideUserlistMain}
-          disabled={disabled}
-        />
-      </View>
-
-      {/* Feed columns */}
-      <View style={[styles.row, styles.rowBorder]}>
-        <View style={styles.labelContainer}>
-          <Text style={styles.label}>Feed Columns</Text>
-          <Text style={styles.description}>Number of columns in the feed grid</Text>
-        </View>
-        <ColumnSelector
-          value={feedGridColumns}
-          onValueChange={onSetFeedGridColumns}
-          disabled={disabled}
-        />
-      </View>
-
       {/* Hide watch notifications */}
-      <View style={styles.row}>
+      <View style={[styles.row, styles.rowBorder]}>
         <View style={styles.labelContainer}>
           <Text style={styles.label}>Hide Watch Notifications</Text>
           <Text style={styles.description}>Only show reviews, hide watch activity</Text>
@@ -59,7 +32,31 @@ export default function DisplaySettings({
         <Toggle
           value={hideWatchNotifications}
           onValueChange={onSetHideWatchNotifications}
-          disabled={disabled}
+          disabled={disableRemote}
+        />
+      </View>
+
+      {/* Use drop caps */}
+      <View style={[styles.row, styles.rowBorder]}>
+        <View style={styles.labelContainer}>
+          <Text style={styles.label}>Use Drop Caps</Text>
+          <Text style={styles.description}>Stylize the first letter of reviews</Text>
+        </View>
+        <Toggle
+          value={useDropCap}
+          onValueChange={onSetUseDropCap}
+        />
+      </View>
+
+      {/* Hide ratings */}
+      <View style={styles.row}>
+        <View style={styles.labelContainer}>
+          <Text style={styles.label}>Hide Ratings</Text>
+          <Text style={styles.description}>Hide star ratings on review cards</Text>
+        </View>
+        <Toggle
+          value={hideRatings}
+          onValueChange={onSetHideRatings}
         />
       </View>
     </View>

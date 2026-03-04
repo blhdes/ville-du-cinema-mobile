@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import RenderHtml from 'react-native-render-html'
 import type { Review } from '@/types/database'
+import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { colors, fonts, spacing, typography } from '@/theme'
 
 interface ReviewCardProps {
@@ -52,6 +53,7 @@ function truncateHtml(html: string, max: number): string {
 
 export default function ReviewCard({ review }: ReviewCardProps) {
   const [expanded, setExpanded] = useState(false)
+  const { preferences } = useDisplayPreferences()
   const { width } = useWindowDimensions()
   const contentWidth = width - spacing.md * 4 // outer margin + inner padding
 
@@ -88,7 +90,32 @@ export default function ReviewCard({ review }: ReviewCardProps) {
     },
     i: { fontFamily: fonts.bodyItalic },
     em: { fontFamily: fonts.bodyItalic },
+    b: { fontFamily: fonts.bodyBold },
+    strong: { fontFamily: fonts.bodyBold },
   }), [])
+
+  const classesStyles = useMemo(() => {
+    if (!preferences.useDropCap) return undefined
+    return {
+      'drop-cap': {
+        fontFamily: fonts.heading,
+        fontSize: typography.title1.fontSize * 1.6,
+        lineHeight: typography.title1.fontSize * 1.6,
+        color: colors.foreground,
+      },
+    }
+  }, [preferences.useDropCap])
+
+  // Wrap the first visible letter in a drop-cap span.
+  // The regex skips over any leading HTML tags (e.g. <p>, <b>, <i>, <em>, <strong>)
+  // to find the first real alphanumeric character outside of a tag.
+  const processedHtml = useMemo(() => {
+    if (!preferences.useDropCap || !displayHtml) return displayHtml
+    return displayHtml.replace(
+      /^((?:\s*<[^>]+>)*)(\s*)([A-Za-z\u00C0-\u024F])/,
+      '$1$2<span class="drop-cap">$3</span>',
+    )
+  }, [preferences.useDropCap, displayHtml])
 
   const renderersProps = useMemo(() => ({
     a: {
@@ -103,7 +130,7 @@ export default function ReviewCard({ review }: ReviewCardProps) {
         <Text style={styles.movieTitle} numberOfLines={2}>
           {review.movieTitle}
         </Text>
-        {review.rating ? (
+        {review.rating && !preferences.hideRatings ? (
           <Text style={styles.rating}>{review.rating}</Text>
         ) : null}
       </View>
@@ -120,8 +147,9 @@ export default function ReviewCard({ review }: ReviewCardProps) {
         <Pressable onPress={() => isLong && setExpanded(!expanded)} disabled={!isLong}>
           <RenderHtml
             contentWidth={contentWidth}
-            source={{ html: displayHtml }}
+            source={{ html: processedHtml }}
             tagsStyles={tagsStyles}
+            classesStyles={classesStyles}
             renderersProps={renderersProps}
             defaultTextProps={{ selectable: true }}
           />

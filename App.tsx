@@ -5,6 +5,7 @@ import { ActivityIndicator, View } from 'react-native'
 import { useFonts, PlayfairDisplay_700Bold, PlayfairDisplay_700Bold_Italic } from '@expo-google-fonts/playfair-display'
 import { EBGaramond_400Regular, EBGaramond_400Regular_Italic, EBGaramond_700Bold } from '@expo-google-fonts/eb-garamond'
 import { GuestModeProvider } from '@/contexts/GuestModeContext'
+import { DisplayPreferencesProvider } from '@/contexts/DisplayPreferencesContext'
 import RootNavigator from '@/navigation/RootNavigator'
 import { colors } from '@/theme'
 
@@ -28,8 +29,10 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <GuestModeProvider>
-        <StatusBar style="dark" />
-        <RootNavigator />
+        <DisplayPreferencesProvider>
+          <StatusBar style="dark" />
+          <RootNavigator />
+        </DisplayPreferencesProvider>
       </GuestModeProvider>
     </SafeAreaProvider>
   )
