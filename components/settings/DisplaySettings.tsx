@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native'
+import Slider from '@react-native-community/slider'
 import Toggle from '@/components/ui/Toggle'
 import { colors, fonts, spacing, typography } from '@/theme'
 
@@ -6,9 +7,11 @@ interface DisplaySettingsProps {
   hideWatchNotifications: boolean
   useDropCap: boolean
   hideRatings: boolean
+  fontSizeLevel: number
   onSetHideWatchNotifications: (value: boolean) => void
   onSetUseDropCap: (value: boolean) => void
   onSetHideRatings: (value: boolean) => void
+  onSetFontSizeLevel: (value: number) => void
   disableRemote?: boolean
 }
 
@@ -16,9 +19,11 @@ export default function DisplaySettings({
   hideWatchNotifications,
   useDropCap,
   hideRatings,
+  fontSizeLevel,
   onSetHideWatchNotifications,
   onSetUseDropCap,
   onSetHideRatings,
+  onSetFontSizeLevel,
   disableRemote,
 }: DisplaySettingsProps) {
   return (
@@ -49,7 +54,7 @@ export default function DisplaySettings({
       </View>
 
       {/* Hide ratings */}
-      <View style={styles.row}>
+      <View style={[styles.row, styles.rowBorder]}>
         <View style={styles.labelContainer}>
           <Text style={styles.label}>Hide Ratings</Text>
           <Text style={styles.description}>Hide star ratings on review cards</Text>
@@ -58,6 +63,26 @@ export default function DisplaySettings({
           value={hideRatings}
           onValueChange={onSetHideRatings}
         />
+      </View>
+
+      {/* Font size */}
+      <View style={styles.sliderRow}>
+        <Text style={styles.label}>Font Size</Text>
+        <View style={styles.sliderContainer}>
+          <Text style={styles.sliderIcon}>A</Text>
+          <Slider
+            style={styles.slider}
+            minimumValue={1}
+            maximumValue={10}
+            step={1}
+            value={fontSizeLevel}
+            onSlidingComplete={onSetFontSizeLevel}
+            minimumTrackTintColor={colors.secondaryText}
+            maximumTrackTintColor={colors.border}
+            thumbTintColor={colors.foreground}
+          />
+          <Text style={styles.sliderIconLarge}>A</Text>
+        </View>
       </View>
     </View>
   )
@@ -95,5 +120,28 @@ const styles = StyleSheet.create({
     fontSize: typography.caption.fontSize,
     color: colors.secondaryText,
     marginTop: 2,
+  },
+  sliderRow: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  sliderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  slider: {
+    flex: 1,
+    marginHorizontal: 8,
+  },
+  sliderIcon: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.secondaryText,
+  },
+  sliderIconLarge: {
+    fontFamily: fonts.body,
+    fontSize: 22,
+    color: colors.secondaryText,
   },
 })

@@ -18,6 +18,7 @@ export default function SettingsScreen() {
     setHideWatchNotifications,
     setUseDropCap,
     setHideRatings,
+    setFontSizeLevel,
   } = useDisplayPreferences()
 
   const handleSignOut = async () => {
@@ -58,9 +59,11 @@ export default function SettingsScreen() {
             hideWatchNotifications={preferences.hideWatchNotifications}
             useDropCap={preferences.useDropCap}
             hideRatings={preferences.hideRatings}
+            fontSizeLevel={preferences.fontSizeLevel}
             onSetHideWatchNotifications={setHideWatchNotifications}
             onSetUseDropCap={setUseDropCap}
             onSetHideRatings={setHideRatings}
+            onSetFontSizeLevel={setFontSizeLevel}
             disableRemote={!isAuthenticated}
           />
         </View>

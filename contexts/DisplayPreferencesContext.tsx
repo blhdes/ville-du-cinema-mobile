@@ -4,11 +4,13 @@ import { useProfile } from '@/hooks/useProfile'
 
 const STORAGE_KEY_DROP_CAP = 'display_use_drop_cap'
 const STORAGE_KEY_HIDE_RATINGS = 'display_hide_ratings'
+const STORAGE_KEY_FONT_SIZE_LEVEL = 'display_font_size_level'
 
 interface DisplayPrefs {
   hideWatchNotifications: boolean
   useDropCap: boolean
   hideRatings: boolean
+  fontSizeLevel: number
 }
 
 interface DisplayPreferencesContextValue {
@@ -18,12 +20,14 @@ interface DisplayPreferencesContextValue {
   setHideWatchNotifications: (value: boolean) => void
   setUseDropCap: (value: boolean) => void
   setHideRatings: (value: boolean) => void
+  setFontSizeLevel: (value: number) => void
 }
 
 const DEFAULTS: DisplayPrefs = {
   hideWatchNotifications: false,
   useDropCap: false,
   hideRatings: false,
+  fontSizeLevel: 4,
 }
 
 const DisplayPreferencesContext = createContext<DisplayPreferencesContextValue>({
@@ -33,6 +37,7 @@ const DisplayPreferencesContext = createContext<DisplayPreferencesContextValue>(
   setHideWatchNotifications: () => {},
   setUseDropCap: () => {},
   setHideRatings: () => {},
+  setFontSizeLevel: () => {},
 })
 
 export function DisplayPreferencesProvider({ children }: { children: ReactNode }) {
@@ -47,11 +52,13 @@ export function DisplayPreferencesProvider({ children }: { children: ReactNode }
     Promise.all([
       storage.getItem<boolean>(STORAGE_KEY_DROP_CAP),
       storage.getItem<boolean>(STORAGE_KEY_HIDE_RATINGS),
-    ]).then(([dropCap, hideRatings]) => {
+      storage.getItem<number>(STORAGE_KEY_FONT_SIZE_LEVEL),
+    ]).then(([dropCap, hideRatings, fontSizeLevel]) => {
       setPrefs((prev) => ({
         ...prev,
         useDropCap: dropCap === true,
         hideRatings: hideRatings === true,
+        fontSizeLevel: typeof fontSizeLevel === 'number' ? fontSizeLevel : 4,
       }))
       setLocalLoaded(true)
     })
@@ -99,6 +106,12 @@ export function DisplayPreferencesProvider({ children }: { children: ReactNode }
     storage.setItem(STORAGE_KEY_HIDE_RATINGS, value)
   }, [])
 
+  const setFontSizeLevel = useCallback((value: number) => {
+    const clamped = Math.min(10, Math.max(1, Math.round(value)))
+    setPrefs((prev) => ({ ...prev, fontSizeLevel: clamped }))
+    storage.setItem(STORAGE_KEY_FONT_SIZE_LEVEL, clamped)
+  }, [])
+
   return (
     <DisplayPreferencesContext.Provider
       value={{
@@ -108,6 +121,7 @@ export function DisplayPreferencesProvider({ children }: { children: ReactNode }
         setHideWatchNotifications,
         setUseDropCap,
         setHideRatings,
+        setFontSizeLevel,
       }}
     >
       {children}
