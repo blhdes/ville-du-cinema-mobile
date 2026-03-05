@@ -7,6 +7,7 @@ import {
   TextInput,
   View,
 } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { DISCOVERY_USERS } from '@/constants/discoveryUsers'
 import { colors, fonts, spacing, typography } from '@/theme'
 import type { FollowedUser } from '@/types/database'
@@ -24,6 +25,9 @@ export default function UserListPanel({
   onAdd,
   onRemove,
 }: UserListPanelProps) {
+  const insets = useSafeAreaInsets()
+  const bottomPadding = insets.bottom + 49 + 20
+
   const [input, setInput] = useState('')
   const [addError, setAddError] = useState<string | null>(null)
   const [isAdding, setIsAdding] = useState(false)
@@ -48,7 +52,7 @@ export default function UserListPanel({
     .slice(0, 3)
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}>
       {/* Add input */}
       <View style={styles.inputRow}>
         <TextInput

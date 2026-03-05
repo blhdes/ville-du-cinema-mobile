@@ -1,4 +1,4 @@
-import { Image, StyleSheet } from 'react-native'
+import { Image, StyleSheet, View } from 'react-native'
 import { createBottomTabNavigator, type BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { BottomTabBar } from '@react-navigation/bottom-tabs'
 import { Ionicons } from '@expo/vector-icons'
@@ -20,13 +20,12 @@ function ProfileTabIcon({ color, focused }: { color: string; focused: boolean })
 
   if (profile?.avatar_url) {
     return (
-      <Image
-        source={{ uri: profile.avatar_url }}
-        style={[
-          styles.avatar,
-          focused && styles.avatarFocused,
-        ]}
-      />
+      <View style={[styles.avatarWrapper, focused && styles.avatarWrapperFocused]}>
+        <Image
+          source={{ uri: profile.avatar_url }}
+          style={styles.avatar}
+        />
+      </View>
     )
   }
 
@@ -107,14 +106,19 @@ export default function AppTabs() {
 }
 
 const styles = StyleSheet.create({
+  avatarWrapper: {
+    borderRadius: (AVATAR_SIZE + 4) / 2,
+    padding: 2,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  avatarWrapperFocused: {
+    borderColor: colors.foreground,
+  },
   avatar: {
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
     borderRadius: AVATAR_SIZE / 2,
-  },
-  avatarFocused: {
-    borderWidth: 1,
-    borderColor: colors.foreground,
   },
   tabBarWrapper: {
     position: 'absolute',

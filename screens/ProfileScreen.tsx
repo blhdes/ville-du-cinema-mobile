@@ -44,15 +44,17 @@ export default function ProfileScreen() {
     )
   }
 
+  const headerTitle = profile?.username ? `@${profile.username}` : 'Profile'
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
+        <Text style={styles.headerTitle}>{headerTitle}</Text>
       </View>
 
       {error && <ErrorBanner message={error} />}
 
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + 20 }]}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + insets.bottom + 20 }]}>
         {profile && <ProfileHeader profile={profile} />}
 
         {/* Name & info */}

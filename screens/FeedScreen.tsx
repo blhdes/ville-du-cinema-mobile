@@ -209,7 +209,7 @@ export default function FeedScreen() {
   const error = listError || feedError
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
       {error && (
         <ErrorBanner message={error} onDismiss={clearError} />
       )}
@@ -249,7 +249,7 @@ export default function FeedScreen() {
       {/* Header floats above content so it can slide out of view */}
       <Animated.View
         onLayout={onHeaderLayout}
-        style={[styles.header, headerAnimatedStyle]}
+        style={[styles.header, { paddingTop: insets.top + 12 }, headerAnimatedStyle]}
       >
         <Pressable
           onPress={openDrawer}
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
-    paddingVertical: 12,
+    paddingBottom: 12,
     backgroundColor: colors.background,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
