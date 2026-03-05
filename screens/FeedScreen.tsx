@@ -27,6 +27,7 @@ import ErrorBanner from '@/components/ui/ErrorBanner'
 import ReviewCard from '@/components/ReviewCard'
 import WatchNotification from '@/components/WatchNotification'
 import QuoteOfTheDay from '@/components/QuoteOfTheDay'
+import LogoIcon from '@/components/ui/LogoIcon'
 
 // Deadzone: header only starts hiding after this many px of continuous downward scroll.
 // Scrolling up has 0px threshold — the header reveals immediately.
@@ -269,7 +270,7 @@ export default function FeedScreen() {
             </View>
           )}
         </Pressable>
-        <Text style={styles.headerTitle}>Feed</Text>
+        <LogoIcon size={32} fill={colors.foreground} />
         <View style={styles.headerSpacer} />
       </Animated.View>
     </View>
@@ -319,11 +320,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyBold,
     fontSize: 12,
     color: colors.secondaryText,
-  },
-  headerTitle: {
-    fontFamily: fonts.heading,
-    fontSize: typography.title3.fontSize,
-    color: colors.foreground,
   },
   headerSpacer: {
     width: 60,
