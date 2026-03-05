@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import Slider from '@react-native-community/slider'
 import Toggle from '@/components/ui/Toggle'
@@ -26,6 +27,8 @@ export default function DisplaySettings({
   onSetFontSizeLevel,
   disableRemote,
 }: DisplaySettingsProps) {
+  const [localFontSize, setLocalFontSize] = useState(fontSizeLevel)
+
   return (
     <View style={styles.card}>
       {/* Hide watch notifications */}
@@ -74,8 +77,8 @@ export default function DisplaySettings({
             style={styles.slider}
             minimumValue={1}
             maximumValue={10}
-            step={1}
-            value={fontSizeLevel}
+            value={localFontSize}
+            onValueChange={setLocalFontSize}
             onSlidingComplete={onSetFontSizeLevel}
             minimumTrackTintColor={colors.secondaryText}
             maximumTrackTintColor={colors.border}
