@@ -24,7 +24,7 @@ export default function Logo({ size = 80, className = '' }: LogoProps) {
             <rect x="37" y="37" width="108" height="108" fill="white" stroke="black" strokeWidth="5"/>
 
             {/* V */}
-            <text x="91" y="120" fontFamily="serif" fontSize="72" fontWeight="900" textAnchor="middle" fill="black">V</text>
+            <text x="91" y="120" fontFamily="PlayfairDisplay_700Bold" fontSize="72" fontWeight="900" textAnchor="middle" fill="black">V</text>
         </svg>
     );
 }

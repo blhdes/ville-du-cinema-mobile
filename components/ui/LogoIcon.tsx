@@ -20,7 +20,7 @@ export default function LogoIcon({ size = 24, fill = '#1C1C1E' }: LogoIconProps)
       <SvgText
         x="91"
         y="120"
-        fontFamily="serif"
+        fontFamily="PlayfairDisplay_700Bold"
         fontSize="72"
         fontWeight="900"
         textAnchor="middle"

@@ -8,7 +8,7 @@ import type { AppTabsParamList } from '@/navigation/types'
 import FeedDrawerNavigator from '@/navigation/FeedDrawerNavigator'
 import ProfileScreen from '@/screens/ProfileScreen'
 import SettingsScreen from '@/screens/SettingsScreen'
-import LogoIcon from '@/components/ui/LogoIcon'
+import FeedTabIcon from '@/components/ui/FeedTabIcon'
 import { useProfile } from '@/hooks/useProfile'
 import { TabBarProvider, useTabBar } from '@/contexts/TabBarContext'
 import { colors } from '@/theme'
@@ -63,6 +63,7 @@ function AppTabsInner() {
           borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: colors.border,
           height: 49,
+          paddingTop: 4,
           elevation: 0,
           shadowOpacity: 0,
         },
@@ -73,7 +74,7 @@ function AppTabsInner() {
         component={FeedDrawerNavigator}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <LogoIcon fill={color} size={size} />
+            <FeedTabIcon fill={color} size={size} />
           ),
         }}
       />

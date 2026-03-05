@@ -270,7 +270,7 @@ export default function FeedScreen() {
             </View>
           )}
         </Pressable>
-        <LogoIcon size={32} fill={colors.foreground} />
+        <LogoIcon size={40} fill={colors.foreground} />
         <View style={styles.headerSpacer} />
       </Animated.View>
     </View>
