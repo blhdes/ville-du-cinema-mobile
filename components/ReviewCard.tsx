@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import * as WebBrowser from 'expo-web-browser'
 import RenderHtml from 'react-native-render-html'
 import type { Review } from '@/types/database'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
@@ -129,9 +130,17 @@ export default function ReviewCard({ review }: ReviewCardProps) {
     <View style={styles.card}>
       {/* Title row */}
       <View style={styles.header}>
-        <Text style={[styles.movieTitle, { fontSize: scaled.title.fontSize, lineHeight: scaled.title.lineHeight }]} numberOfLines={2}>
-          {review.movieTitle}
-        </Text>
+        <Pressable
+          onPress={() => {
+            const query = encodeURIComponent(`${review.movieTitle} film`)
+            WebBrowser.openBrowserAsync(`https://www.google.com/search?q=${query}`)
+          }}
+          style={({ pressed }) => [styles.titlePressable, pressed && styles.titlePressed]}
+        >
+          <Text style={[styles.movieTitle, { fontSize: scaled.title.fontSize, lineHeight: scaled.title.lineHeight }]} numberOfLines={2}>
+            {review.movieTitle}
+          </Text>
+        </Pressable>
         {review.rating && !preferences.hideRatings ? (
           <Text style={[styles.rating, { fontSize: scaled.body.fontSize, lineHeight: scaled.title.lineHeight }]}>{review.rating}</Text>
         ) : null}
@@ -188,13 +197,18 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: spacing.xs,
   },
+  titlePressable: {
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  titlePressed: {
+    opacity: 0.6,
+  },
   movieTitle: {
     fontFamily: fonts.heading,
     fontSize: typography.title3.fontSize,
     lineHeight: typography.title3.lineHeight,
     color: colors.foreground,
-    flex: 1,
-    marginRight: spacing.sm,
   },
   rating: {
     fontSize: typography.body.fontSize,

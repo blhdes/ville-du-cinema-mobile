@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
+import * as WebBrowser from 'expo-web-browser'
 import type { Review } from '@/types/database'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { colors, fonts, spacing, typography } from '@/theme'
@@ -9,6 +11,7 @@ interface WatchNotificationProps {
 
 export default function WatchNotification({ review }: WatchNotificationProps) {
   const { preferences } = useDisplayPreferences()
+  const [titlePressed, setTitlePressed] = useState(false)
 
   return (
     <Pressable
@@ -20,7 +23,18 @@ export default function WatchNotification({ review }: WatchNotificationProps) {
         <Text style={styles.text} numberOfLines={1}>
           <Text style={styles.username}>{review.creator}</Text>
           {' watched '}
-          <Text style={styles.movie}>{review.movieTitle}</Text>
+          <Text
+            style={[styles.movie, titlePressed && styles.moviePressed]}
+            onPressIn={() => setTitlePressed(true)}
+            onPressOut={() => setTitlePressed(false)}
+            onPress={() => {
+              const query = encodeURIComponent(`${review.movieTitle} film`)
+              WebBrowser.openBrowserAsync(`https://www.google.com/search?q=${query}`)
+            }}
+            suppressHighlighting
+          >
+            {review.movieTitle}
+          </Text>
         </Text>
         {review.rating && !preferences.hideRatings ? (
           <Text style={styles.rating}>{review.rating}</Text>
@@ -68,6 +82,9 @@ const styles = StyleSheet.create({
   },
   movie: {
     fontFamily: fonts.bodyItalic,
+  },
+  moviePressed: {
+    opacity: 0.6,
   },
   rating: {
     fontSize: typography.callout.fontSize,
