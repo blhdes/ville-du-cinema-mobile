@@ -107,10 +107,10 @@ export default function AppTabs() {
 
 const styles = StyleSheet.create({
   avatarWrapper: {
-    borderRadius: (AVATAR_SIZE + 4) / 2,
-    padding: 2,
+    borderRadius: AVATAR_SIZE / 2,
     borderWidth: 1,
     borderColor: 'transparent',
+    overflow: 'hidden',
   },
   avatarWrapperFocused: {
     borderColor: colors.foreground,

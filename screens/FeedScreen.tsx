@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native'
 import Animated, {
+  interpolate,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
@@ -51,6 +52,11 @@ export default function FeedScreen() {
 
   const headerAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: headerTranslateY.value }],
+    opacity: interpolate(
+      headerTranslateY.value,
+      [-headerHeight, 0],
+      [0, 1],
+    ),
   }))
 
   const scrollHandler = useAnimatedScrollHandler({
