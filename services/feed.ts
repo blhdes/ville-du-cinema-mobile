@@ -43,6 +43,24 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '').trim()
 }
 
+/**
+ * Fetch the display name for a Letterboxd user from their RSS feed.
+ * Returns undefined if the feed can't be reached or has no creator tag.
+ */
+export async function fetchDisplayName(username: string): Promise<string | undefined> {
+  try {
+    const response = await fetch(`https://letterboxd.com/${username}/rss/`)
+    if (!response.ok) return undefined
+    const xml = await response.text()
+    const parsed = parser.parse(xml)
+    const items = parsed?.rss?.channel?.item
+    const first = Array.isArray(items) ? items[0] : items
+    return first?.['dc:creator'] || undefined
+  } catch {
+    return undefined
+  }
+}
+
 async function fetchUserFeed(username: string): Promise<Review[]> {
   try {
     const response = await fetch(`https://letterboxd.com/${username}/rss/`)

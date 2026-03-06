@@ -5,7 +5,7 @@ import { StyleSheet, Platform } from 'react-native'
 // ---------------------------------------------------------------------------
 export const colors = {
   // ---- Semantic tokens (primary API) ----
-  background: '#FFFFFF',
+  background: '#FCFAF8',
   backgroundSecondary: '#F2F2F7',
   foreground: '#1C1C1E',
   secondaryText: '#8E8E93',
@@ -14,17 +14,18 @@ export const colors = {
   blue: '#2E86AB',
   white: '#FFFFFF',
 
+  // ---- Brand accent palette (logo-derived) ----
+  teal: '#2E86AB',
+  red: '#D7263D',
+  yellow: '#F2C14E',
+
   // ---- Legacy aliases (keep consumers compiling) ----
   /** @deprecated use `background` */
-  cream: '#FFFFFF',
+  cream: '#FCFAF8',
   /** @deprecated use `foreground` */
   black: '#1C1C1E',
   /** @deprecated use `secondaryText` */
   sepia: '#8E8E93',
-  /** @deprecated use `accent` */
-  yellow: '#FFD600',
-  /** @deprecated use `accent` */
-  red: '#FF2D55',
   /** @deprecated use `secondaryText` */
   sepiaLight: '#C6C6C8',
   /** @deprecated use `backgroundSecondary` */
@@ -59,6 +60,11 @@ export const typography = {
   body: { fontSize: 16, lineHeight: 24 },
   callout: { fontSize: 15, lineHeight: 21 },
   caption: { fontSize: 13, lineHeight: 18 },
+
+  // ---- Editorial / magazine presets ----
+  magazineTitle: { fontSize: 28, lineHeight: 34 },
+  magazineMeta: { fontSize: 11, lineHeight: 16, letterSpacing: 1.5, textTransform: 'uppercase' as const },
+  magazineBody: { fontSize: 16, lineHeight: 24 },
 } as const
 
 /**

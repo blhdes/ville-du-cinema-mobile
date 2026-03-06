@@ -11,6 +11,7 @@ interface ReviewCardProps {
 }
 
 const MAX_PREVIEW_LENGTH = 280
+const HORIZONTAL_PAD = 20
 
 /** Rough plain-text length of an HTML string (strip tags). */
 function htmlTextLength(html: string): number {
@@ -27,12 +28,10 @@ function truncateHtml(html: string, max: number): string {
     if (html[i] === '>') { inTag = false; continue }
     if (!inTag) visible++
   }
-  // Find the end of any partially-opened tag
   if (inTag) {
     const close = html.indexOf('>', i)
     if (close !== -1) i = close + 1
   }
-  // Close any open tags naively (good enough for simple inline HTML)
   const openTags = (html.slice(0, i).match(/<([a-z]+)\b[^>]*>/gi) || [])
     .map(t => t.match(/<([a-z]+)/i)?.[1] || '')
     .filter(Boolean)
@@ -56,7 +55,7 @@ export default function ReviewCard({ review }: ReviewCardProps) {
   const [expanded, setExpanded] = useState(false)
   const { preferences } = useDisplayPreferences()
   const { width } = useWindowDimensions()
-  const contentWidth = width - spacing.md * 4 // outer margin + inner padding
+  const contentWidth = width - HORIZONTAL_PAD * 2
   const scaled = useMemo(() => getScaledTypography(preferences.fontSizeLevel), [preferences.fontSizeLevel])
 
   const textLength = useMemo(() => htmlTextLength(review.review), [review.review])
@@ -72,7 +71,7 @@ export default function ReviewCard({ review }: ReviewCardProps) {
         month: 'short',
         day: 'numeric',
         year: 'numeric',
-      })
+      }).toUpperCase()
     : ''
 
   const tagsStyles = useMemo(() => ({
@@ -84,10 +83,10 @@ export default function ReviewCard({ review }: ReviewCardProps) {
     },
     p: {
       marginTop: 0,
-      marginBottom: spacing.xs,
+      marginBottom: spacing.sm,
     },
     a: {
-      color: colors.blue,
+      color: colors.teal,
       textDecorationLine: 'none' as const,
     },
     i: { fontFamily: fonts.bodyItalic },
@@ -98,20 +97,20 @@ export default function ReviewCard({ review }: ReviewCardProps) {
 
   const classesStyles = useMemo(() => {
     if (!preferences.useDropCap) return undefined
-    const dropCapSize = scaled.title.fontSize * 2.2
+    const dropCapSize = scaled.title.fontSize * 3
     return {
       'drop-cap': {
         fontFamily: fonts.heading,
         fontSize: dropCapSize,
         lineHeight: dropCapSize,
         color: colors.foreground,
+        textShadowColor: colors.teal,
+        textShadowOffset: { width: 1.5, height: 1.5 },
+        textShadowRadius: 0,
       },
     }
   }, [preferences.useDropCap, scaled])
 
-  // Wrap the first visible letter in a drop-cap span.
-  // The regex skips over any leading HTML tags (e.g. <p>, <b>, <i>, <em>, <strong>)
-  // to find the first real alphanumeric character outside of a tag.
   const processedHtml = useMemo(() => {
     if (!preferences.useDropCap || !displayHtml) return displayHtml
     return displayHtml.replace(
@@ -127,33 +126,30 @@ export default function ReviewCard({ review }: ReviewCardProps) {
   }), [])
 
   return (
-    <View style={styles.card}>
-      {/* Title row */}
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => {
-            const query = encodeURIComponent(`${review.movieTitle} film`)
-            WebBrowser.openBrowserAsync(`https://www.google.com/search?q=${query}`)
-          }}
-          style={({ pressed }) => [styles.titlePressable, pressed && styles.titlePressed]}
-        >
-          <Text style={[styles.movieTitle, { fontSize: scaled.title.fontSize, lineHeight: scaled.title.lineHeight }]} numberOfLines={2}>
-            {review.movieTitle}
-          </Text>
-        </Pressable>
+    <View style={styles.article}>
+      {/* Title */}
+      <Pressable
+        onPress={() => {
+          const query = encodeURIComponent(`${review.movieTitle} film`)
+          WebBrowser.openBrowserAsync(`https://www.google.com/search?q=${query}`)
+        }}
+        style={({ pressed }) => pressed && styles.titlePressed}
+      >
+        <Text style={styles.movieTitle} numberOfLines={3}>
+          {review.movieTitle}
+        </Text>
+      </Pressable>
+
+      {/* Meta: BY AUTHOR · DATE · ★★★★ */}
+      <Text style={styles.meta}>
+        BY {review.creator.toUpperCase()}
+        {dateStr ? ` \u00B7 ${dateStr}` : ''}
         {review.rating && !preferences.hideRatings ? (
-          <Text style={[styles.rating, { fontSize: scaled.body.fontSize, lineHeight: scaled.title.lineHeight }]}>{review.rating}</Text>
+          <Text style={styles.rating}> \u00B7 {review.rating}</Text>
         ) : null}
-      </View>
+      </Text>
 
-      {/* Author & date */}
-      <View style={styles.meta}>
-        <Text style={[styles.creator, { fontSize: scaled.caption.fontSize, lineHeight: scaled.caption.lineHeight }]}>{review.creator}</Text>
-        <Text style={[styles.dot, { fontSize: scaled.caption.fontSize }]}>{'\u00B7'}</Text>
-        <Text style={[styles.date, { fontSize: scaled.caption.fontSize, lineHeight: scaled.caption.lineHeight }]}>{dateStr}</Text>
-      </View>
-
-      {/* Review body (rich HTML) */}
+      {/* Review body */}
       {review.review ? (
         <Pressable onPress={() => isLong && setExpanded(!expanded)} disabled={!isLong}>
           <RenderHtml
@@ -177,81 +173,70 @@ export default function ReviewCard({ review }: ReviewCardProps) {
         onPress={() => Linking.openURL(review.link)}
         style={styles.linkButton}
       >
-        <Text style={[styles.linkText, { fontSize: scaled.caption.fontSize, lineHeight: scaled.caption.lineHeight }]}>View on Letterboxd</Text>
+        {({ pressed }) => (
+          <Text style={[styles.linkText, pressed && styles.linkPressed]}>
+            VIEW ON LETTERBOXD
+          </Text>
+        )}
       </Pressable>
+
+      {/* Hairline separator */}
+      <View style={styles.divider} />
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  card: {
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.md,
-    padding: spacing.md,
-    backgroundColor: colors.backgroundSecondary,
-    borderRadius: 12,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.xs,
-  },
-  titlePressable: {
-    flex: 1,
-    marginRight: spacing.sm,
+  article: {
+    paddingHorizontal: HORIZONTAL_PAD,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xs,
   },
   titlePressed: {
     opacity: 0.6,
   },
   movieTitle: {
     fontFamily: fonts.heading,
-    fontSize: typography.title3.fontSize,
-    lineHeight: typography.title3.lineHeight,
+    fontSize: typography.magazineTitle.fontSize,
+    lineHeight: typography.magazineTitle.lineHeight,
     color: colors.foreground,
-  },
-  rating: {
-    fontSize: typography.body.fontSize,
-    lineHeight: typography.title3.lineHeight,
-    color: colors.accent,
+    marginBottom: spacing.md,
   },
   meta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  creator: {
-    fontFamily: fonts.bodyBold,
-    fontSize: typography.caption.fontSize,
-    lineHeight: typography.caption.lineHeight,
-    color: colors.secondaryText,
-  },
-  dot: {
-    fontSize: typography.caption.fontSize,
-    color: colors.secondaryText,
-    marginHorizontal: spacing.xs,
-  },
-  date: {
     fontFamily: fonts.body,
-    fontSize: typography.caption.fontSize,
-    lineHeight: typography.caption.lineHeight,
+    fontSize: typography.magazineMeta.fontSize,
+    lineHeight: typography.magazineMeta.lineHeight,
+    letterSpacing: typography.magazineMeta.letterSpacing,
     color: colors.secondaryText,
+    marginBottom: spacing.lg,
+  },
+  rating: {
+    color: colors.yellow,
   },
   expandToggle: {
     fontFamily: fonts.bodyBold,
     fontSize: typography.caption.fontSize,
-    color: colors.blue,
-    marginTop: spacing.xs,
+    color: colors.teal,
+    marginTop: spacing.sm,
   },
   linkButton: {
-    marginTop: spacing.sm,
+    marginTop: spacing.lg,
     paddingVertical: spacing.xs,
-    alignSelf: 'flex-start',
+    alignSelf: 'flex-end',
   },
   linkText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: typography.caption.fontSize,
-    lineHeight: typography.caption.lineHeight,
+    fontFamily: fonts.body,
+    fontSize: typography.magazineMeta.fontSize,
+    lineHeight: typography.magazineMeta.lineHeight,
+    letterSpacing: typography.magazineMeta.letterSpacing,
     color: colors.secondaryText,
+  },
+  linkPressed: {
+    color: colors.teal,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+    marginTop: spacing.lg,
   },
 })

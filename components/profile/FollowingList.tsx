@@ -1,108 +1,99 @@
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import type { FollowedUser } from '@/types/database'
 import { colors, fonts, spacing, typography } from '@/theme'
+import LetterboxdDots from '@/components/ui/LetterboxdDots'
 
 interface FollowingListProps {
   users: FollowedUser[]
 }
 
+const HORIZONTAL_PAD = 20
+
 export default function FollowingList({ users }: FollowingListProps) {
   return (
-    <View style={styles.section}>
+    <View>
       <Text style={styles.sectionLabel}>
-        Following ({users.length})
+        FOLLOWING ({users.length})
       </Text>
 
       {users.length === 0 ? (
-        <View style={styles.card}>
-          <Text style={styles.emptyText}>No users followed yet</Text>
-        </View>
+        <Text style={styles.emptyText}>No users followed yet</Text>
       ) : (
-        <View style={styles.card}>
-          {users.map((user, index) => (
-            <Pressable
-              key={user.username}
-              style={({ pressed }) => [
-                styles.row,
-                index < users.length - 1 && styles.rowBorder,
-                pressed && styles.rowPressed,
-              ]}
-              onPress={() =>
-                Linking.openURL(`https://letterboxd.com/${user.username}/`)
-              }
-            >
-              <View style={styles.rowContent}>
-                <Text style={styles.username}>
-                  {user.display_name || user.username}
-                </Text>
-                <Text style={styles.handle}>@{user.username}</Text>
-              </View>
-              <Text style={styles.chevron}>{'\u203A'}</Text>
-            </Pressable>
-          ))}
-        </View>
+        users.map((user, index) => (
+          <Pressable
+            key={user.username}
+            style={({ pressed }) => [
+              styles.row,
+              index < users.length - 1 && styles.rowBorder,
+              pressed && styles.rowPressed,
+            ]}
+            onPress={() =>
+              Linking.openURL(`https://letterboxd.com/${user.username}/`)
+            }
+          >
+            <View style={styles.rowContent}>
+              <Text style={styles.displayName}>
+                {user.display_name || user.username}
+              </Text>
+              <Text style={styles.handle}>@{user.username.toUpperCase()}</Text>
+            </View>
+            <LetterboxdDots size={20} />
+          </Pressable>
+        ))
       )}
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  section: {
-    paddingHorizontal: spacing.md,
-  },
   sectionLabel: {
-    fontFamily: fonts.bodyBold,
-    fontSize: typography.caption.fontSize,
-    lineHeight: typography.caption.lineHeight,
+    fontFamily: fonts.body,
+    fontSize: typography.magazineMeta.fontSize,
+    lineHeight: typography.magazineMeta.lineHeight,
+    letterSpacing: typography.magazineMeta.letterSpacing,
     color: colors.secondaryText,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: spacing.sm,
-  },
-  card: {
-    backgroundColor: colors.background,
-    borderRadius: 10,
-    overflow: 'hidden',
+    paddingHorizontal: HORIZONTAL_PAD,
+    marginBottom: spacing.md,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: spacing.md,
+    paddingHorizontal: HORIZONTAL_PAD,
   },
   rowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
   rowPressed: {
-    backgroundColor: colors.backgroundSecondary,
+    opacity: 0.6,
   },
   rowContent: {
     flex: 1,
     marginRight: spacing.sm,
   },
-  username: {
-    fontFamily: fonts.body,
+  displayName: {
+    fontFamily: fonts.bodyBold,
     fontSize: typography.body.fontSize,
+    lineHeight: typography.body.lineHeight,
     color: colors.foreground,
   },
   handle: {
     fontFamily: fonts.body,
-    fontSize: typography.caption.fontSize,
+    fontSize: typography.magazineMeta.fontSize,
+    lineHeight: typography.magazineMeta.lineHeight,
+    letterSpacing: typography.magazineMeta.letterSpacing,
     color: colors.secondaryText,
     marginTop: 2,
   },
-  chevron: {
-    fontSize: 22,
-    color: colors.secondaryText,
-    fontWeight: '300',
-  },
   emptyText: {
-    fontFamily: fonts.body,
-    fontSize: typography.body.fontSize,
+    fontFamily: fonts.bodyItalic,
+    fontSize: typography.magazineBody.fontSize,
+    lineHeight: typography.magazineBody.lineHeight,
     color: colors.secondaryText,
     textAlign: 'center',
     paddingVertical: spacing.lg,
+    paddingHorizontal: HORIZONTAL_PAD,
   },
 })

@@ -18,28 +18,26 @@ export default function WatchNotification({ review }: WatchNotificationProps) {
       style={({ pressed }) => [styles.container, pressed && styles.pressed]}
       onPress={() => Linking.openURL(review.link)}
     >
-      <View style={styles.indicator} />
-      <View style={styles.content}>
-        <Text style={styles.text} numberOfLines={1}>
-          <Text style={styles.username}>{review.creator}</Text>
-          {' watched '}
-          <Text
-            style={[styles.movie, titlePressed && styles.moviePressed]}
-            onPressIn={() => setTitlePressed(true)}
-            onPressOut={() => setTitlePressed(false)}
-            onPress={() => {
-              const query = encodeURIComponent(`${review.movieTitle} film`)
-              WebBrowser.openBrowserAsync(`https://www.google.com/search?q=${query}`)
-            }}
-            suppressHighlighting
-          >
-            {review.movieTitle}
-          </Text>
+      <View style={styles.dot} />
+      <Text style={styles.text} numberOfLines={1}>
+        <Text style={styles.author}>{review.creator}</Text>
+        {' watched '}
+        <Text
+          style={[styles.movie, titlePressed && styles.moviePressed]}
+          onPressIn={() => setTitlePressed(true)}
+          onPressOut={() => setTitlePressed(false)}
+          onPress={() => {
+            const query = encodeURIComponent(`${review.movieTitle} film`)
+            WebBrowser.openBrowserAsync(`https://www.google.com/search?q=${query}`)
+          }}
+          suppressHighlighting
+        >
+          {review.movieTitle}
         </Text>
-        {review.rating && !preferences.hideRatings ? (
-          <Text style={styles.rating}>{review.rating}</Text>
-        ) : null}
-      </View>
+      </Text>
+      {review.rating && !preferences.hideRatings ? (
+        <Text style={styles.rating}>{review.rating}</Text>
+      ) : null}
     </Pressable>
   )
 }
@@ -49,45 +47,43 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
   pressed: {
-    backgroundColor: colors.backgroundSecondary,
+    opacity: 0.6,
   },
-  indicator: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.secondaryText,
+  dot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: colors.teal,
     marginRight: spacing.sm,
-  },
-  content: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
   },
   text: {
-    fontFamily: fonts.body,
-    fontSize: typography.callout.fontSize,
-    lineHeight: typography.callout.lineHeight,
-    color: colors.foreground,
     flex: 1,
+    fontFamily: fonts.body,
+    fontSize: typography.magazineMeta.fontSize,
+    lineHeight: typography.magazineMeta.lineHeight,
+    letterSpacing: typography.magazineMeta.letterSpacing,
+    textTransform: 'uppercase',
+    color: colors.secondaryText,
     marginRight: spacing.sm,
   },
-  username: {
+  author: {
     fontFamily: fonts.bodyBold,
   },
   movie: {
     fontFamily: fonts.bodyItalic,
+    textTransform: 'none',
   },
   moviePressed: {
     opacity: 0.6,
   },
   rating: {
-    fontSize: typography.callout.fontSize,
-    color: colors.accent,
+    fontSize: typography.magazineMeta.fontSize,
+    letterSpacing: typography.magazineMeta.letterSpacing,
+    color: colors.yellow,
   },
 })

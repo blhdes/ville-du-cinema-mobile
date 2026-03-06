@@ -8,6 +8,8 @@ import ErrorBanner from '@/components/ui/ErrorBanner'
 import ProfileHeader from '@/components/profile/ProfileHeader'
 import FollowingList from '@/components/profile/FollowingList'
 
+const HORIZONTAL_PAD = 20
+
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets()
   const tabBarHeight = useBottomTabBarHeight()
@@ -44,29 +46,19 @@ export default function ProfileScreen() {
     )
   }
 
-  const headerTitle = profile?.username ? `@${profile.username}` : 'Profile'
-
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>{headerTitle}</Text>
+        <Text style={styles.headerTitle}>Profile</Text>
       </View>
 
       {error && <ErrorBanner message={error} />}
 
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + insets.bottom + 20 }]}>
-        {profile && <ProfileHeader profile={profile} />}
+      <ScrollView contentContainerStyle={{ paddingBottom: tabBarHeight + insets.bottom + 20 }}>
+        {profile && <ProfileHeader profile={profile} email={user.email} />}
 
-        {/* Name & info */}
-        <View style={styles.nameSection}>
-          {profile?.display_name && (
-            <Text style={styles.displayName}>{profile.display_name}</Text>
-          )}
-          {profile?.username && (
-            <Text style={styles.username}>@{profile.username}</Text>
-          )}
-          <Text style={styles.email}>{user.email}</Text>
-        </View>
+        {/* Hairline before following */}
+        <View style={styles.divider} />
 
         {profile && (
           <View style={styles.followingSection}>
@@ -81,70 +73,47 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.background,
   },
   header: {
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: HORIZONTAL_PAD,
     paddingVertical: 12,
-    backgroundColor: colors.background,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    alignItems: 'center',
   },
   headerTitle: {
     fontFamily: fonts.heading,
     fontSize: typography.title3.fontSize,
     color: colors.foreground,
   },
-  content: {},
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  nameSection: {
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.lg,
-  },
-  displayName: {
-    fontFamily: fonts.heading,
-    fontSize: typography.title2.fontSize,
-    lineHeight: typography.title2.lineHeight,
-    color: colors.foreground,
-  },
-  username: {
-    fontFamily: fonts.body,
-    fontSize: typography.body.fontSize,
-    color: colors.secondaryText,
-    marginTop: spacing.xs,
-  },
-  email: {
-    fontFamily: fonts.body,
-    fontSize: typography.caption.fontSize,
-    color: colors.secondaryText,
-    marginTop: spacing.xs,
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+    marginHorizontal: HORIZONTAL_PAD,
   },
   followingSection: {
-    paddingTop: spacing.sm,
+    paddingTop: spacing.xl,
   },
   guestContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: spacing.xl,
+    padding: spacing.xxl,
   },
   guestTitle: {
     fontFamily: fonts.heading,
-    fontSize: typography.title2.fontSize,
-    lineHeight: typography.title2.lineHeight,
+    fontSize: typography.magazineTitle.fontSize,
+    lineHeight: typography.magazineTitle.lineHeight,
     color: colors.foreground,
     marginBottom: spacing.md,
   },
   guestText: {
     fontFamily: fonts.body,
-    fontSize: typography.body.fontSize,
-    lineHeight: typography.body.lineHeight,
+    fontSize: typography.magazineBody.fontSize,
+    lineHeight: typography.magazineBody.lineHeight,
     color: colors.secondaryText,
     textAlign: 'center',
   },

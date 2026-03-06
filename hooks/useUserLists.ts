@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import storage from '@/lib/storage'
 import { supabase } from '@/lib/supabase/client'
+import { fetchDisplayName } from '@/services/feed'
 import { useUser } from './useUser'
 import type { FollowedUser } from '@/types/database'
 
@@ -36,11 +37,13 @@ export function useUserLists(): UseUserListsReturn {
   const [users, setUsers] = useState<FollowedUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const backfillRan = useRef(false)
 
   const isAuthenticated = !!user
 
   useEffect(() => {
     if (isAuthLoading) return
+    backfillRan.current = false
 
     const loadUsers = async () => {
       setIsLoading(true)
@@ -65,7 +68,14 @@ export function useUserLists(): UseUserListsReturn {
 
           setUsers(data?.followed_users || [])
         } else {
-          await loadFromStorage()
+          const savedUsers = await storage.getItem<string[] | FollowedUser[]>(
+            LOCALFORAGE_KEY
+          )
+          if (savedUsers) {
+            setUsers(convertToFollowedUsers(savedUsers))
+          } else {
+            setUsers([])
+          }
         }
       } catch (err) {
         console.error('Error loading users:', err)
@@ -75,19 +85,50 @@ export function useUserLists(): UseUserListsReturn {
       }
     }
 
-    const loadFromStorage = async () => {
-      const savedUsers = await storage.getItem<string[] | FollowedUser[]>(
-        LOCALFORAGE_KEY
+    loadUsers()
+  }, [isAuthenticated, isAuthLoading, user])
+
+  // Backfill display names after users are loaded
+  useEffect(() => {
+    if (isLoading || users.length === 0 || backfillRan.current) return
+
+    const needsBackfill = users.filter((u) => !u.display_name)
+    if (needsBackfill.length === 0) return
+
+    backfillRan.current = true
+
+    const run = async () => {
+      const names = await Promise.all(
+        needsBackfill.map((u) => fetchDisplayName(u.username))
       )
-      if (savedUsers) {
-        setUsers(convertToFollowedUsers(savedUsers))
+
+      const nameMap = new Map<string, string>()
+      needsBackfill.forEach((u, i) => {
+        if (names[i]) nameMap.set(u.username, names[i]!)
+      })
+
+      if (nameMap.size === 0) return
+
+      const updated = users.map((u) =>
+        nameMap.has(u.username) ? { ...u, display_name: nameMap.get(u.username) } : u
+      )
+
+      setUsers(updated)
+
+      // Persist
+      if (isAuthenticated && user) {
+        const { error: dbError } = await supabase
+          .from('user_data')
+          .update({ followed_users: updated })
+          .eq('user_id', user.id)
+        if (dbError) console.error('Failed to persist display names:', dbError.message)
       } else {
-        setUsers([])
+        await storage.setItem(LOCALFORAGE_KEY, updated)
       }
     }
 
-    loadUsers()
-  }, [isAuthenticated, isAuthLoading, user])
+    run()
+  }, [isLoading, users, isAuthenticated, user])
 
   const addUser = useCallback(
     async (
@@ -106,26 +147,25 @@ export function useUserLists(): UseUserListsReturn {
       setError(null)
 
       try {
+        // Validate and fetch display name
+        let displayName: string | undefined
+        try {
+          displayName = await fetchDisplayName(normalizedUsername)
+          if (displayName === undefined) {
+            return { success: false, error: 'Letterboxd user not found' }
+          }
+        } catch {
+          return { success: false, error: 'CONNECTION_ERROR' }
+        }
+
+        const newUser: FollowedUser = {
+          username: normalizedUsername,
+          display_name: displayName,
+          added_at: new Date().toISOString(),
+        }
+        const updatedUsers = [...users, newUser]
+
         if (isAuthenticated && user) {
-          // Validate the Letterboxd user exists by checking their RSS
-          try {
-            const rssCheck = await fetch(
-              `https://letterboxd.com/${normalizedUsername}/rss/`,
-              { method: 'HEAD' }
-            )
-            if (!rssCheck.ok) {
-              return { success: false, error: 'Letterboxd user not found' }
-            }
-          } catch {
-            return { success: false, error: 'CONNECTION_ERROR' }
-          }
-
-          const newUser: FollowedUser = {
-            username: normalizedUsername,
-            added_at: new Date().toISOString(),
-          }
-          const updatedUsers = [...users, newUser]
-
           const { error: dbError } = await supabase
             .from('user_data')
             .upsert(
@@ -134,26 +174,12 @@ export function useUserLists(): UseUserListsReturn {
             )
 
           if (dbError) throw new Error(dbError.message)
-
-          setUsers(updatedUsers)
-          return { success: true }
         } else {
-          // Guest mode — save to AsyncStorage
-          const newUser: FollowedUser = {
-            username: normalizedUsername,
-            added_at: new Date().toISOString(),
-          }
-
-          const updatedUsers = [...users, newUser]
-          setUsers(updatedUsers)
-
-          await storage.setItem(
-            LOCALFORAGE_KEY,
-            updatedUsers.map((u) => u.username)
-          )
-
-          return { success: true }
+          await storage.setItem(LOCALFORAGE_KEY, updatedUsers)
         }
+
+        setUsers(updatedUsers)
+        return { success: true }
       } catch (err) {
         if (err instanceof TypeError && err.message.includes('fetch')) {
           return { success: false, error: 'CONNECTION_ERROR' }
@@ -170,30 +196,22 @@ export function useUserLists(): UseUserListsReturn {
       setError(null)
 
       try {
-        if (isAuthenticated && user) {
-          const updatedUsers = users.filter(
-            (u) => u.username !== normalizedUsername
-          )
+        const updatedUsers = users.filter(
+          (u) => u.username !== normalizedUsername
+        )
 
+        if (isAuthenticated && user) {
           const { error: dbError } = await supabase
             .from('user_data')
             .update({ followed_users: updatedUsers })
             .eq('user_id', user.id)
 
           if (dbError) throw new Error(dbError.message)
-
-          setUsers(updatedUsers)
         } else {
-          const updatedUsers = users.filter(
-            (u) => u.username !== normalizedUsername
-          )
-          setUsers(updatedUsers)
-
-          await storage.setItem(
-            LOCALFORAGE_KEY,
-            updatedUsers.map((u) => u.username)
-          )
+          await storage.setItem(LOCALFORAGE_KEY, updatedUsers)
         }
+
+        setUsers(updatedUsers)
       } catch (err) {
         console.error('Error removing user:', err)
         setError('Failed to remove user')
