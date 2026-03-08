@@ -77,9 +77,9 @@ export function getScaledTypography(level: number) {
   const round = (n: number) => Math.round(n)
 
   return {
-    title: { fontSize: round(18 * scale), lineHeight: round(23 * scale) },
-    body:  { fontSize: round(14 * scale), lineHeight: round(21 * scale) },
-    caption: { fontSize: round(12 * scale), lineHeight: round(17 * scale) },
+    title: { fontSize: round(22 * scale), lineHeight: round(28 * scale) },
+    body:  { fontSize: round(18 * scale), lineHeight: round(26 * scale) },
+    caption: { fontSize: round(14 * scale), lineHeight: round(20 * scale) },
   }
 }
 

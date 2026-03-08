@@ -156,6 +156,8 @@ export interface Review {
   /** Movie title stripped of year + rating suffix */
   movieTitle: string
   type: 'review' | 'watch'
+  /** Letterboxd profile avatar URL extracted from the RSS channel image */
+  avatarUrl?: string
 }
 
 // ---------------------------------------------------------------------------

@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react'
-import { Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import { useState, useMemo, useCallback } from 'react'
+import { Image, Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import * as WebBrowser from 'expo-web-browser'
-import RenderHtml from 'react-native-render-html'
+import RenderHtml, { defaultSystemFonts } from 'react-native-render-html'
 import type { Review } from '@/types/database'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { colors, fonts, spacing, typography, getScaledTypography } from '@/theme'
@@ -12,6 +12,14 @@ interface ReviewCardProps {
 
 const MAX_PREVIEW_LENGTH = 280
 const HORIZONTAL_PAD = 20
+const SYSTEM_FONTS = [
+  ...defaultSystemFonts,
+  fonts.heading,
+  fonts.headingItalic,
+  fonts.body,
+  fonts.bodyBold,
+  fonts.bodyItalic,
+]
 
 /** Rough plain-text length of an HTML string (strip tags). */
 function htmlTextLength(html: string): number {
@@ -53,8 +61,10 @@ function truncateHtml(html: string, max: number): string {
 
 export default function ReviewCard({ review }: ReviewCardProps) {
   const [expanded, setExpanded] = useState(false)
+  const [avatarFailed, setAvatarFailed] = useState(false)
   const { preferences } = useDisplayPreferences()
   const { width } = useWindowDimensions()
+  const handleAvatarError = useCallback(() => setAvatarFailed(true), [])
   const contentWidth = width - HORIZONTAL_PAD * 2
   const scaled = useMemo(() => getScaledTypography(preferences.fontSizeLevel), [preferences.fontSizeLevel])
 
@@ -89,35 +99,45 @@ export default function ReviewCard({ review }: ReviewCardProps) {
       color: colors.teal,
       textDecorationLine: 'none' as const,
     },
-    i: { fontFamily: fonts.bodyItalic },
-    em: { fontFamily: fonts.bodyItalic },
-    b: { fontFamily: fonts.bodyBold },
-    strong: { fontFamily: fonts.bodyBold },
+    i: { fontFamily: fonts.bodyItalic, fontStyle: 'normal' as const },
+    em: { fontFamily: fonts.bodyItalic, fontStyle: 'normal' as const },
+    b: { fontFamily: fonts.bodyBold, fontWeight: 'normal' as const },
+    strong: { fontFamily: fonts.bodyBold, fontWeight: 'normal' as const },
+    blockquote: {
+      borderLeftWidth: 3,
+      borderLeftColor: colors.teal,
+      paddingLeft: spacing.md,
+      marginLeft: 0,
+      marginRight: 0,
+      fontFamily: fonts.bodyItalic,
+      fontStyle: 'normal' as const,
+      opacity: 0.85,
+    },
+    img: {
+      marginTop: spacing.sm,
+      marginBottom: spacing.sm,
+      borderRadius: 6,
+    },
+    iframe: {
+      marginTop: spacing.sm,
+      marginBottom: spacing.sm,
+    },
   }), [scaled])
 
-  const classesStyles = useMemo(() => {
-    if (!preferences.useDropCap) return undefined
-    const dropCapSize = scaled.title.fontSize * 3
-    return {
-      'drop-cap': {
-        fontFamily: fonts.heading,
-        fontSize: dropCapSize,
-        lineHeight: dropCapSize,
-        color: colors.foreground,
-        textShadowColor: colors.teal,
-        textShadowOffset: { width: 1.5, height: 1.5 },
-        textShadowRadius: 0,
-      },
-    }
-  }, [preferences.useDropCap, scaled])
-
-  const processedHtml = useMemo(() => {
-    if (!preferences.useDropCap || !displayHtml) return displayHtml
-    return displayHtml.replace(
-      /^((?:\s*<[^>]+>)*)(\s*)([A-Za-z\u00C0-\u024F])/,
-      '$1$2<span class="drop-cap">$3</span>',
+  /** Extract the first letter for native drop cap rendering. */
+  const dropCapData = useMemo(() => {
+    if (!preferences.useDropCap || !displayHtml) return null
+    const match = displayHtml.match(
+      /^((?:\s*<[^>]+>)*)(\s*)([A-Za-z\u00C0-\u024F])([\s\S]*)$/,
     )
+    if (!match) return null
+    return {
+      firstLetter: match[3],
+      remainingHtml: match[1] + match[4],
+    }
   }, [preferences.useDropCap, displayHtml])
+
+  const dropCapSize = scaled.title.fontSize * 3
 
   const renderersProps = useMemo(() => ({
     a: {
@@ -140,26 +160,66 @@ export default function ReviewCard({ review }: ReviewCardProps) {
         </Text>
       </Pressable>
 
-      {/* Meta: BY AUTHOR · DATE · ★★★★ */}
-      <Text style={styles.meta}>
-        BY {review.creator.toUpperCase()}
-        {dateStr ? ` \u00B7 ${dateStr}` : ''}
-        {review.rating && !preferences.hideRatings ? (
-          <Text style={styles.rating}> \u00B7 {review.rating}</Text>
+      {/* Meta: avatar · BY AUTHOR · DATE · ★★★★ — links to profile */}
+      <Pressable
+        onPress={() => Linking.openURL(`https://letterboxd.com/${review.username}/`)}
+        style={({ pressed }) => [styles.metaRow, pressed && styles.metaPressed]}
+      >
+        {review.avatarUrl && !avatarFailed ? (
+          <Image
+            source={{ uri: review.avatarUrl }}
+            style={styles.avatar}
+            onError={handleAvatarError}
+          />
         ) : null}
-      </Text>
+        <Text style={styles.meta}>
+          BY {review.creator.toUpperCase()}
+          {dateStr ? ` \u00B7 ${dateStr}` : ''}
+          {review.rating && !preferences.hideRatings ? (
+            <Text style={styles.rating}>{` \u00B7 ${review.rating}`}</Text>
+          ) : null}
+        </Text>
+      </Pressable>
 
       {/* Review body */}
       {review.review ? (
         <Pressable onPress={() => isLong && setExpanded(!expanded)} disabled={!isLong}>
-          <RenderHtml
-            contentWidth={contentWidth}
-            source={{ html: processedHtml }}
-            tagsStyles={tagsStyles}
-            classesStyles={classesStyles}
-            renderersProps={renderersProps}
-            defaultTextProps={{ selectable: true }}
-          />
+          {dropCapData ? (
+            <View style={styles.dropCapRow}>
+              <Text
+                style={[
+                  styles.dropCapLetter,
+                  {
+                    fontSize: dropCapSize,
+                    lineHeight: dropCapSize * 1.15,
+                    minWidth: dropCapSize * 0.75,
+                  },
+                ]}
+                selectable
+              >
+                {dropCapData.firstLetter}
+              </Text>
+              <View style={styles.dropCapBody}>
+                <RenderHtml
+                  contentWidth={contentWidth - dropCapSize - spacing.xs}
+                  source={{ html: dropCapData.remainingHtml }}
+                  tagsStyles={tagsStyles}
+                  systemFonts={SYSTEM_FONTS}
+                  renderersProps={renderersProps}
+                  defaultTextProps={{ selectable: true }}
+                />
+              </View>
+            </View>
+          ) : (
+            <RenderHtml
+              contentWidth={contentWidth}
+              source={{ html: displayHtml }}
+              tagsStyles={tagsStyles}
+              systemFonts={SYSTEM_FONTS}
+              renderersProps={renderersProps}
+              defaultTextProps={{ selectable: true }}
+            />
+          )}
           {isLong && (
             <Text style={[styles.expandToggle, { fontSize: scaled.caption.fontSize }]}>
               {expanded ? 'Show less' : 'Read more'}
@@ -202,13 +262,26 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     marginBottom: spacing.md,
   },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  metaPressed: {
+    opacity: 0.6,
+  },
+  avatar: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    marginRight: 8,
+  },
   meta: {
     fontFamily: fonts.body,
     fontSize: typography.magazineMeta.fontSize,
     lineHeight: typography.magazineMeta.lineHeight,
     letterSpacing: typography.magazineMeta.letterSpacing,
     color: colors.secondaryText,
-    marginBottom: spacing.lg,
   },
   rating: {
     color: colors.yellow,
@@ -233,6 +306,22 @@ const styles = StyleSheet.create({
   },
   linkPressed: {
     color: colors.teal,
+  },
+  dropCapRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  dropCapLetter: {
+    fontFamily: fonts.heading,
+    color: colors.foreground,
+    textShadowColor: colors.teal,
+    textShadowOffset: { width: 1.5, height: 1.5 },
+    textShadowRadius: 0,
+    marginRight: spacing.xs,
+  },
+  dropCapBody: {
+    flex: 1,
+    paddingTop: spacing.xs,
   },
   divider: {
     height: StyleSheet.hairlineWidth,

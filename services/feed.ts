@@ -3,6 +3,44 @@ import type { Review } from '@/types/database'
 
 const PAGE_SIZE = 50
 
+/** In-memory avatar URL cache keyed by Letterboxd username. Persists for app lifetime. */
+const avatarCache = new Map<string, string>()
+/** Tracks in-flight avatar fetches so we don't duplicate requests. */
+const avatarFetching = new Map<string, Promise<string | undefined>>()
+
+/**
+ * Scrape the user's avatar URL from their Letterboxd profile page.
+ * Looks for the 220px avatar image. Cached in-memory after first fetch.
+ */
+async function fetchAvatarUrl(username: string): Promise<string | undefined> {
+  const cached = avatarCache.get(username)
+  if (cached) return cached
+
+  // Deduplicate concurrent fetches for the same user
+  const existing = avatarFetching.get(username)
+  if (existing) return existing
+
+  const promise = (async () => {
+    try {
+      const res = await fetch(`https://letterboxd.com/${username}/`)
+      if (!res.ok) return undefined
+      const html = await res.text()
+      // Match the avatar img src — Letterboxd uses a.ltrbxd.com/resized/avatar/
+      const match = html.match(/src="(https:\/\/a\.ltrbxd\.com\/resized\/avatar\/[^"]*-0-220-0-220-crop[^"]*)"/i)
+      const url = match?.[1]
+      if (url) avatarCache.set(username, url)
+      return url
+    } catch {
+      return undefined
+    } finally {
+      avatarFetching.delete(username)
+    }
+  })()
+
+  avatarFetching.set(username, promise)
+  return promise
+}
+
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
@@ -22,20 +60,20 @@ function extractMovieTitle(title: string): string {
 
 /**
  * Sanitise Letterboxd RSS description HTML.
- * Removes poster `<img>` blocks but keeps inline formatting tags
- * (<i>, <b>, <em>, <strong>, <a>) so the original author emphasis
- * and links are preserved for the HTML renderer.
+ * Removes the poster `<img>` block (first image wrapped in a <p>)
+ * but keeps formatting, media, and structural tags so reviews render
+ * with their original bold text, embedded images, videos, etc.
  */
 function cleanDescription(description: string): string {
   if (!description) return ''
-  // Remove the poster <img> block
+  // Remove the poster <img> block (first <p> containing only an <img>)
   const withoutPoster = description.replace(/<p>\s*<img[^>]*>\s*<\/p>/i, '')
-  // Strip tags we don't want (everything except i, b, em, strong, a, p, br)
-  const allowed = withoutPoster.replace(
-    /<\/?(?!i\b|b\b|em\b|strong\b|a\b|p\b|br\b)[a-z][a-z0-9]*\b[^>]*>/gi,
+  // Strip only script/style/form tags for safety — keep everything else
+  const sanitised = withoutPoster.replace(
+    /<\/?(?:script|style|form|input|textarea|select|button)\b[^>]*>/gi,
     '',
   )
-  return allowed.trim()
+  return sanitised.trim()
 }
 
 /** Strip ALL HTML — used only to detect "Watched on" plain-text prefix. */
@@ -63,7 +101,11 @@ export async function fetchDisplayName(username: string): Promise<string | undef
 
 async function fetchUserFeed(username: string): Promise<Review[]> {
   try {
-    const response = await fetch(`https://letterboxd.com/${username}/rss/`)
+    // Fetch RSS feed and avatar in parallel — avatar is cached after first call
+    const [response, avatarUrl] = await Promise.all([
+      fetch(`https://letterboxd.com/${username}/rss/`),
+      fetchAvatarUrl(username),
+    ])
     if (!response.ok) return []
 
     const xml = await response.text()
@@ -104,6 +146,7 @@ async function fetchUserFeed(username: string): Promise<Review[]> {
         rating: extractRating(title),
         movieTitle: extractMovieTitle(title),
         type: isWatch ? 'watch' : 'review',
+        avatarUrl,
       })
     }
 
