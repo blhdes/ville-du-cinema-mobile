@@ -80,9 +80,9 @@ export default function DisplaySettings({
             value={localFontSize}
             onValueChange={setLocalFontSize}
             onSlidingComplete={onSetFontSizeLevel}
-            minimumTrackTintColor={colors.secondaryText}
+            minimumTrackTintColor={colors.teal}
             maximumTrackTintColor={colors.border}
-            thumbTintColor={colors.foreground}
+            thumbTintColor={colors.white}
           />
           <Text style={styles.sliderIconLarge}>A</Text>
         </View>
@@ -93,16 +93,14 @@ export default function DisplaySettings({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.background,
-    borderRadius: 10,
     overflow: 'hidden',
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: spacing.md,
+    paddingHorizontal: 20,
     minHeight: 44,
   },
   rowBorder: {
@@ -120,13 +118,15 @@ const styles = StyleSheet.create({
   },
   description: {
     fontFamily: fonts.body,
-    fontSize: typography.caption.fontSize,
+    fontSize: typography.magazineMeta.fontSize,
     color: colors.secondaryText,
+    textTransform: 'uppercase',
+    letterSpacing: typography.magazineMeta.letterSpacing,
     marginTop: 2,
   },
   sliderRow: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: spacing.md,
+    paddingHorizontal: 20,
   },
   sliderContainer: {
     flexDirection: 'row',
@@ -138,12 +138,12 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   sliderIcon: {
-    fontFamily: fonts.body,
+    fontFamily: fonts.heading,
     fontSize: 13,
     color: colors.secondaryText,
   },
   sliderIconLarge: {
-    fontFamily: fonts.body,
+    fontFamily: fonts.heading,
     fontSize: 22,
     color: colors.secondaryText,
   },

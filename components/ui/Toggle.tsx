@@ -13,7 +13,7 @@ export default function Toggle({ value, onValueChange, disabled }: ToggleProps) 
       value={value}
       onValueChange={onValueChange}
       disabled={disabled}
-      trackColor={{ false: colors.border, true: colors.blue }}
+      trackColor={{ false: colors.border, true: colors.teal }}
       thumbColor={colors.white}
       ios_backgroundColor={colors.border}
     />
