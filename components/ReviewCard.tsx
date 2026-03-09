@@ -175,7 +175,7 @@ export default function ReviewCard({ review }: ReviewCardProps) {
         <Text style={styles.meta}>
           BY {review.creator.toUpperCase()}
           {dateStr ? ` \u00B7 ${dateStr}` : ''}
-          {review.rating && !preferences.hideRatings ? (
+          {review.rating && preferences.showRatings ? (
             <Text style={styles.rating}>{` \u00B7 ${review.rating}`}</Text>
           ) : null}
         </Text>

@@ -164,9 +164,9 @@ export default function FeedScreen() {
   }, [navigation])
 
   // Filter watch notifications if preference is set
-  const filteredReviews = preferences.hideWatchNotifications
-    ? reviews.filter((r) => r.type !== 'watch')
-    : reviews
+  const filteredReviews = preferences.showWatchNotifications
+    ? reviews
+    : reviews.filter((r) => r.type !== 'watch')
 
   const renderItem = useCallback(({ item }: { item: Review }) => {
     if (item.type === 'watch') {

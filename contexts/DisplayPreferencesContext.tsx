@@ -3,13 +3,13 @@ import storage from '@/lib/storage'
 import { useProfile } from '@/hooks/useProfile'
 
 const STORAGE_KEY_DROP_CAP = 'display_use_drop_cap'
-const STORAGE_KEY_HIDE_RATINGS = 'display_hide_ratings'
+const STORAGE_KEY_SHOW_RATINGS = 'display_show_ratings'
 const STORAGE_KEY_FONT_SIZE_LEVEL = 'display_font_size_level'
 
 interface DisplayPrefs {
-  hideWatchNotifications: boolean
+  showWatchNotifications: boolean
   useDropCap: boolean
-  hideRatings: boolean
+  showRatings: boolean
   fontSizeLevel: number
 }
 
@@ -17,16 +17,16 @@ interface DisplayPreferencesContextValue {
   preferences: DisplayPrefs
   isLoading: boolean
   isAuthenticated: boolean
-  setHideWatchNotifications: (value: boolean) => void
+  setShowWatchNotifications: (value: boolean) => void
   setUseDropCap: (value: boolean) => void
-  setHideRatings: (value: boolean) => void
+  setShowRatings: (value: boolean) => void
   setFontSizeLevel: (value: number) => void
 }
 
 const DEFAULTS: DisplayPrefs = {
-  hideWatchNotifications: false,
+  showWatchNotifications: true,
   useDropCap: false,
-  hideRatings: false,
+  showRatings: false,
   fontSizeLevel: 4,
 }
 
@@ -34,9 +34,9 @@ const DisplayPreferencesContext = createContext<DisplayPreferencesContextValue>(
   preferences: DEFAULTS,
   isLoading: true,
   isAuthenticated: false,
-  setHideWatchNotifications: () => {},
+  setShowWatchNotifications: () => {},
   setUseDropCap: () => {},
-  setHideRatings: () => {},
+  setShowRatings: () => {},
   setFontSizeLevel: () => {},
 })
 
@@ -51,44 +51,45 @@ export function DisplayPreferencesProvider({ children }: { children: ReactNode }
   useEffect(() => {
     Promise.all([
       storage.getItem<boolean>(STORAGE_KEY_DROP_CAP),
-      storage.getItem<boolean>(STORAGE_KEY_HIDE_RATINGS),
+      storage.getItem<boolean>(STORAGE_KEY_SHOW_RATINGS),
       storage.getItem<number>(STORAGE_KEY_FONT_SIZE_LEVEL),
-    ]).then(([dropCap, hideRatings, fontSizeLevel]) => {
+    ]).then(([dropCap, showRatings, fontSizeLevel]) => {
       setPrefs((prev) => ({
         ...prev,
         useDropCap: dropCap === true,
-        hideRatings: hideRatings === true,
+        showRatings: showRatings === true,
         fontSizeLevel: typeof fontSizeLevel === 'number' ? fontSizeLevel : 4,
       }))
       setLocalLoaded(true)
     })
   }, [])
 
-  // Sync hideWatchNotifications from profile
+  // Sync showWatchNotifications from profile (invert Supabase's hide_watch_notifications)
   useEffect(() => {
     if (profile) {
       setPrefs((prev) => ({
         ...prev,
-        hideWatchNotifications: profile.hide_watch_notifications,
+        showWatchNotifications: !profile.hide_watch_notifications,
       }))
     } else {
       setPrefs((prev) => ({
         ...prev,
-        hideWatchNotifications: false,
+        showWatchNotifications: true,
       }))
     }
   }, [profile])
 
-  const setHideWatchNotifications = useCallback(
+  const setShowWatchNotifications = useCallback(
     (value: boolean) => {
       if (!isAuthenticated) return
-      setPrefs((prev) => ({ ...prev, hideWatchNotifications: value }))
-      updateDisplayPreferences({ hide_watch_notifications: value }).catch(() => {
+      setPrefs((prev) => ({ ...prev, showWatchNotifications: value }))
+      // Invert when writing to Supabase: show=true means hide=false
+      updateDisplayPreferences({ hide_watch_notifications: !value }).catch(() => {
         // Revert on failure
         if (profile) {
           setPrefs((prev) => ({
             ...prev,
-            hideWatchNotifications: profile.hide_watch_notifications,
+            showWatchNotifications: !profile.hide_watch_notifications,
           }))
         }
       })
@@ -101,9 +102,9 @@ export function DisplayPreferencesProvider({ children }: { children: ReactNode }
     storage.setItem(STORAGE_KEY_DROP_CAP, value)
   }, [])
 
-  const setHideRatings = useCallback((value: boolean) => {
-    setPrefs((prev) => ({ ...prev, hideRatings: value }))
-    storage.setItem(STORAGE_KEY_HIDE_RATINGS, value)
+  const setShowRatings = useCallback((value: boolean) => {
+    setPrefs((prev) => ({ ...prev, showRatings: value }))
+    storage.setItem(STORAGE_KEY_SHOW_RATINGS, value)
   }, [])
 
   const setFontSizeLevel = useCallback((value: number) => {
@@ -118,9 +119,9 @@ export function DisplayPreferencesProvider({ children }: { children: ReactNode }
         preferences: prefs,
         isLoading: isProfileLoading || !localLoaded,
         isAuthenticated,
-        setHideWatchNotifications,
+        setShowWatchNotifications,
         setUseDropCap,
-        setHideRatings,
+        setShowRatings,
         setFontSizeLevel,
       }}
     >

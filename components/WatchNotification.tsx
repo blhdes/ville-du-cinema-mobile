@@ -35,7 +35,7 @@ export default function WatchNotification({ review }: WatchNotificationProps) {
           {review.movieTitle}
         </Text>
       </Text>
-      {review.rating && !preferences.hideRatings ? (
+      {review.rating && preferences.showRatings ? (
         <Text style={styles.rating}>{review.rating}</Text>
       ) : null}
     </Pressable>

@@ -15,9 +15,9 @@ export default function SettingsScreen() {
   const {
     preferences,
     isAuthenticated,
-    setHideWatchNotifications,
+    setShowWatchNotifications,
     setUseDropCap,
-    setHideRatings,
+    setShowRatings,
     setFontSizeLevel,
   } = useDisplayPreferences()
 
@@ -56,13 +56,13 @@ export default function SettingsScreen() {
         <Text style={styles.sectionLabel}>Display</Text>
         <View style={styles.cardWrapper}>
           <DisplaySettings
-            hideWatchNotifications={preferences.hideWatchNotifications}
+            showWatchNotifications={preferences.showWatchNotifications}
             useDropCap={preferences.useDropCap}
-            hideRatings={preferences.hideRatings}
+            showRatings={preferences.showRatings}
             fontSizeLevel={preferences.fontSizeLevel}
-            onSetHideWatchNotifications={setHideWatchNotifications}
+            onSetShowWatchNotifications={setShowWatchNotifications}
             onSetUseDropCap={setUseDropCap}
-            onSetHideRatings={setHideRatings}
+            onSetShowRatings={setShowRatings}
             onSetFontSizeLevel={setFontSizeLevel}
             disableRemote={!isAuthenticated}
           />

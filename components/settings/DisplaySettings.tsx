@@ -5,25 +5,25 @@ import Toggle from '@/components/ui/Toggle'
 import { colors, fonts, spacing, typography } from '@/theme'
 
 interface DisplaySettingsProps {
-  hideWatchNotifications: boolean
+  showWatchNotifications: boolean
   useDropCap: boolean
-  hideRatings: boolean
+  showRatings: boolean
   fontSizeLevel: number
-  onSetHideWatchNotifications: (value: boolean) => void
+  onSetShowWatchNotifications: (value: boolean) => void
   onSetUseDropCap: (value: boolean) => void
-  onSetHideRatings: (value: boolean) => void
+  onSetShowRatings: (value: boolean) => void
   onSetFontSizeLevel: (value: number) => void
   disableRemote?: boolean
 }
 
 export default function DisplaySettings({
-  hideWatchNotifications,
+  showWatchNotifications,
   useDropCap,
-  hideRatings,
+  showRatings,
   fontSizeLevel,
-  onSetHideWatchNotifications,
+  onSetShowWatchNotifications,
   onSetUseDropCap,
-  onSetHideRatings,
+  onSetShowRatings,
   onSetFontSizeLevel,
   disableRemote,
 }: DisplaySettingsProps) {
@@ -31,23 +31,23 @@ export default function DisplaySettings({
 
   return (
     <View style={styles.card}>
-      {/* Hide watch notifications */}
+      {/* Watch notifications */}
       <View style={[styles.row, styles.rowBorder]}>
         <View style={styles.labelContainer}>
-          <Text style={styles.label}>Hide Watch Notifications</Text>
-          <Text style={styles.description}>Only show reviews, hide watch activity</Text>
+          <Text style={styles.label}>Watch Notifications</Text>
+          <Text style={styles.description}>Show watch activity in the feed</Text>
         </View>
         <Toggle
-          value={hideWatchNotifications}
-          onValueChange={onSetHideWatchNotifications}
+          value={showWatchNotifications}
+          onValueChange={onSetShowWatchNotifications}
           disabled={disableRemote}
         />
       </View>
 
-      {/* Use drop caps */}
+      {/* Drop caps */}
       <View style={[styles.row, styles.rowBorder]}>
         <View style={styles.labelContainer}>
-          <Text style={styles.label}>Use Drop Caps</Text>
+          <Text style={styles.label}>Drop Caps</Text>
           <Text style={styles.description}>Stylize the first letter of reviews</Text>
         </View>
         <Toggle
@@ -56,15 +56,15 @@ export default function DisplaySettings({
         />
       </View>
 
-      {/* Hide ratings */}
+      {/* Ratings */}
       <View style={[styles.row, styles.rowBorder]}>
         <View style={styles.labelContainer}>
-          <Text style={styles.label}>Hide Ratings</Text>
-          <Text style={styles.description}>Hide star ratings on review cards</Text>
+          <Text style={styles.label}>Ratings</Text>
+          <Text style={styles.description}>Show star ratings on reviews</Text>
         </View>
         <Toggle
-          value={hideRatings}
-          onValueChange={onSetHideRatings}
+          value={showRatings}
+          onValueChange={onSetShowRatings}
         />
       </View>
 
