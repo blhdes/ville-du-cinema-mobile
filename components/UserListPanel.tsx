@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import {
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -7,6 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native'
+import * as Haptics from 'expo-haptics'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { DISCOVERY_USERS } from '@/constants/discoveryUsers'
 import { colors, fonts, spacing, typography } from '@/theme'
@@ -40,6 +42,7 @@ export default function UserListPanel({
     if (!result.success) {
       setAddError(result.error || 'Failed to add user')
     } else {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
       setInput('')
     }
     setIsAdding(false)
@@ -98,9 +101,17 @@ export default function UserListPanel({
         <View style={styles.userList}>
           {users.map((u) => (
             <View key={u.username} style={styles.userRow}>
-              <Text style={styles.username}>{u.username}</Text>
               <Pressable
-                onPress={() => onRemove(u.username)}
+                onPress={() => Linking.openURL(`https://letterboxd.com/${u.username}/`)}
+                style={({ pressed }) => pressed && { opacity: 0.6 }}
+              >
+                <Text style={styles.username}>@{u.username}</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                  onRemove(u.username)
+                }}
                 hitSlop={8}
                 style={({ pressed }) => [
                   styles.removeButton,
@@ -130,7 +141,10 @@ export default function UserListPanel({
                   styles.suggestionRow,
                   pressed && { opacity: 0.6 },
                 ]}
-                onPress={() => onAdd(username)}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                  onAdd(username)
+                }}
               >
                 <Text style={styles.suggestionText}>{username}</Text>
                 <Text style={styles.suggestionAction}>ADD</Text>
