@@ -3,6 +3,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { useUser } from '@/hooks/useUser'
 import { useProfile } from '@/hooks/useProfile'
+import { useUserLists } from '@/hooks/useUserLists'
 import { colors, fonts, spacing, typography } from '@/theme'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import ProfileHeader from '@/components/profile/ProfileHeader'
@@ -15,6 +16,7 @@ export default function ProfileScreen() {
   const tabBarHeight = useBottomTabBarHeight()
   const { user } = useUser()
   const { profile, isLoading, error } = useProfile()
+  const { users: followedUsers } = useUserLists()
 
   // Guest mode — prompt to sign in
   if (!user) {
@@ -60,11 +62,9 @@ export default function ProfileScreen() {
         {/* Hairline before following */}
         <View style={styles.divider} />
 
-        {profile && (
-          <View style={styles.followingSection}>
-            <FollowingList users={profile.followed_users} />
-          </View>
-        )}
+        <View style={styles.followingSection}>
+          <FollowingList users={followedUsers} />
+        </View>
       </ScrollView>
     </View>
   )
