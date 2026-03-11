@@ -1,9 +1,11 @@
-import { useState, useMemo, useCallback } from 'react'
-import { Image, Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import { useState, useMemo } from 'react'
+import { Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import { Image } from 'expo-image'
 import * as WebBrowser from 'expo-web-browser'
 import RenderHtml, { defaultSystemFonts } from 'react-native-render-html'
 import type { Review } from '@/types/database'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
+import { useAvatarUrl } from '@/services/avatarCache'
 import { colors, fonts, spacing, typography, getScaledTypography } from '@/theme'
 
 interface ReviewCardProps {
@@ -61,10 +63,9 @@ function truncateHtml(html: string, max: number): string {
 
 export default function ReviewCard({ review }: ReviewCardProps) {
   const [expanded, setExpanded] = useState(false)
-  const [avatarFailed, setAvatarFailed] = useState(false)
   const { preferences } = useDisplayPreferences()
   const { width } = useWindowDimensions()
-  const handleAvatarError = useCallback(() => setAvatarFailed(true), [])
+  const cachedAvatarUrl = useAvatarUrl(review.username)
   const contentWidth = width - HORIZONTAL_PAD * 2
   const scaled = useMemo(() => getScaledTypography(preferences.fontSizeLevel), [preferences.fontSizeLevel])
 
@@ -165,11 +166,11 @@ export default function ReviewCard({ review }: ReviewCardProps) {
         onPress={() => Linking.openURL(`https://letterboxd.com/${review.username}/`)}
         style={({ pressed }) => [styles.metaRow, pressed && styles.metaPressed]}
       >
-        {review.avatarUrl && !avatarFailed ? (
+        {cachedAvatarUrl ? (
           <Image
-            source={{ uri: review.avatarUrl }}
+            source={cachedAvatarUrl}
             style={styles.avatar}
-            onError={handleAvatarError}
+            cachePolicy="memory-disk"
           />
         ) : null}
         <Text style={styles.meta}>

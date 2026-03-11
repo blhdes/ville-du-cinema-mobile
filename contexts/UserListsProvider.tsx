@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from 'react'
 import storage from '@/lib/storage'
 import { supabase } from '@/lib/supabase/client'
-import { fetchDisplayName } from '@/services/feed'
+import { fetchDisplayName, refreshAvatarUrls } from '@/services/feed'
 import { useUser } from '@/hooks/useUser'
 import type { FollowedUser } from '@/types/database'
 
@@ -170,6 +170,9 @@ export function UserListsProvider({ children }: { children: ReactNode }) {
 
         // Optimistic update — show the new user immediately
         setUsers(updatedUsers)
+
+        // Scrape and cache the new user's avatar in the background
+        refreshAvatarUrls([normalizedUsername]).catch(() => {})
 
         // Persist in the background
         try {

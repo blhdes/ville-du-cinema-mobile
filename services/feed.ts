@@ -1,19 +1,31 @@
 import { XMLParser } from 'fast-xml-parser'
 import type { Review } from '@/types/database'
+import { getAvatarUrl, setAvatarUrl, setAvatarUrls } from '@/services/avatarCache'
 
 const PAGE_SIZE = 50
 
-/** In-memory avatar URL cache keyed by Letterboxd username. Persists for app lifetime. */
-const avatarCache = new Map<string, string>()
+/**
+ * Match the 220px avatar from a Letterboxd profile page.
+ * Letterboxd hosts avatars on their own CDN (a.ltrbxd.com) or falls back to Gravatar.
+ */
+const AVATAR_REGEX =
+  /src="(https:\/\/a\.ltrbxd\.com\/resized\/avatar\/[^"]*-0-220-0-220-crop[^"]*)"|src="(https:\/\/secure\.gravatar\.com\/avatar\/[^"]*size=220[^"]*)"/i
+
+function extractAvatarUrl(html: string): string | undefined {
+  const match = html.match(AVATAR_REGEX)
+  // Group 1 = Letterboxd CDN, Group 2 = Gravatar
+  return match?.[1] ?? match?.[2]
+}
+
 /** Tracks in-flight avatar fetches so we don't duplicate requests. */
 const avatarFetching = new Map<string, Promise<string | undefined>>()
 
 /**
  * Scrape the user's avatar URL from their Letterboxd profile page.
- * Looks for the 220px avatar image. Cached in-memory after first fetch.
+ * Reads from the persistent cache first, then scrapes if missing.
  */
 async function fetchAvatarUrl(username: string): Promise<string | undefined> {
-  const cached = avatarCache.get(username)
+  const cached = getAvatarUrl(username)
   if (cached) return cached
 
   // Deduplicate concurrent fetches for the same user
@@ -25,10 +37,8 @@ async function fetchAvatarUrl(username: string): Promise<string | undefined> {
       const res = await fetch(`https://letterboxd.com/${username}/`)
       if (!res.ok) return undefined
       const html = await res.text()
-      // Match the avatar img src — Letterboxd uses a.ltrbxd.com/resized/avatar/
-      const match = html.match(/src="(https:\/\/a\.ltrbxd\.com\/resized\/avatar\/[^"]*-0-220-0-220-crop[^"]*)"/i)
-      const url = match?.[1]
-      if (url) avatarCache.set(username, url)
+      const url = extractAvatarUrl(html)
+      if (url) await setAvatarUrl(username, url)
       return url
     } catch {
       return undefined
@@ -39,6 +49,38 @@ async function fetchAvatarUrl(username: string): Promise<string | undefined> {
 
   avatarFetching.set(username, promise)
   return promise
+}
+
+/**
+ * Scrape avatar URLs for a list of usernames in the background.
+ * Always hits the network (bypasses cache) to pick up profile picture changes.
+ * Writes results back to the persistent cache.
+ */
+export async function refreshAvatarUrls(usernames: string[]): Promise<void> {
+  const results = await Promise.allSettled(
+    usernames.map(async (username) => {
+      try {
+        const res = await fetch(`https://letterboxd.com/${username}/`)
+        if (!res.ok) return undefined
+        const html = await res.text()
+        return extractAvatarUrl(html)
+      } catch {
+        return undefined
+      }
+    })
+  )
+
+  const updates: Record<string, string> = {}
+  usernames.forEach((username, i) => {
+    const result = results[i]
+    if (result.status === 'fulfilled' && result.value) {
+      updates[username] = result.value
+    }
+  })
+
+  if (Object.keys(updates).length > 0) {
+    await setAvatarUrls(updates)
+  }
 }
 
 const parser = new XMLParser({

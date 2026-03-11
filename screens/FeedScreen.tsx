@@ -20,7 +20,8 @@ import { useNavigation, DrawerActions } from '@react-navigation/native'
 import { useUserLists } from '@/hooks/useUserLists'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { useTabBar } from '@/contexts/TabBarContext'
-import { fetchFeed, type FeedResult } from '@/services/feed'
+import { fetchFeed, refreshAvatarUrls, type FeedResult } from '@/services/feed'
+import { hydrateAvatarCache } from '@/services/avatarCache'
 import type { Review } from '@/types/database'
 import { colors, fonts, spacing, typography } from '@/theme'
 import ErrorBanner from '@/components/ui/ErrorBanner'
@@ -113,6 +114,13 @@ export default function FeedScreen() {
   const [hasMore, setHasMore] = useState(false)
   const [feedError, setFeedError] = useState<string | null>(null)
 
+  const [cacheReady, setCacheReady] = useState(false)
+
+  // Hydrate the avatar cache from AsyncStorage before loading the feed
+  useEffect(() => {
+    hydrateAvatarCache().then(() => setCacheReady(true))
+  }, [])
+
   const loadFeed = useCallback(async (pageNum: number, append = false) => {
     if (usernames.length === 0) {
       setReviews([])
@@ -141,17 +149,22 @@ export default function FeedScreen() {
     }
   }, [usernames])
 
-  // Reload feed when usernames change
+  // Wait for cache hydration + user list before loading the feed.
+  // fetchUserFeed already scrapes any missing avatars, so no extra refresh needed here.
   useEffect(() => {
-    if (!isListLoading) {
+    if (!isListLoading && cacheReady) {
       loadFeed(1)
     }
-  }, [usernames, isListLoading, loadFeed])
+  }, [usernames, isListLoading, cacheReady, loadFeed])
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true)
     loadFeed(1)
-  }, [loadFeed])
+    // Background-refresh avatar URLs on pull-to-refresh
+    if (usernames.length > 0) {
+      refreshAvatarUrls(usernames).catch(() => {})
+    }
+  }, [loadFeed, usernames])
 
   const handleLoadMore = useCallback(() => {
     if (hasMore && !isLoading) {
