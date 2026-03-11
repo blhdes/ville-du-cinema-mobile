@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   type LayoutChangeEvent,
@@ -8,6 +8,7 @@ import {
   Text,
   View,
 } from 'react-native'
+import * as SplashScreen from 'expo-splash-screen'
 import Animated, {
   interpolate,
   useAnimatedScrollHandler,
@@ -108,13 +109,14 @@ export default function FeedScreen() {
   })
 
   const [reviews, setReviews] = useState<Review[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
   const [feedError, setFeedError] = useState<string | null>(null)
 
   const [cacheReady, setCacheReady] = useState(false)
+  const splashHidden = useRef(false)
 
   // Hydrate the avatar cache from AsyncStorage before loading the feed
   useEffect(() => {
@@ -148,6 +150,26 @@ export default function FeedScreen() {
       setIsRefreshing(false)
     }
   }, [usernames])
+
+  const hideSplash = useCallback(() => {
+    if (!splashHidden.current) {
+      splashHidden.current = true
+      SplashScreen.hideAsync()
+    }
+  }, [])
+
+  // Hide splash once loading finishes (runs after React renders the loaded state)
+  useEffect(() => {
+    if (!isLoading && !isListLoading) {
+      hideSplash()
+    }
+  }, [isLoading, isListLoading, hideSplash])
+
+  // Safety: hide splash after 5s no matter what, so users aren't stuck
+  useEffect(() => {
+    const timer = setTimeout(hideSplash, 5000)
+    return () => clearTimeout(timer)
+  }, [hideSplash])
 
   // Wait for cache hydration + user list before loading the feed.
   // fetchUserFeed already scrapes any missing avatars, so no extra refresh needed here.

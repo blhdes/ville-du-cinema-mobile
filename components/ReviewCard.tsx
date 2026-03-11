@@ -12,7 +12,7 @@ interface ReviewCardProps {
   review: Review
 }
 
-const MAX_PREVIEW_LENGTH = 280
+const MAX_PREVIEW_LENGTH = 300
 const HORIZONTAL_PAD = 20
 const SYSTEM_FONTS = [
   ...defaultSystemFonts,
