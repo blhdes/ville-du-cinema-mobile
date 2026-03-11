@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   type LayoutChangeEvent,
@@ -198,6 +198,13 @@ export default function FeedScreen() {
     navigation.dispatch(DrawerActions.openDrawer())
   }, [navigation])
 
+  // When layout-altering display settings change, force a clean FlatList remount
+  // so ReviewCard components recalculate their layout from scratch.
+  const layoutKey = useMemo(
+    () => `feed-${preferences.fontMultiplier}-${preferences.showRatings}-${preferences.useDropCap}`,
+    [preferences.fontMultiplier, preferences.showRatings, preferences.useDropCap],
+  )
+
   // Filter watch notifications if preference is set
   const filteredReviews = preferences.showWatchNotifications
     ? reviews
@@ -263,6 +270,7 @@ export default function FeedScreen() {
         </View>
       ) : (
         <Animated.FlatList
+          key={layoutKey}
           data={filteredReviews}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}

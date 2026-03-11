@@ -4,13 +4,13 @@ import { useProfile } from '@/hooks/useProfile'
 
 const STORAGE_KEY_DROP_CAP = 'display_use_drop_cap'
 const STORAGE_KEY_SHOW_RATINGS = 'display_show_ratings'
-const STORAGE_KEY_FONT_SIZE_LEVEL = 'display_font_size_level'
+const STORAGE_KEY_FONT_MULTIPLIER = 'display_font_multiplier'
 
 interface DisplayPrefs {
   showWatchNotifications: boolean
   useDropCap: boolean
   showRatings: boolean
-  fontSizeLevel: number
+  fontMultiplier: number
 }
 
 interface DisplayPreferencesContextValue {
@@ -20,14 +20,14 @@ interface DisplayPreferencesContextValue {
   setShowWatchNotifications: (value: boolean) => void
   setUseDropCap: (value: boolean) => void
   setShowRatings: (value: boolean) => void
-  setFontSizeLevel: (value: number) => void
+  setFontMultiplier: (value: number) => void
 }
 
 const DEFAULTS: DisplayPrefs = {
   showWatchNotifications: true,
   useDropCap: false,
   showRatings: false,
-  fontSizeLevel: 4,
+  fontMultiplier: 1.0,
 }
 
 const DisplayPreferencesContext = createContext<DisplayPreferencesContextValue>({
@@ -37,7 +37,7 @@ const DisplayPreferencesContext = createContext<DisplayPreferencesContextValue>(
   setShowWatchNotifications: () => {},
   setUseDropCap: () => {},
   setShowRatings: () => {},
-  setFontSizeLevel: () => {},
+  setFontMultiplier: () => {},
 })
 
 export function DisplayPreferencesProvider({ children }: { children: ReactNode }) {
@@ -52,13 +52,13 @@ export function DisplayPreferencesProvider({ children }: { children: ReactNode }
     Promise.all([
       storage.getItem<boolean>(STORAGE_KEY_DROP_CAP),
       storage.getItem<boolean>(STORAGE_KEY_SHOW_RATINGS),
-      storage.getItem<number>(STORAGE_KEY_FONT_SIZE_LEVEL),
-    ]).then(([dropCap, showRatings, fontSizeLevel]) => {
+      storage.getItem<number>(STORAGE_KEY_FONT_MULTIPLIER),
+    ]).then(([dropCap, showRatings, fontMultiplier]) => {
       setPrefs((prev) => ({
         ...prev,
         useDropCap: dropCap === true,
         showRatings: showRatings === true,
-        fontSizeLevel: typeof fontSizeLevel === 'number' ? fontSizeLevel : 4,
+        fontMultiplier: typeof fontMultiplier === 'number' ? fontMultiplier : 1.0,
       }))
       setLocalLoaded(true)
     })
@@ -107,10 +107,10 @@ export function DisplayPreferencesProvider({ children }: { children: ReactNode }
     storage.setItem(STORAGE_KEY_SHOW_RATINGS, value)
   }, [])
 
-  const setFontSizeLevel = useCallback((value: number) => {
-    const clamped = Math.min(10, Math.max(1, Math.round(value)))
-    setPrefs((prev) => ({ ...prev, fontSizeLevel: clamped }))
-    storage.setItem(STORAGE_KEY_FONT_SIZE_LEVEL, clamped)
+  const setFontMultiplier = useCallback((value: number) => {
+    const clamped = Math.min(1.4, Math.max(0.8, value))
+    setPrefs((prev) => ({ ...prev, fontMultiplier: clamped }))
+    storage.setItem(STORAGE_KEY_FONT_MULTIPLIER, clamped)
   }, [])
 
   return (
@@ -122,7 +122,7 @@ export function DisplayPreferencesProvider({ children }: { children: ReactNode }
         setShowWatchNotifications,
         setUseDropCap,
         setShowRatings,
-        setFontSizeLevel,
+        setFontMultiplier,
       }}
     >
       {children}

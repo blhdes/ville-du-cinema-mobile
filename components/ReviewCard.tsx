@@ -13,6 +13,7 @@ interface ReviewCardProps {
 }
 
 const MAX_PREVIEW_LENGTH = 300
+const TOLERANCE_RATIO = 0.5
 const HORIZONTAL_PAD = 20
 const SYSTEM_FONTS = [
   ...defaultSystemFonts,
@@ -67,10 +68,10 @@ export default function ReviewCard({ review }: ReviewCardProps) {
   const { width } = useWindowDimensions()
   const cachedAvatarUrl = useAvatarUrl(review.username)
   const contentWidth = width - HORIZONTAL_PAD * 2
-  const scaled = useMemo(() => getScaledTypography(preferences.fontSizeLevel), [preferences.fontSizeLevel])
+  const scaled = useMemo(() => getScaledTypography(preferences.fontMultiplier), [preferences.fontMultiplier])
 
   const textLength = useMemo(() => htmlTextLength(review.review), [review.review])
-  const isLong = textLength > MAX_PREVIEW_LENGTH
+  const isLong = textLength > MAX_PREVIEW_LENGTH * (1 + TOLERANCE_RATIO)
 
   const displayHtml = useMemo(
     () => expanded || !isLong ? review.review : truncateHtml(review.review, MAX_PREVIEW_LENGTH),
@@ -184,7 +185,7 @@ export default function ReviewCard({ review }: ReviewCardProps) {
 
       {/* Review body */}
       {review.review ? (
-        <Pressable onPress={() => isLong && setExpanded(!expanded)} disabled={!isLong}>
+        <Pressable onPress={() => !expanded && setExpanded(true)} disabled={!isLong || expanded}>
           {dropCapData ? (
             <View style={styles.dropCapRow}>
               <Text
@@ -221,9 +222,9 @@ export default function ReviewCard({ review }: ReviewCardProps) {
               defaultTextProps={{ selectable: true }}
             />
           )}
-          {isLong && (
+          {isLong && !expanded && (
             <Text style={[styles.expandToggle, { fontSize: scaled.caption.fontSize }]}>
-              {expanded ? 'Show less' : 'Read more'}
+              Read more
             </Text>
           )}
         </Pressable>

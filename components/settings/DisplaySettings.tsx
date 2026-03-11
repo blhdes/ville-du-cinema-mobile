@@ -8,11 +8,11 @@ interface DisplaySettingsProps {
   showWatchNotifications: boolean
   useDropCap: boolean
   showRatings: boolean
-  fontSizeLevel: number
+  fontMultiplier: number
   onSetShowWatchNotifications: (value: boolean) => void
   onSetUseDropCap: (value: boolean) => void
   onSetShowRatings: (value: boolean) => void
-  onSetFontSizeLevel: (value: number) => void
+  onSetFontMultiplier: (value: number) => void
   disableRemote?: boolean
 }
 
@@ -20,14 +20,14 @@ export default function DisplaySettings({
   showWatchNotifications,
   useDropCap,
   showRatings,
-  fontSizeLevel,
+  fontMultiplier,
   onSetShowWatchNotifications,
   onSetUseDropCap,
   onSetShowRatings,
-  onSetFontSizeLevel,
+  onSetFontMultiplier,
   disableRemote,
 }: DisplaySettingsProps) {
-  const [localFontSize, setLocalFontSize] = useState(fontSizeLevel)
+  const [localFontSize, setLocalFontSize] = useState(fontMultiplier)
 
   return (
     <View style={styles.card}>
@@ -75,11 +75,11 @@ export default function DisplaySettings({
           <Text style={styles.sliderIcon}>A</Text>
           <Slider
             style={styles.slider}
-            minimumValue={1}
-            maximumValue={10}
+            minimumValue={0.8}
+            maximumValue={1.4}
             value={localFontSize}
             onValueChange={setLocalFontSize}
-            onSlidingComplete={onSetFontSizeLevel}
+            onSlidingComplete={onSetFontMultiplier}
             minimumTrackTintColor={colors.teal}
             maximumTrackTintColor={colors.border}
             thumbTintColor={colors.white}

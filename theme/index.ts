@@ -68,18 +68,16 @@ export const typography = {
 } as const
 
 /**
- * Returns scaled typography values for the ReviewCard based on fontSizeLevel (1–10).
- * Level 4 is the default and produces a smaller, cleaner look than the base `typography`.
+ * Returns scaled typography values for the ReviewCard based on a font multiplier (0.8–1.4).
+ * A multiplier of 1.0 is the default size.
  */
-export function getScaledTypography(level: number) {
-  // Level 4 → scale 1.0, each step is ~8%
-  const scale = 1 + (level - 4) * 0.08
+export function getScaledTypography(multiplier: number) {
   const round = (n: number) => Math.round(n)
 
   return {
-    title: { fontSize: round(22 * scale), lineHeight: round(28 * scale) },
-    body:  { fontSize: round(18 * scale), lineHeight: round(26 * scale) },
-    caption: { fontSize: round(14 * scale), lineHeight: round(20 * scale) },
+    title: { fontSize: round(22 * multiplier), lineHeight: round(28 * multiplier) },
+    body:  { fontSize: round(18 * multiplier), lineHeight: round(26 * multiplier) },
+    caption: { fontSize: round(14 * multiplier), lineHeight: round(20 * multiplier) },
   }
 }
 
