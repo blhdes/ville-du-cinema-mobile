@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,6 +13,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import type { AuthStackParamList } from '@/navigation/types'
 import { supabase } from '@/lib/supabase/client'
 import { useGuestMode } from '@/contexts/GuestModeContext'
+import Spinner from '@/components/ui/Spinner'
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>
 
@@ -111,7 +111,7 @@ export default function LoginScreen({ navigation }: Props) {
             disabled={isLoading}
           >
             {isLoading ? (
-              <ActivityIndicator color="#fdfaf3" />
+              <Spinner size={18} color="#fdfaf3" />
             ) : (
               <Text style={styles.submitButtonText}>Sign In</Text>
             )}

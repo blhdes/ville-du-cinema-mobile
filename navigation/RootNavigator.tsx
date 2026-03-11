@@ -1,9 +1,10 @@
-import { ActivityIndicator, StyleSheet, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { NavigationContainer } from '@react-navigation/native'
 import { useUser } from '@/hooks/useUser'
 import { useGuestMode } from '@/contexts/GuestModeContext'
 import AuthStack from '@/navigation/AuthStack'
 import AppTabs from '@/navigation/AppTabs'
+import Spinner from '@/components/ui/Spinner'
 
 export default function RootNavigator() {
   const { user, isLoading: isAuthLoading } = useUser()
@@ -12,7 +13,7 @@ export default function RootNavigator() {
   if (isAuthLoading || isGuestLoading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#b22222" />
+        <Spinner size={24} />
       </View>
     )
   }

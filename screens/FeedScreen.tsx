@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  ActivityIndicator,
   type LayoutChangeEvent,
   Pressable,
   RefreshControl,
@@ -14,6 +13,7 @@ import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
+  withTiming,
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
@@ -29,6 +29,7 @@ import ErrorBanner from '@/components/ui/ErrorBanner'
 import ReviewCard from '@/components/ReviewCard'
 import WatchNotification from '@/components/WatchNotification'
 import QuoteOfTheDay from '@/components/QuoteOfTheDay'
+import Spinner from '@/components/ui/Spinner'
 import LogoIcon from '@/components/ui/LogoIcon'
 
 // Deadzone: header only starts hiding after this many px of continuous downward scroll.
@@ -42,7 +43,7 @@ export default function FeedScreen() {
   const navigation = useNavigation()
   const { users, usernames, isLoading: isListLoading, error: listError, clearError } = useUserLists()
   const { preferences } = useDisplayPreferences()
-  const { translateY } = useTabBar()
+  const { translateY, feedRefreshRequested, setIsFeedRefreshing } = useTabBar()
 
   // Header hide/show
   const [headerHeight, setHeaderHeight] = useState(0)
@@ -111,10 +112,12 @@ export default function FeedScreen() {
   const [reviews, setReviews] = useState<Review[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
   const [feedError, setFeedError] = useState<string | null>(null)
 
+  const flatListRef = useRef<Animated.FlatList<Review>>(null)
   const [cacheReady, setCacheReady] = useState(false)
   const splashHidden = useRef(false)
 
@@ -123,21 +126,27 @@ export default function FeedScreen() {
     hydrateAvatarCache().then(() => setCacheReady(true))
   }, [])
 
-  const loadFeed = useCallback(async (pageNum: number, append = false) => {
+  const loadFeed = useCallback(async (pageNum: number, append = false, keepContent = false) => {
     if (usernames.length === 0) {
       setReviews([])
       setHasMore(false)
       return
     }
 
-    if (!append) setIsLoading(true)
+    // keepContent: show RefreshControl spinner but don't swap to full-screen loader
+    if (!append && !keepContent) setIsLoading(true)
+    if (append) setIsLoadingMore(true)
     setFeedError(null)
 
     try {
       const result: FeedResult = await fetchFeed(usernames, pageNum)
 
       if (append) {
-        setReviews((prev) => [...prev, ...result.reviews])
+        setReviews((prev) => {
+          const existingIds = new Set(prev.map((r) => r.id))
+          const newItems = result.reviews.filter((r) => !existingIds.has(r.id))
+          return [...prev, ...newItems]
+        })
       } else {
         setReviews(result.reviews)
       }
@@ -148,8 +157,10 @@ export default function FeedScreen() {
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
+      setIsLoadingMore(false)
+      setIsFeedRefreshing(false)
     }
-  }, [usernames])
+  }, [usernames, setIsFeedRefreshing])
 
   const hideSplash = useCallback(() => {
     if (!splashHidden.current) {
@@ -187,6 +198,27 @@ export default function FeedScreen() {
       refreshAvatarUrls(usernames).catch(() => {})
     }
   }, [loadFeed, usernames])
+
+  // Refresh feed when the Feed tab icon is tapped while already on Feed:
+  // scroll to top, reveal header + tab bar, show the RefreshControl spinner, keep existing content
+  useEffect(() => {
+    if (feedRefreshRequested > 0) {
+      // Scroll the list to the top
+      flatListRef.current?.scrollToOffset({ offset: 0, animated: true })
+
+      // Reveal the header and tab bar
+      headerTranslateY.value = withTiming(0, { duration: 200 })
+      translateY.value = withTiming(0, { duration: 200 })
+
+      // Trigger refresh but keep cached content visible (keepContent = true)
+      setIsFeedRefreshing(true)
+      setIsRefreshing(true)
+      loadFeed(1, false, true)
+      if (usernames.length > 0) {
+        refreshAvatarUrls(usernames).catch(() => {})
+      }
+    }
+  }, [feedRefreshRequested]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLoadMore = useCallback(() => {
     if (hasMore && !isLoading) {
@@ -239,11 +271,20 @@ export default function FeedScreen() {
     )
   }
 
+  const renderHeader = () => {
+    if (!isRefreshing) return null
+    return (
+      <View style={styles.refreshSpinner}>
+        <Spinner size={20} />
+      </View>
+    )
+  }
+
   const renderFooter = () => {
-    if (isLoading && page > 1) {
+    if (isLoadingMore) {
       return (
         <View style={styles.footerLoader}>
-          <ActivityIndicator size="small" color={colors.secondaryText} />
+          <Spinner size={18} />
         </View>
       )
     }
@@ -263,17 +304,18 @@ export default function FeedScreen() {
         <ErrorBanner message={error} onDismiss={clearError} />
       )}
 
-      {isLoading && page === 1 ? (
+      {isLoading && page === 1 && reviews.length === 0 ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.secondaryText} />
-          <Text style={styles.loadingText}>Loading feed...</Text>
+          <Spinner size={24} />
         </View>
       ) : (
         <Animated.FlatList
+          ref={flatListRef}
           key={layoutKey}
           data={filteredReviews}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
+          ListHeaderComponent={renderHeader}
           ListEmptyComponent={renderEmpty}
           ListFooterComponent={renderFooter}
           onEndReached={handleLoadMore}
@@ -284,8 +326,8 @@ export default function FeedScreen() {
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={handleRefresh}
-              tintColor={colors.secondaryText}
-              colors={[colors.secondaryText]}
+              tintColor="transparent"
+              colors={['transparent']}
             />
           }
           contentContainerStyle={
@@ -375,12 +417,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
   },
-  loadingText: {
-    fontFamily: fonts.body,
-    fontSize: typography.caption.fontSize,
-    color: colors.secondaryText,
+  refreshSpinner: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
   },
   emptyContainer: {
     flex: 1,

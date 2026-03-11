@@ -1,10 +1,11 @@
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { useUser } from '@/hooks/useUser'
 import { useProfile } from '@/hooks/useProfile'
 import { useUserLists } from '@/hooks/useUserLists'
 import { colors, fonts, spacing, typography } from '@/theme'
+import Spinner from '@/components/ui/Spinner'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import ProfileHeader from '@/components/profile/ProfileHeader'
 import FollowingList from '@/components/profile/FollowingList'
@@ -42,7 +43,7 @@ export default function ProfileScreen() {
           <Text style={styles.headerTitle}>Profile</Text>
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.secondaryText} />
+          <Spinner size={24} />
         </View>
       </View>
     )

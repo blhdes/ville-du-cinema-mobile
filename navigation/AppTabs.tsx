@@ -107,6 +107,7 @@ function AnimatedTabBar(props: BottomTabBarProps) {
 const Tab = createBottomTabNavigator<AppTabsParamList>()
 
 function AppTabsInner() {
+  const { requestFeedRefresh, isFeedRefreshing } = useTabBar()
   const onFeedPress = useCallback(() => onTabFocus('Feed'), [])
   const onProfileBounce = useCallback(() => onTabFocus('Profile'), [])
   const onSettingsPress = useCallback(() => onTabFocus('Settings'), [])
@@ -145,7 +146,14 @@ function AppTabsInner() {
         options={{
           tabBarIcon: ({ color, size }) => <FeedIcon color={color} size={size} />,
         }}
-        listeners={{ tabPress: onFeedPress }}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            onFeedPress()
+            if (navigation.isFocused() && !isFeedRefreshing) {
+              requestFeedRefresh()
+            }
+          },
+        })}
       />
       <Tab.Screen
         name="Profile"
