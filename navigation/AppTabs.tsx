@@ -12,7 +12,7 @@ import Animated, {
 import { useCallback } from 'react'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { AppTabsParamList } from '@/navigation/types'
-import FeedDrawerNavigator from '@/navigation/FeedDrawerNavigator'
+import FeedStackNavigator from '@/navigation/FeedStackNavigator'
 import ProfileScreen from '@/screens/ProfileScreen'
 import SettingsScreen from '@/screens/SettingsScreen'
 import FeedTabIcon from '@/components/ui/FeedTabIcon'
@@ -142,7 +142,7 @@ function AppTabsInner() {
     >
       <Tab.Screen
         name="Feed"
-        component={FeedDrawerNavigator}
+        component={FeedStackNavigator}
         options={{
           tabBarIcon: ({ color, size }) => <FeedIcon color={color} size={size} />,
         }}

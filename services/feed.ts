@@ -141,7 +141,7 @@ export async function fetchDisplayName(username: string): Promise<string | undef
   }
 }
 
-async function fetchUserFeed(username: string): Promise<Review[]> {
+export async function fetchUserFeed(username: string): Promise<Review[]> {
   try {
     // Fetch RSS feed and avatar in parallel — avatar is cached after first call
     const [response, avatarUrl] = await Promise.all([
