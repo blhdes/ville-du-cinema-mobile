@@ -1,16 +1,20 @@
 import { useState } from 'react'
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import * as WebBrowser from 'expo-web-browser'
+import { useNavigation, type NavigationProp } from '@react-navigation/native'
+import type { FeedStackParamList } from '@/navigation/types'
 import type { Review } from '@/types/database'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { colors, fonts, spacing, typography } from '@/theme'
 
 interface WatchNotificationProps {
   review: Review
+  hideAuthor?: boolean
 }
 
-export default function WatchNotification({ review }: WatchNotificationProps) {
+export default function WatchNotification({ review, hideAuthor = false }: WatchNotificationProps) {
   const { preferences } = useDisplayPreferences()
+  const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const [titlePressed, setTitlePressed] = useState(false)
 
   return (
@@ -20,8 +24,18 @@ export default function WatchNotification({ review }: WatchNotificationProps) {
     >
       <View style={styles.dot} />
       <Text style={styles.text} numberOfLines={1}>
-        <Text style={styles.author}>{review.creator}</Text>
-        {' watched '}
+        {!hideAuthor && (
+          <>
+            <Text
+              style={styles.author}
+              onPress={() => navigation.navigate('ExternalProfile', { username: review.username })}
+              suppressHighlighting
+            >
+              {review.creator}
+            </Text>
+            {' watched '}
+          </>
+        )}
         <Text
           style={[styles.movie, titlePressed && styles.moviePressed]}
           onPressIn={() => setTitlePressed(true)}
@@ -32,7 +46,7 @@ export default function WatchNotification({ review }: WatchNotificationProps) {
           }}
           suppressHighlighting
         >
-          {review.movieTitle}
+          {hideAuthor ? `Watched ${review.movieTitle}` : review.movieTitle}
         </Text>
       </Text>
       {review.rating && preferences.showRatings ? (

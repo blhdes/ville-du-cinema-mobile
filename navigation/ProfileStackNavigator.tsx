@@ -1,17 +1,17 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
-import FeedDrawerNavigator from '@/navigation/FeedDrawerNavigator'
+import ProfileScreen from '@/screens/ProfileScreen'
 import ExternalProfileScreen from '@/screens/ExternalProfileScreen'
-import type { FeedStackParamList } from '@/navigation/types'
+import type { ProfileStackParamList } from '@/navigation/types'
 import { colors, fonts, typography } from '@/theme'
 
-const Stack = createNativeStackNavigator<FeedStackParamList>()
+const Stack = createNativeStackNavigator<ProfileStackParamList>()
 
-export default function FeedStackNavigator() {
+export default function ProfileStackNavigator() {
   return (
     <Stack.Navigator>
       <Stack.Screen
-        name="FeedDrawer"
-        component={FeedDrawerNavigator}
+        name="ProfileMain"
+        component={ProfileScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen

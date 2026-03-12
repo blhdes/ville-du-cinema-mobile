@@ -1,5 +1,8 @@
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
+import { useNavigation } from '@react-navigation/native'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import type { FollowedUser } from '@/types/database'
+import type { ProfileStackParamList } from '@/navigation/types'
 import { colors, fonts, spacing, typography } from '@/theme'
 import LetterboxdDots from '@/components/ui/LetterboxdDots'
 
@@ -10,6 +13,8 @@ interface FollowingListProps {
 const HORIZONTAL_PAD = 20
 
 export default function FollowingList({ users }: FollowingListProps) {
+  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>()
+
   return (
     <View>
       <Text style={styles.sectionLabel}>
@@ -20,25 +25,37 @@ export default function FollowingList({ users }: FollowingListProps) {
         <Text style={styles.emptyText}>No users followed yet</Text>
       ) : (
         users.map((user, index) => (
-          <Pressable
+          <View
             key={user.username}
-            style={({ pressed }) => [
+            style={[
               styles.row,
               index < users.length - 1 && styles.rowBorder,
-              pressed && styles.rowPressed,
             ]}
-            onPress={() =>
-              Linking.openURL(`https://letterboxd.com/${user.username}/`)
-            }
           >
-            <View style={styles.rowContent}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.rowContent,
+                pressed && styles.rowPressed,
+              ]}
+              onPress={() =>
+                navigation.navigate('ExternalProfile', { username: user.username })
+              }
+            >
               <Text style={styles.displayName}>
                 {user.display_name || user.username}
               </Text>
               <Text style={styles.handle}>@{user.username.toUpperCase()}</Text>
-            </View>
-            <LetterboxdDots size={20} />
-          </Pressable>
+            </Pressable>
+            <Pressable
+              onPress={() =>
+                Linking.openURL(`https://letterboxd.com/${user.username}/`)
+              }
+              hitSlop={8}
+              style={({ pressed }) => pressed && styles.rowPressed}
+            >
+              <LetterboxdDots size={20} />
+            </Pressable>
+          </View>
         ))
       )}
     </View>

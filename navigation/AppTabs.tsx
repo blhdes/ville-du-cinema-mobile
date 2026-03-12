@@ -13,7 +13,7 @@ import { useCallback } from 'react'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { AppTabsParamList } from '@/navigation/types'
 import FeedStackNavigator from '@/navigation/FeedStackNavigator'
-import ProfileScreen from '@/screens/ProfileScreen'
+import ProfileStackNavigator from '@/navigation/ProfileStackNavigator'
 import SettingsScreen from '@/screens/SettingsScreen'
 import FeedTabIcon from '@/components/ui/FeedTabIcon'
 import { useProfile } from '@/hooks/useProfile'
@@ -157,7 +157,7 @@ function AppTabsInner() {
       />
       <Tab.Screen
         name="Profile"
-        component={ProfileScreen}
+        component={ProfileStackNavigator}
         options={{
           tabBarIcon: ({ color }) => <ProfileIcon color={color} />,
         }}

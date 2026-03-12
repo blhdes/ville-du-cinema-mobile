@@ -3,6 +3,8 @@ import { Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 
 import { Image } from 'expo-image'
 import * as WebBrowser from 'expo-web-browser'
 import RenderHtml, { defaultSystemFonts } from 'react-native-render-html'
+import { useNavigation, type NavigationProp } from '@react-navigation/native'
+import type { FeedStackParamList } from '@/navigation/types'
 import type { Review } from '@/types/database'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { useAvatarUrl } from '@/services/avatarCache'
@@ -10,6 +12,7 @@ import { colors, fonts, spacing, typography, getScaledTypography } from '@/theme
 
 interface ReviewCardProps {
   review: Review
+  hideAuthor?: boolean
 }
 
 const MAX_PREVIEW_LENGTH = 300
@@ -62,10 +65,11 @@ function truncateHtml(html: string, max: number): string {
   return html.slice(0, i) + suffix
 }
 
-export default function ReviewCard({ review }: ReviewCardProps) {
+export default function ReviewCard({ review, hideAuthor = false }: ReviewCardProps) {
   const [expanded, setExpanded] = useState(false)
   const { preferences } = useDisplayPreferences()
   const { width } = useWindowDimensions()
+  const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const cachedAvatarUrl = useAvatarUrl(review.username)
   const contentWidth = width - HORIZONTAL_PAD * 2
   const scaled = useMemo(() => getScaledTypography(preferences.fontMultiplier), [preferences.fontMultiplier])
@@ -163,25 +167,36 @@ export default function ReviewCard({ review }: ReviewCardProps) {
       </Pressable>
 
       {/* Meta: avatar · BY AUTHOR · DATE · ★★★★ — links to profile */}
-      <Pressable
-        onPress={() => Linking.openURL(`https://letterboxd.com/${review.username}/`)}
-        style={({ pressed }) => [styles.metaRow, pressed && styles.metaPressed]}
-      >
-        {cachedAvatarUrl ? (
-          <Image
-            source={cachedAvatarUrl}
-            style={styles.avatar}
-            cachePolicy="memory-disk"
-          />
-        ) : null}
-        <Text style={styles.meta}>
-          BY {review.creator.toUpperCase()}
-          {dateStr ? ` \u00B7 ${dateStr}` : ''}
-          {review.rating && preferences.showRatings ? (
-            <Text style={styles.rating}>{` \u00B7 ${review.rating}`}</Text>
+      {!hideAuthor ? (
+        <Pressable
+          onPress={() => navigation.navigate('ExternalProfile', { username: review.username })}
+          style={({ pressed }) => [styles.metaRow, pressed && styles.metaPressed]}
+        >
+          {cachedAvatarUrl ? (
+            <Image
+              source={cachedAvatarUrl}
+              style={styles.avatar}
+              cachePolicy="memory-disk"
+            />
           ) : null}
-        </Text>
-      </Pressable>
+          <Text style={styles.meta}>
+            BY {review.creator.toUpperCase()}
+            {dateStr ? ` \u00B7 ${dateStr}` : ''}
+            {review.rating && preferences.showRatings ? (
+              <Text style={styles.rating}>{` \u00B7 ${review.rating}`}</Text>
+            ) : null}
+          </Text>
+        </Pressable>
+      ) : (
+        <View style={styles.metaRow}>
+          <Text style={styles.meta}>
+            {dateStr}
+            {review.rating && preferences.showRatings ? (
+              <Text style={styles.rating}>{dateStr ? ` \u00B7 ${review.rating}` : review.rating}</Text>
+            ) : null}
+          </Text>
+        </View>
+      )}
 
       {/* Review body */}
       {review.review ? (

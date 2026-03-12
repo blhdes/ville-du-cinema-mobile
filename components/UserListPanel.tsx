@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import {
-  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,9 +8,12 @@ import {
   View,
 } from 'react-native'
 import * as Haptics from 'expo-haptics'
+import { useNavigation } from '@react-navigation/native'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { DISCOVERY_USERS } from '@/constants/discoveryUsers'
 import { colors, fonts, spacing, typography } from '@/theme'
+import type { FeedStackParamList } from '@/navigation/types'
 import type { FollowedUser } from '@/types/database'
 
 interface UserListPanelProps {
@@ -27,6 +29,7 @@ export default function UserListPanel({
   onAdd,
   onRemove,
 }: UserListPanelProps) {
+  const navigation = useNavigation<NativeStackNavigationProp<FeedStackParamList>>()
   const insets = useSafeAreaInsets()
   const bottomPadding = insets.bottom + 49 + 20
 
@@ -102,7 +105,7 @@ export default function UserListPanel({
           {users.map((u) => (
             <View key={u.username} style={styles.userRow}>
               <Pressable
-                onPress={() => Linking.openURL(`https://letterboxd.com/${u.username}/`)}
+                onPress={() => navigation.navigate('ExternalProfile', { username: u.username })}
                 style={({ pressed }) => pressed && { opacity: 0.6 }}
               >
                 <Text style={styles.username}>@{u.username}</Text>

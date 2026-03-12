@@ -13,6 +13,11 @@ export type FeedStackParamList = {
   ExternalProfile: { username: string }
 }
 
+export type ProfileStackParamList = {
+  ProfileMain: undefined
+  ExternalProfile: { username: string }
+}
+
 export type AppTabsParamList = {
   Feed: undefined
   Profile: undefined
