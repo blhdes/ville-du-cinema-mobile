@@ -1,6 +1,3 @@
-import type { Review } from '@/types/database'
-import { fetchUserFeed } from '@/services/feed'
-
 export interface ExternalProfileMeta {
   displayName: string
   bio: string
@@ -19,13 +16,6 @@ interface CacheEntry {
 }
 
 const profileCache = new Map<string, CacheEntry>()
-
-interface FeedCacheEntry {
-  reviews: Review[]
-  fetchedAt: number
-}
-
-const feedCache = new Map<string, FeedCacheEntry>()
 
 /** Decode common HTML entities that appear in scraped text. */
 function decodeEntities(text: string): string {
@@ -185,25 +175,7 @@ export async function fetchExternalProfileMeta(
   }
 }
 
-/**
- * Fetch a user's review feed with in-memory caching (5-min TTL).
- * Back-then-forward navigation returns cached data instantly.
- */
-export async function fetchCachedUserFeed(
-  username: string
-): Promise<Review[]> {
-  const cached = feedCache.get(username)
-  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL) {
-    return cached.reviews
-  }
-
-  const reviews = await fetchUserFeed(username)
-  feedCache.set(username, { reviews, fetchedAt: Date.now() })
-  return reviews
-}
-
-/** Clear both in-memory caches (used by pull-to-refresh). */
+/** Clear the in-memory profile meta cache (used by pull-to-refresh). */
 export function clearProfileCache(): void {
   profileCache.clear()
-  feedCache.clear()
 }

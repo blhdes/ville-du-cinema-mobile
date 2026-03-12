@@ -21,7 +21,7 @@ import { useNavigation, DrawerActions } from '@react-navigation/native'
 import { useUserLists } from '@/hooks/useUserLists'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { useTabBar } from '@/contexts/TabBarContext'
-import { fetchFeed, refreshAvatarUrls, type FeedResult } from '@/services/feed'
+import { fetchFeed, clearFeedCache, refreshAvatarUrls, type FeedResult } from '@/services/feed'
 import { hydrateAvatarCache } from '@/services/avatarCache'
 import type { Review } from '@/types/database'
 import { colors, fonts, spacing, typography } from '@/theme'
@@ -192,6 +192,7 @@ export default function FeedScreen() {
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true)
+    clearFeedCache()
     loadFeed(1)
     // Background-refresh avatar URLs on pull-to-refresh
     if (usernames.length > 0) {
@@ -213,6 +214,7 @@ export default function FeedScreen() {
       // Trigger refresh but keep cached content visible (keepContent = true)
       setIsFeedRefreshing(true)
       setIsRefreshing(true)
+      clearFeedCache()
       loadFeed(1, false, true)
       if (usernames.length > 0) {
         refreshAvatarUrls(usernames).catch(() => {})
