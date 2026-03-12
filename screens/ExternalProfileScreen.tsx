@@ -13,10 +13,10 @@ import type { FeedStackParamList } from '@/navigation/types'
 import type { Review } from '@/types/database'
 import {
   fetchExternalProfileMeta,
+  fetchCachedUserFeed,
   clearProfileCache,
   type ExternalProfileMeta,
 } from '@/services/externalProfile'
-import { fetchUserFeed } from '@/services/feed'
 import { useAvatarUrl } from '@/services/avatarCache'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { colors, fonts, spacing, typography } from '@/theme'
@@ -45,7 +45,7 @@ export default function ExternalProfileScreen() {
     setError(null)
 
     const [feedResult, metaResult] = await Promise.allSettled([
-      fetchUserFeed(username),
+      fetchCachedUserFeed(username),
       fetchExternalProfileMeta(username),
     ])
 
