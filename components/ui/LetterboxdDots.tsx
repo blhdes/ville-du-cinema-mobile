@@ -1,4 +1,4 @@
-import Svg, { Ellipse } from 'react-native-svg'
+import { Image } from 'expo-image'
 import { colors } from '@/theme'
 
 interface LetterboxdDotsProps {
@@ -6,14 +6,21 @@ interface LetterboxdDotsProps {
   fill?: string
 }
 
-export default function LetterboxdDots({ size = 16, fill = colors.secondaryText }: LetterboxdDotsProps) {
-  // Three overlapping dots from the Letterboxd decal, simplified to plain ellipses.
-  // Original viewBox spans roughly x:0–378, y:0–140 for the dots group.
+const ASPECT_RATIO = 140 / 378
+
+/**
+ * Official Letterboxd decal dots (neg-mono variant).
+ * Uses the SVG asset directly rather than recreating the paths.
+ */
+export default function LetterboxdDots({
+  size = 16,
+  fill = colors.secondaryText,
+}: LetterboxdDotsProps) {
   return (
-    <Svg width={size} height={size * 0.37} viewBox="0 0 378 140">
-      <Ellipse cx="70" cy="70" rx="70" ry="70" fill={fill} opacity={0.5} />
-      <Ellipse cx="189" cy="70" rx="70" ry="70" fill={fill} opacity={0.7} />
-      <Ellipse cx="308" cy="70" rx="70" ry="70" fill={fill} opacity={0.5} />
-    </Svg>
+    <Image
+      source={require('@/assets/letterboxd-dots.svg')}
+      style={{ width: size, height: size * ASPECT_RATIO }}
+      tintColor={fill}
+    />
   )
 }

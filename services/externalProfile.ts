@@ -26,34 +26,77 @@ function decodeEntities(text: string): string {
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&lrm;/gi, '')
+    .replace(/&bull;/gi, '\u2022')
 }
 
 /**
- * Extract bio text from the profile page HTML.
- * Primary: the collapsible bio div inside <div class="bio js-bio">.
- * Fallback: <meta name="description" content="..."> (includes "Bio:" prefix).
+ * Extract the full-text bio URL from the profile page, if present.
+ * Letterboxd truncates long bios in the page HTML and provides a
+ * `data-full-text-url` attribute to fetch the complete content via AJAX.
  */
-function extractBio(html: string): string {
-  // The bio lives in a div with classes like "js-collapsible-text body-text -small -reset js-bio-content"
-  // or just "body-text" inside <div class="bio js-bio">
-  const bioBlockMatch = html.match(
-    /<div\s+class="bio\s+js-bio">\s*([\s\S]*?)<\/div>\s*<\/div>/i
+function extractFullTextUrl(html: string): string | null {
+  const bioSection = html.match(
+    /<section\s+class="profile-person-bio[^"]*">([\s\S]*?)<\/section>/i
   )
-  if (bioBlockMatch) {
-    const raw = bioBlockMatch[1].replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
-    return decodeEntities(raw)
+  if (!bioSection) return null
+
+  const urlMatch = bioSection[1].match(/data-full-text-url="([^"]+)"/i)
+  if (!urlMatch) return null
+
+  return `https://letterboxd.com${urlMatch[1]}`
+}
+
+/**
+ * Extract the collapsed (truncated) bio HTML from the profile page.
+ * Used as a fallback when the full-text endpoint is unavailable.
+ */
+function extractCollapsedBio(html: string): string {
+  const bioSection = html.match(
+    /<section\s+class="profile-person-bio[^"]*">([\s\S]*?)<\/section>/i
+  )
+  if (bioSection) {
+    const collapsedMatch = bioSection[1].match(
+      /<div\s+class="collapsed-text">\s*([\s\S]*?)\s*<\/div>/i
+    )
+    if (collapsedMatch) return collapsedMatch[1].trim()
   }
 
-  // Fallback: meta description — extract just the "Bio: ..." portion if present
+  // Fallback: meta description (plain text only)
   const metaMatch = html.match(
     /<meta\s+name="description"\s+content="([^"]*)"/i
   )
   if (metaMatch) {
     const bioPrefix = metaMatch[1].match(/Bio:\s*(.+)$/i)
-    return bioPrefix ? decodeEntities(bioPrefix[1].trim()) : ''
+    if (bioPrefix) return decodeEntities(bioPrefix[1].trim())
   }
 
   return ''
+}
+
+/**
+ * Fetch the full bio HTML from Letterboxd's full-text endpoint.
+ * Returns the inner HTML content, or null if the request fails.
+ */
+async function fetchFullBio(fullTextUrl: string): Promise<string | null> {
+  try {
+    const res = await fetch(fullTextUrl)
+    if (!res.ok) return null
+
+    const html = await res.text()
+    // The endpoint returns a small HTML fragment. Extract the body content.
+    // It may be a full page wrapper or just the raw HTML — handle both.
+    const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i)
+    const content = bodyMatch ? bodyMatch[1].trim() : html.trim()
+
+    // If we got a Cloudflare challenge or empty response, bail out
+    if (!content || content.includes('cf-browser-verification') || content.includes('challenge-platform')) {
+      return null
+    }
+
+    return content
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -157,9 +200,18 @@ export async function fetchExternalProfileMeta(
     const { location, websiteUrl, websiteLabel, twitterHandle, twitterUrl } =
       extractProfileMetadata(html)
 
+    // Try to fetch the full untruncated bio from Letterboxd's AJAX endpoint.
+    // Fall back to the collapsed (truncated) version from the page HTML.
+    const fullTextUrl = extractFullTextUrl(html)
+    let bio = extractCollapsedBio(html)
+    if (fullTextUrl) {
+      const fullBio = await fetchFullBio(fullTextUrl)
+      if (fullBio) bio = fullBio
+    }
+
     const meta: ExternalProfileMeta = {
       displayName: extractDisplayName(html),
-      bio: extractBio(html),
+      bio,
       location,
       websiteUrl,
       websiteLabel,

@@ -22,7 +22,6 @@ export default function WatchNotification({ review, hideAuthor = false }: WatchN
       style={({ pressed }) => [styles.container, pressed && styles.pressed]}
       onPress={() => Linking.openURL(review.link)}
     >
-      <View style={styles.dot} />
       <Text style={styles.text} numberOfLines={1}>
         {!hideAuthor && (
           <>
@@ -33,9 +32,10 @@ export default function WatchNotification({ review, hideAuthor = false }: WatchN
             >
               {review.creator}
             </Text>
-            {' watched '}
+            {'  '}
           </>
         )}
+        <Text style={styles.watchedLabel}>Watched </Text>
         <Text
           style={[styles.movie, titlePressed && styles.moviePressed]}
           onPressIn={() => setTitlePressed(true)}
@@ -46,7 +46,7 @@ export default function WatchNotification({ review, hideAuthor = false }: WatchN
           }}
           suppressHighlighting
         >
-          {hideAuthor ? `Watched ${review.movieTitle}` : review.movieTitle}
+          {review.movieTitle}
         </Text>
       </Text>
       {review.rating && preferences.showRatings ? (
@@ -68,29 +68,27 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.6,
   },
-  dot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: colors.teal,
-    marginRight: spacing.sm,
-  },
   text: {
     flex: 1,
     fontFamily: fonts.body,
-    fontSize: typography.magazineMeta.fontSize,
-    lineHeight: typography.magazineMeta.lineHeight,
+    fontSize: typography.caption.fontSize,
+    lineHeight: typography.caption.lineHeight,
     letterSpacing: typography.magazineMeta.letterSpacing,
-    textTransform: 'uppercase',
     color: colors.secondaryText,
     marginRight: spacing.sm,
   },
   author: {
     fontFamily: fonts.bodyBold,
   },
+  watchedLabel: {
+    fontFamily: fonts.body,
+    textTransform: 'uppercase',
+    fontSize: typography.magazineMeta.fontSize,
+    letterSpacing: typography.magazineMeta.letterSpacing,
+  },
   movie: {
     fontFamily: fonts.bodyItalic,
-    textTransform: 'none',
+    color: colors.foreground,
   },
   moviePressed: {
     opacity: 0.6,

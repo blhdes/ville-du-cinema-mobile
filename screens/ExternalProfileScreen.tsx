@@ -89,19 +89,26 @@ export default function ExternalProfileScreen() {
   const headerComponent = useMemo(() => {
     const displayName = meta?.displayName || username
     return (
-      <ExternalProfileHeader
-        displayName={displayName}
-        username={username}
-        bio={meta?.bio ?? ''}
-        avatarUrl={avatarUrl}
-        location={meta?.location}
-        websiteUrl={meta?.websiteUrl}
-        websiteLabel={meta?.websiteLabel}
-        twitterHandle={meta?.twitterHandle}
-        twitterUrl={meta?.twitterUrl}
-      />
+      <>
+        {refreshing && (
+          <View style={styles.refreshSpinner}>
+            <Spinner size={18} />
+          </View>
+        )}
+        <ExternalProfileHeader
+          displayName={displayName}
+          username={username}
+          bio={meta?.bio ?? ''}
+          avatarUrl={avatarUrl}
+          location={meta?.location}
+          websiteUrl={meta?.websiteUrl}
+          websiteLabel={meta?.websiteLabel}
+          twitterHandle={meta?.twitterHandle}
+          twitterUrl={meta?.twitterUrl}
+        />
+      </>
     )
-  }, [meta, username, avatarUrl])
+  }, [meta, username, avatarUrl, refreshing])
 
   const renderEmpty = useCallback(() => {
     if (isLoading) return null
@@ -154,7 +161,7 @@ export default function ExternalProfileScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={colors.secondaryText}
+            tintColor="transparent"
           />
         }
         contentContainerStyle={
@@ -174,6 +181,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  refreshSpinner: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
   },
   list: {
     paddingBottom: 40,

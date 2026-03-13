@@ -12,13 +12,13 @@ export default function FeedStackNavigator() {
       <Stack.Screen
         name="FeedDrawer"
         component={FeedDrawerNavigator}
-        options={{ headerShown: false }}
+        options={{ headerShown: false, title: '' }}
       />
       <Stack.Screen
         name="ExternalProfile"
         component={ExternalProfileScreen}
         options={({ route }) => ({
-          headerTitle: route.params.username,
+          headerTitle: `@${route.params.username}`,
           headerStyle: { backgroundColor: colors.background },
           headerTitleStyle: {
             fontFamily: fonts.heading,
@@ -26,7 +26,7 @@ export default function FeedStackNavigator() {
             color: colors.foreground,
           },
           headerTintColor: colors.foreground,
-          headerBackTitle: '',
+          headerBackTitleVisible: false,
           headerShadowVisible: false,
         })}
       />
