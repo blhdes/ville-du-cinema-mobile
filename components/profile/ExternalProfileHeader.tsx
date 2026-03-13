@@ -1,5 +1,11 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Linking, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import Animated, {
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import * as WebBrowser from 'expo-web-browser'
 import { Image } from 'expo-image'
@@ -33,6 +39,45 @@ const SYSTEM_FONTS = [
   fonts.bodyBold,
   fonts.bodyItalic,
 ]
+
+const FOLLOW_DURATION = 250
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
+
+function FollowButton({ isFollowing, onPress }: { isFollowing: boolean; onPress: () => void }) {
+  const progress = useSharedValue(isFollowing ? 1 : 0)
+
+  useEffect(() => {
+    progress.value = withTiming(isFollowing ? 1 : 0, { duration: FOLLOW_DURATION })
+  }, [isFollowing, progress])
+
+  const buttonStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(
+      progress.value,
+      [0, 1],
+      ['transparent', colors.teal],
+    ),
+    borderColor: colors.teal,
+  }))
+
+  const textStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(
+      progress.value,
+      [0, 1],
+      [colors.teal, colors.white],
+    ),
+  }))
+
+  return (
+    <AnimatedPressable
+      style={[styles.followButton, buttonStyle]}
+      onPress={onPress}
+    >
+      <Animated.Text style={[styles.followText, textStyle]}>
+        {isFollowing ? 'FOLLOWING' : 'FOLLOW'}
+      </Animated.Text>
+    </AnimatedPressable>
+  )
+}
 
 export default function ExternalProfileHeader({
   displayName,
@@ -209,17 +254,10 @@ export default function ExternalProfileHeader({
       ) : null}
 
       {/* Follow / Following */}
-      <Pressable
-        style={[styles.followButton, isFollowing && styles.followButtonActive]}
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-          onFollowToggle()
-        }}
-      >
-        <Text style={[styles.followText, isFollowing && styles.followTextActive]}>
-          {isFollowing ? 'FOLLOWING' : 'FOLLOW'}
-        </Text>
-      </Pressable>
+      <FollowButton isFollowing={isFollowing} onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+        onFollowToggle()
+      }} />
 
       {/* Letterboxd link */}
       <Pressable
@@ -355,23 +393,15 @@ const styles = StyleSheet.create({
   followButton: {
     marginTop: spacing.md,
     paddingVertical: 8,
-    paddingHorizontal: 24,
+    minWidth: 120,
+    alignItems: 'center',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.teal,
     borderRadius: 4,
-  },
-  followButtonActive: {
-    backgroundColor: colors.teal,
-    borderColor: colors.teal,
   },
   followText: {
     fontFamily: fonts.bodyBold,
     fontSize: typography.magazineMeta.fontSize,
     letterSpacing: typography.magazineMeta.letterSpacing,
-    color: colors.teal,
-  },
-  followTextActive: {
-    color: colors.white,
   },
   letterboxdButton: {
     marginTop: spacing.md,
