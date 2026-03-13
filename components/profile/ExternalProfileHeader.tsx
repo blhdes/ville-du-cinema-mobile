@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Linking, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import * as WebBrowser from 'expo-web-browser'
 import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
 import RenderHtml, { defaultSystemFonts } from 'react-native-render-html'
@@ -20,11 +21,8 @@ interface ExternalProfileHeaderProps {
 
 const AVATAR_SIZE = 72
 const HORIZONTAL_PAD = 20
-const BIO_CHAR_LIMIT = 140
-
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
-}
+// 8 lines of magazineBody (lineHeight 24) = 192px
+const BIO_COLLAPSED_HEIGHT = 192
 const SYSTEM_FONTS = [
   ...defaultSystemFonts,
   fonts.heading,
@@ -45,13 +43,18 @@ export default function ExternalProfileHeader({
   twitterUrl,
 }: ExternalProfileHeaderProps) {
   const [bioExpanded, setBioExpanded] = useState(false)
+  const [bioOverflows, setBioOverflows] = useState(false)
   const [avatarOpen, setAvatarOpen] = useState(false)
   const { width } = useWindowDimensions()
   const contentWidth = width - HORIZONTAL_PAD * 2
   const hasMetadata = !!location || !!websiteUrl || !!twitterUrl
   const letterboxdUrl = `https://letterboxd.com/${username}/`
-  const bioPlainText = bio ? stripHtml(bio) : ''
-  const bioIsTruncatable = bioPlainText.length > BIO_CHAR_LIMIT
+
+  const handleBioLayout = useCallback((e: { nativeEvent: { layout: { height: number } } }) => {
+    if (!bioExpanded && e.nativeEvent.layout.height > BIO_COLLAPSED_HEIGHT) {
+      setBioOverflows(true)
+    }
+  }, [bioExpanded])
 
   const bioTagsStyles = useMemo(() => ({
     body: {
@@ -69,7 +72,7 @@ export default function ExternalProfileHeader({
     a: {
       fontFamily: fonts.body,
       color: colors.teal,
-      textDecorationLine: 'underline' as const,
+      textDecorationLine: 'none' as const,
     },
     i: { fontFamily: fonts.bodyItalic, fontStyle: 'normal' as const },
     em: { fontFamily: fonts.bodyItalic, fontStyle: 'normal' as const },
@@ -79,7 +82,7 @@ export default function ExternalProfileHeader({
 
   const bioRenderersProps = useMemo(() => ({
     a: {
-      onPress: (_event: unknown, href: string) => Linking.openURL(href),
+      onPress: (_event: unknown, href: string) => WebBrowser.openBrowserAsync(href),
     },
   }), [])
 
@@ -127,22 +130,44 @@ export default function ExternalProfileHeader({
       {/* Bio */}
       {bio ? (
         <View style={styles.bioWrapper}>
-          {bioIsTruncatable && !bioExpanded ? (
-            <Text style={styles.bioTruncated}>
-              {bioPlainText.slice(0, BIO_CHAR_LIMIT).trimEnd()}…{' '}
-              <Text style={styles.bioToggle} onPress={() => setBioExpanded(true)}>
-                more
-              </Text>
-            </Text>
-          ) : (
-            <RenderHtml
-              contentWidth={contentWidth}
-              source={{ html: bio }}
-              tagsStyles={bioTagsStyles}
-              systemFonts={SYSTEM_FONTS}
-              renderersProps={bioRenderersProps}
-            />
-          )}
+          <View
+            style={
+              !bioExpanded && bioOverflows
+                ? { maxHeight: BIO_COLLAPSED_HEIGHT, overflow: 'hidden' as const }
+                : undefined
+            }
+          >
+            <View onLayout={handleBioLayout}>
+              <RenderHtml
+                contentWidth={contentWidth}
+                source={{ html: bio }}
+                tagsStyles={bioTagsStyles}
+                systemFonts={SYSTEM_FONTS}
+                renderersProps={bioRenderersProps}
+              />
+            </View>
+          </View>
+
+          {/* Fade overlay at bottom of clamped bio */}
+          {!bioExpanded && bioOverflows ? (
+            <View style={styles.bioFade} pointerEvents="none">
+              <View style={[styles.bioFadeStep, { opacity: 0 }]} />
+              <View style={[styles.bioFadeStep, { opacity: 0.4 }]} />
+              <View style={[styles.bioFadeStep, { opacity: 0.7 }]} />
+              <View style={[styles.bioFadeStep, { opacity: 0.95 }]} />
+            </View>
+          ) : null}
+
+          {/* Editorial Read More */}
+          {!bioExpanded && bioOverflows ? (
+            <Pressable
+              style={styles.readMoreButton}
+              onPress={() => setBioExpanded(true)}
+              hitSlop={12}
+            >
+              <Text style={styles.readMoreText}>Read More</Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
 
@@ -159,9 +184,9 @@ export default function ExternalProfileHeader({
           {websiteUrl ? (
             <Pressable
               style={styles.metadataItem}
-              onPress={() => Linking.openURL(websiteUrl)}
+              onPress={() => WebBrowser.openBrowserAsync(websiteUrl)}
             >
-              <Ionicons name="link" size={14} color={colors.teal} />
+              <Ionicons name="globe-outline" size={14} color={colors.teal} />
               <Text style={styles.metadataLink}>{websiteLabel || websiteUrl}</Text>
             </Pressable>
           ) : null}
@@ -254,18 +279,30 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     marginTop: spacing.lg,
   },
-  bioTruncated: {
-    fontFamily: fonts.body,
-    fontSize: typography.magazineBody.fontSize,
-    lineHeight: typography.magazineBody.lineHeight,
-    color: colors.foreground,
-    textAlign: 'center',
+  bioFade: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 32,
+    flexDirection: 'column',
   },
-  bioToggle: {
-    fontFamily: fonts.body,
-    fontSize: typography.magazineBody.fontSize,
+  bioFadeStep: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  readMoreButton: {
+    alignItems: 'center',
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+  },
+  readMoreText: {
+    fontFamily: fonts.bodyItalic,
+    fontStyle: 'normal',
+    fontSize: typography.callout.fontSize,
+    lineHeight: typography.callout.lineHeight,
     color: colors.secondaryText,
-    textAlign: 'center',
+    letterSpacing: 0.3,
   },
   metadataRow: {
     flexDirection: 'row',
