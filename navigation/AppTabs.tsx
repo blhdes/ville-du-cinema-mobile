@@ -149,8 +149,11 @@ function AppTabsInner() {
         listeners={({ navigation }) => ({
           tabPress: () => {
             onFeedPress()
-            if (navigation.isFocused() && !isFeedRefreshing) {
-              requestFeedRefresh()
+            if (navigation.isFocused()) {
+              navigation.navigate('Feed', { screen: 'FeedDrawer', params: { screen: 'FeedMain' } })
+              if (!isFeedRefreshing) {
+                requestFeedRefresh()
+              }
             }
           },
         })}
