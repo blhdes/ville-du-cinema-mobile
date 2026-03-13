@@ -147,14 +147,30 @@ function AppTabsInner() {
           tabBarIcon: ({ color, size }) => <FeedIcon color={color} size={size} />,
         }}
         listeners={({ navigation }) => ({
-          tabPress: () => {
+          tabPress: (e) => {
             onFeedPress()
-            if (navigation.isFocused()) {
-              navigation.navigate('Feed', { screen: 'FeedDrawer', params: { screen: 'FeedMain' } })
+
+            // Only refresh when already viewing the root FeedScreen.
+            // Condition A: Different tab is active → isFocused() is false → normal tab switch.
+            // Condition B: Feed tab active but deep in stack → popToTop, no refresh.
+            // Condition C: Feed tab active at root → scroll to top + refresh.
+            if (!navigation.isFocused()) return
+
+            const state = navigation.getState()
+            const feedRoute = state.routes.find((r: { name: string }) => r.name === 'Feed')
+            const feedStack = feedRoute?.state
+
+            // feedStack is undefined on first render (only root visible), or index 0 means root
+            const isAtFeedRoot = !feedStack || feedStack.index === 0
+
+            if (isAtFeedRoot) {
+              // Condition C — already at root: scroll to top + refresh
+              e.preventDefault()
               if (!isFeedRefreshing) {
                 requestFeedRefresh()
               }
             }
+            // Condition B — deep in stack: let default popToTop behavior happen (no refresh)
           },
         })}
       />

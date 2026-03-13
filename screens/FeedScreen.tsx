@@ -13,11 +13,12 @@ import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
-import { useNavigation, DrawerActions } from '@react-navigation/native'
+import { useNavigation, useFocusEffect, DrawerActions } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Ionicons } from '@expo/vector-icons'
 import type { FeedStackParamList } from '@/navigation/types'
@@ -39,6 +40,13 @@ import LogoIcon from '@/components/ui/LogoIcon'
 // Scrolling up has 0px threshold — the header reveals immediately.
 const DOWN_DEADZONE = 8
 
+// Scroll positions below this are a "safe zone" — the tab bar always snaps back to
+// visible so users who just opened the app can switch tabs freely.
+const TOP_THRESHOLD = 250
+
+// Spring config for snap animations — relaxed, deliberate settling for an editorial feel.
+const SNAP_SPRING = { damping: 24, stiffness: 120, mass: 1.0, overshootClamping: true }
+
 export default function FeedScreen() {
   const insets = useSafeAreaInsets()
   const tabBarHeight = useBottomTabBarHeight()
@@ -52,13 +60,21 @@ export default function FeedScreen() {
   const [headerHeight, setHeaderHeight] = useState(0)
   const headerTranslateY = useSharedValue(0)
   const downAccumulator = useSharedValue(0)
+  const isDragging = useSharedValue(false)
+  const lastScrollDirection = useSharedValue(0)
 
   const onHeaderLayout = useCallback((e: LayoutChangeEvent) => {
     setHeaderHeight(e.nativeEvent.layout.height)
   }, [])
 
+  // Outer container: translateY only — background stays 100% opaque.
   const headerAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: headerTranslateY.value }],
+    opacity: 1,
+  }))
+
+  // Inner content: opacity fades the buttons/logo, leaving a clean solid bar behind.
+  const headerContentOpacity = useAnimatedStyle(() => ({
     opacity: interpolate(
       headerTranslateY.value,
       [-headerHeight, 0],
@@ -66,14 +82,51 @@ export default function FeedScreen() {
     ),
   }))
 
+  // Snap bars to a definitive visible/hidden state — no halfway positions.
+  const snapToFinalState = (scrollY: number) => {
+    'worklet'
+    // Top safe zone — always animate back to fully visible.
+    if (scrollY < TOP_THRESHOLD) {
+      translateY.value = withSpring(0, SNAP_SPRING)
+      headerTranslateY.value = withSpring(0, SNAP_SPRING)
+      return
+    }
+
+    if (lastScrollDirection.value > 0) {
+      // Was scrolling DOWN → snap fully hidden.
+      translateY.value = withSpring(tabBarMax, SNAP_SPRING)
+      headerTranslateY.value = withSpring(-headerHeight, SNAP_SPRING)
+    } else {
+      // Was scrolling UP → only lock visible if the user scrolled hard enough
+      // to fully reveal the bar (translateY ≈ 0). Otherwise snap back to hidden.
+      if (translateY.value < 1) {
+        translateY.value = withSpring(0, SNAP_SPRING)
+        headerTranslateY.value = withSpring(0, SNAP_SPRING)
+      } else {
+        translateY.value = withSpring(tabBarMax, SNAP_SPRING)
+        headerTranslateY.value = withSpring(-headerHeight, SNAP_SPRING)
+      }
+    }
+  }
+
   const scrollHandler = useAnimatedScrollHandler({
+    onBeginDrag: (event, ctx: { prevY: number }) => {
+      isDragging.value = true
+      ctx.prevY = event.contentOffset.y
+      downAccumulator.value = 0
+    },
     onScroll: (event, ctx: { prevY: number }) => {
       const currentY = event.contentOffset.y
       const delta = currentY - ctx.prevY
       ctx.prevY = currentY
 
+      // Track direction during both drag and momentum (needed for snap decisions).
+      if (delta !== 0) {
+        lastScrollDirection.value = delta
+      }
+
       if (currentY <= 0) {
-        // At the top — always fully visible
+        // At the very top — always fully visible.
         headerTranslateY.value = 0
         translateY.value = 0
         downAccumulator.value = 0
@@ -81,18 +134,19 @@ export default function FeedScreen() {
       }
 
       if (delta > 0) {
-        // Scrolling down — apply deadzone, then 1:1
-        downAccumulator.value += delta
-        if (downAccumulator.value > DOWN_DEADZONE) {
-          headerTranslateY.value = Math.max(
-            -headerHeight,
-            Math.min(0, headerTranslateY.value - delta),
-          )
-          translateY.value = Math.min(
-            tabBarMax,
-            Math.max(0, translateY.value + delta),
-          )
+        // Scrolling down — deadzone only applies during active drag, not momentum.
+        if (isDragging.value) {
+          downAccumulator.value += delta
+          if (downAccumulator.value <= DOWN_DEADZONE) return
         }
+        headerTranslateY.value = Math.max(
+          -headerHeight,
+          Math.min(0, headerTranslateY.value - delta),
+        )
+        translateY.value = Math.min(
+          tabBarMax,
+          Math.max(0, translateY.value + delta),
+        )
       } else if (delta < 0) {
         // Scrolling up — immediate 1:1 (0px threshold)
         downAccumulator.value = 0
@@ -106,11 +160,24 @@ export default function FeedScreen() {
         )
       }
     },
-    onBeginDrag: (event, ctx: { prevY: number }) => {
-      ctx.prevY = event.contentOffset.y
-      downAccumulator.value = 0
+    onEndDrag: (event) => {
+      isDragging.value = false
+      snapToFinalState(event.contentOffset.y)
+    },
+    onMomentumEnd: (event) => {
+      snapToFinalState(event.contentOffset.y)
     },
   })
+
+  // Reset tab bar + header when leaving FeedScreen (fixes stuck-hidden bug on screen transitions).
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        translateY.value = withTiming(0, { duration: 200 })
+        headerTranslateY.value = withTiming(0, { duration: 200 })
+      }
+    }, [translateY, headerTranslateY])
+  )
 
   const [reviews, setReviews] = useState<Review[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -343,31 +410,33 @@ export default function FeedScreen() {
         />
       )}
 
-      {/* Header floats above content so it can slide out of view */}
+      {/* Header: outer shell stays opaque, inner content fades on scroll */}
       <Animated.View
         onLayout={onHeaderLayout}
         style={[styles.header, { paddingTop: insets.top + 12 }, headerAnimatedStyle]}
       >
-        <Pressable
-          onPress={openDrawer}
-          style={styles.usersButton}
-          hitSlop={8}
-        >
-          <Text style={styles.usersButtonText}>Users</Text>
-          {users.length > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{users.length}</Text>
-            </View>
-          )}
-        </Pressable>
-        <LogoIcon size={40} fill={colors.foreground} />
-        <Pressable
-          onPress={() => navigation.navigate('UserSearch')}
-          style={styles.searchButton}
-          hitSlop={8}
-        >
-          <Ionicons name="search-outline" size={20} color={colors.foreground} />
-        </Pressable>
+        <Animated.View style={[styles.headerContent, headerContentOpacity]}>
+          <Pressable
+            onPress={openDrawer}
+            style={styles.usersButton}
+            hitSlop={8}
+          >
+            <Text style={styles.usersButtonText}>Users</Text>
+            {users.length > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{users.length}</Text>
+              </View>
+            )}
+          </Pressable>
+          <LogoIcon size={40} fill={colors.foreground} />
+          <Pressable
+            onPress={() => navigation.navigate('UserSearch')}
+            style={styles.searchButton}
+            hitSlop={8}
+          >
+            <Ionicons name="search-outline" size={20} color={colors.foreground} />
+          </Pressable>
+        </Animated.View>
       </Animated.View>
     </View>
   )
@@ -392,6 +461,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
     zIndex: 1,
+  },
+  headerContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   usersButton: {
     flexDirection: 'row',
