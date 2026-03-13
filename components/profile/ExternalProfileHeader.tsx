@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import { useMemo, useState } from 'react'
+import { Linking, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
 import RenderHtml, { defaultSystemFonts } from 'react-native-render-html'
@@ -20,6 +20,11 @@ interface ExternalProfileHeaderProps {
 
 const AVATAR_SIZE = 72
 const HORIZONTAL_PAD = 20
+const BIO_CHAR_LIMIT = 140
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
+}
 const SYSTEM_FONTS = [
   ...defaultSystemFonts,
   fonts.heading,
@@ -39,10 +44,14 @@ export default function ExternalProfileHeader({
   twitterHandle,
   twitterUrl,
 }: ExternalProfileHeaderProps) {
+  const [bioExpanded, setBioExpanded] = useState(false)
+  const [avatarOpen, setAvatarOpen] = useState(false)
   const { width } = useWindowDimensions()
   const contentWidth = width - HORIZONTAL_PAD * 2
   const hasMetadata = !!location || !!websiteUrl || !!twitterUrl
   const letterboxdUrl = `https://letterboxd.com/${username}/`
+  const bioPlainText = bio ? stripHtml(bio) : ''
+  const bioIsTruncatable = bioPlainText.length > BIO_CHAR_LIMIT
 
   const bioTagsStyles = useMemo(() => ({
     body: {
@@ -79,7 +88,9 @@ export default function ExternalProfileHeader({
       {/* Avatar */}
       <View style={styles.avatarWrapper}>
         {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+          <Pressable onPress={() => setAvatarOpen(true)}>
+            <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+          </Pressable>
         ) : (
           <View style={[styles.avatar, styles.avatarPlaceholder]}>
             <Text style={styles.avatarInitial}>
@@ -88,6 +99,24 @@ export default function ExternalProfileHeader({
           </View>
         )}
       </View>
+
+      {/* Enlarged avatar modal */}
+      {avatarUrl ? (
+        <Modal
+          visible={avatarOpen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setAvatarOpen(false)}
+        >
+          <Pressable style={styles.avatarOverlay} onPress={() => setAvatarOpen(false)}>
+            <Image
+              source={{ uri: avatarUrl }}
+              style={[styles.avatarEnlarged, { width: width * 0.6, height: width * 0.6 }]}
+            />
+            <Text style={styles.avatarOverlayName}>{displayName}</Text>
+          </Pressable>
+        </Modal>
+      ) : null}
 
       {/* Display name */}
       <Text style={styles.displayName}>{displayName}</Text>
@@ -98,13 +127,22 @@ export default function ExternalProfileHeader({
       {/* Bio */}
       {bio ? (
         <View style={styles.bioWrapper}>
-          <RenderHtml
-            contentWidth={contentWidth}
-            source={{ html: bio }}
-            tagsStyles={bioTagsStyles}
-            systemFonts={SYSTEM_FONTS}
-            renderersProps={bioRenderersProps}
-          />
+          {bioIsTruncatable && !bioExpanded ? (
+            <Text style={styles.bioTruncated}>
+              {bioPlainText.slice(0, BIO_CHAR_LIMIT).trimEnd()}…{' '}
+              <Text style={styles.bioToggle} onPress={() => setBioExpanded(true)}>
+                more
+              </Text>
+            </Text>
+          ) : (
+            <RenderHtml
+              contentWidth={contentWidth}
+              source={{ html: bio }}
+              tagsStyles={bioTagsStyles}
+              systemFonts={SYSTEM_FONTS}
+              renderersProps={bioRenderersProps}
+            />
+          )}
         </View>
       ) : null}
 
@@ -168,6 +206,22 @@ const styles = StyleSheet.create({
     height: AVATAR_SIZE,
     borderRadius: AVATAR_SIZE / 2,
   },
+  avatarOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarEnlarged: {
+    borderRadius: 9999,
+  },
+  avatarOverlayName: {
+    fontFamily: fonts.heading,
+    fontSize: typography.title1.fontSize,
+    color: colors.white,
+    marginTop: spacing.lg,
+    textAlign: 'center',
+  },
   avatarPlaceholder: {
     backgroundColor: colors.background,
     borderWidth: StyleSheet.hairlineWidth,
@@ -199,6 +253,19 @@ const styles = StyleSheet.create({
   bioWrapper: {
     alignSelf: 'stretch',
     marginTop: spacing.lg,
+  },
+  bioTruncated: {
+    fontFamily: fonts.body,
+    fontSize: typography.magazineBody.fontSize,
+    lineHeight: typography.magazineBody.lineHeight,
+    color: colors.foreground,
+    textAlign: 'center',
+  },
+  bioToggle: {
+    fontFamily: fonts.body,
+    fontSize: typography.magazineBody.fontSize,
+    color: colors.secondaryText,
+    textAlign: 'center',
   },
   metadataRow: {
     flexDirection: 'row',
