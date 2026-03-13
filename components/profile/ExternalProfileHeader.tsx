@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Linking, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import Animated, {
   interpolateColor,
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
+  withSequence,
   withTiming,
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
@@ -12,6 +14,7 @@ import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
 import RenderHtml, { defaultSystemFonts } from 'react-native-render-html'
 import LetterboxdDots from '@/components/ui/LetterboxdDots'
+import type { FavoriteFilm } from '@/services/externalProfile'
 import { colors, fonts, spacing, typography } from '@/theme'
 
 interface ExternalProfileHeaderProps {
@@ -24,6 +27,7 @@ interface ExternalProfileHeaderProps {
   websiteLabel?: string
   twitterHandle?: string
   twitterUrl?: string
+  favoriteFilms?: FavoriteFilm[]
   isFollowing: boolean
   onFollowToggle: () => void
 }
@@ -40,8 +44,54 @@ const SYSTEM_FONTS = [
   fonts.bodyItalic,
 ]
 
+const SKELETON_DURATION = 800
 const FOLLOW_DURATION = 250
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
+
+function FavouritesSkeleton({
+  count,
+  posterWidth,
+  posterHeight,
+}: {
+  count: number
+  posterWidth: number
+  posterHeight: number
+}) {
+  const shimmer = useSharedValue(0.06)
+
+  useEffect(() => {
+    shimmer.value = withRepeat(
+      withSequence(
+        withTiming(0.12, { duration: SKELETON_DURATION }),
+        withTiming(0.06, { duration: SKELETON_DURATION }),
+      ),
+      -1,
+    )
+  }, [shimmer])
+
+  const skeletonStyle = useAnimatedStyle(() => ({
+    opacity: shimmer.value,
+  }))
+
+  return (
+    <View style={styles.favoritesRow}>
+      {Array.from({ length: count }, (_, i) => (
+        <Animated.View
+          key={i}
+          style={[
+            {
+              width: posterWidth,
+              height: posterHeight,
+              borderRadius: 4,
+              backgroundColor: colors.foreground,
+            },
+            skeletonStyle,
+          ]}
+        />
+      ))}
+    </View>
+  )
+}
 
 function FollowButton({ isFollowing, onPress }: { isFollowing: boolean; onPress: () => void }) {
   const progress = useSharedValue(isFollowing ? 1 : 0)
@@ -89,6 +139,7 @@ export default function ExternalProfileHeader({
   websiteLabel,
   twitterHandle,
   twitterUrl,
+  favoriteFilms,
   isFollowing,
   onFollowToggle,
 }: ExternalProfileHeaderProps) {
@@ -98,7 +149,27 @@ export default function ExternalProfileHeader({
   const { width } = useWindowDimensions()
   const contentWidth = width - HORIZONTAL_PAD * 2
   const hasMetadata = !!location || !!websiteUrl || !!twitterUrl
+  const posterWidth = (contentWidth - spacing.sm * 3) / 4
+  const posterHeight = posterWidth * 1.5
   const letterboxdUrl = `https://letterboxd.com/${username}/`
+
+  // Track poster loading globally — skeleton stays until every poster is ready
+  const totalPosters = favoriteFilms?.length ?? 0
+  const loadedCount = useRef(0)
+  const [allPostersLoaded, setAllPostersLoaded] = useState(false)
+  const postersOpacity = useSharedValue(0)
+
+  const handlePosterLoad = useCallback(() => {
+    loadedCount.current += 1
+    if (loadedCount.current >= totalPosters) {
+      setAllPostersLoaded(true)
+      postersOpacity.value = withTiming(1, { duration: 300 })
+    }
+  }, [totalPosters, postersOpacity])
+
+  const postersAnimStyle = useAnimatedStyle(() => ({
+    opacity: postersOpacity.value,
+  }))
 
   const handleBioLayout = useCallback((e: { nativeEvent: { layout: { height: number } } }) => {
     if (!bioExpanded && e.nativeEvent.layout.height > BIO_COLLAPSED_HEIGHT) {
@@ -253,6 +324,50 @@ export default function ExternalProfileHeader({
         </View>
       ) : null}
 
+      {/* Favourites */}
+      {favoriteFilms && favoriteFilms.length > 0 ? (
+        <View style={styles.favoritesSection}>
+          <Text style={styles.favoritesLabel}>FAVOURITES</Text>
+
+          {/* Skeleton — overlays posters until all have loaded */}
+          {!allPostersLoaded ? (
+            <View style={styles.skeletonOverlay}>
+              <FavouritesSkeleton
+                count={favoriteFilms.length}
+                posterWidth={posterWidth}
+                posterHeight={posterHeight}
+              />
+            </View>
+          ) : null}
+
+          {/* Real posters — always in layout, fade in once all loaded */}
+          <Animated.View style={[styles.favoritesRow, postersAnimStyle]}>
+            {favoriteFilms.map((film, index) => (
+              <Pressable
+                key={index}
+                onPress={() => {
+                  const query = encodeURIComponent(`${film.title} film`)
+                  WebBrowser.openBrowserAsync(`https://www.google.com/search?q=${query}`)
+                }}
+                style={({ pressed }) => pressed && styles.posterPressed}
+              >
+                <Image
+                  source={{ uri: film.posterUrl }}
+                  style={{
+                    width: posterWidth,
+                    height: posterHeight,
+                    borderRadius: 4,
+                  }}
+                  cachePolicy="memory-disk"
+                  accessibilityLabel={film.title}
+                  onLoad={handlePosterLoad}
+                />
+              </Pressable>
+            ))}
+          </Animated.View>
+        </View>
+      ) : null}
+
       {/* Follow / Following */}
       <FollowButton isFollowing={isFollowing} onPress={() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
@@ -389,6 +504,34 @@ const styles = StyleSheet.create({
     fontSize: typography.caption.fontSize,
     lineHeight: typography.caption.lineHeight,
     color: colors.teal,
+  },
+  favoritesSection: {
+    alignSelf: 'stretch',
+    marginTop: spacing.lg,
+    alignItems: 'center',
+  },
+  favoritesLabel: {
+    fontFamily: fonts.body,
+    fontSize: typography.magazineMeta.fontSize,
+    lineHeight: typography.magazineMeta.lineHeight,
+    letterSpacing: typography.magazineMeta.letterSpacing,
+    color: colors.secondaryText,
+    textTransform: 'uppercase',
+    marginBottom: spacing.sm,
+  },
+  favoritesRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  skeletonOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  posterPressed: {
+    opacity: 0.6,
   },
   followButton: {
     marginTop: spacing.md,

@@ -1,3 +1,8 @@
+export interface FavoriteFilm {
+  title: string
+  posterUrl: string
+}
+
 export interface ExternalProfileMeta {
   displayName: string
   bio: string
@@ -6,6 +11,7 @@ export interface ExternalProfileMeta {
   websiteLabel?: string
   twitterHandle?: string
   twitterUrl?: string
+  favoriteFilms: FavoriteFilm[]
 }
 
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
@@ -114,6 +120,83 @@ function extractDisplayName(html: string): string {
     .trim()
 }
 
+const FAVOURITES_SECTION_REGEX =
+  /<section\s+id="favourites"[^>]*>([\s\S]*?)<\/section>/i
+const FAVOURITE_ITEM_REGEX =
+  /data-item-slug="([^"]+)"[^>]*data-item-link="([^"]+)"[^>]*data-item-full-display-name="([^"]+)"/gi
+const JSONLD_IMAGE_REGEX = /"image"\s*:\s*"([^"]+)"/
+
+/**
+ * Extract favorite film slugs and titles from the profile page.
+ * Letterboxd lazy-loads poster images via React, so the `<img src>` is
+ * just a placeholder. We pull slugs from the `<section id="favourites">`
+ * data attributes, then resolve real poster URLs from each film's JSON-LD.
+ */
+function extractFavoriteSlugs(
+  html: string
+): { slug: string; link: string; title: string }[] {
+  const sectionMatch = html.match(FAVOURITES_SECTION_REGEX)
+  if (!sectionMatch) return []
+
+  const sectionHtml = sectionMatch[1]
+  const slugs: { slug: string; link: string; title: string }[] = []
+  let match: RegExpExecArray | null
+
+  while ((match = FAVOURITE_ITEM_REGEX.exec(sectionHtml)) !== null) {
+    slugs.push({
+      slug: match[1],
+      link: match[2],
+      title: decodeEntities(match[3]),
+    })
+    if (slugs.length >= 4) break
+  }
+  FAVOURITE_ITEM_REGEX.lastIndex = 0
+
+  return slugs
+}
+
+/**
+ * Fetch a film page and extract the poster URL from its JSON-LD metadata.
+ * Returns null if the page can't be fetched or parsed.
+ */
+async function fetchPosterUrl(filmLink: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://letterboxd.com${filmLink}`)
+    if (!res.ok) return null
+
+    const html = await res.text()
+    const match = html.match(JSONLD_IMAGE_REGEX)
+    return match ? match[1] : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Resolve favorite films with real poster URLs.
+ * Fetches up to 4 film pages in parallel for their JSON-LD poster images.
+ */
+async function resolveFavoriteFilms(
+  html: string
+): Promise<FavoriteFilm[]> {
+  const slugs = extractFavoriteSlugs(html)
+  if (slugs.length === 0) return []
+
+  const results = await Promise.allSettled(
+    slugs.map(async ({ link, title }) => {
+      const posterUrl = await fetchPosterUrl(link)
+      return posterUrl ? { title, posterUrl } : null
+    })
+  )
+
+  return results
+    .filter(
+      (r): r is PromiseFulfilledResult<FavoriteFilm> =>
+        r.status === 'fulfilled' && r.value !== null
+    )
+    .map((r) => r.value)
+}
+
 /**
  * Extract location, website, and Twitter/X from the profile-metadata section.
  *
@@ -194,20 +277,19 @@ export async function fetchExternalProfileMeta(
 
   try {
     const res = await fetch(`https://letterboxd.com/${username}/`)
-    if (!res.ok) return { displayName: '', bio: '' }
+    if (!res.ok) return { displayName: '', bio: '', favoriteFilms: [] }
 
     const html = await res.text()
     const { location, websiteUrl, websiteLabel, twitterHandle, twitterUrl } =
       extractProfileMetadata(html)
 
-    // Try to fetch the full untruncated bio from Letterboxd's AJAX endpoint.
-    // Fall back to the collapsed (truncated) version from the page HTML.
+    // Fetch full bio and resolve poster URLs in parallel to avoid added latency.
     const fullTextUrl = extractFullTextUrl(html)
-    let bio = extractCollapsedBio(html)
-    if (fullTextUrl) {
-      const fullBio = await fetchFullBio(fullTextUrl)
-      if (fullBio) bio = fullBio
-    }
+    const [fullBio, favoriteFilms] = await Promise.all([
+      fullTextUrl ? fetchFullBio(fullTextUrl) : Promise.resolve(null),
+      resolveFavoriteFilms(html),
+    ])
+    const bio = fullBio ?? extractCollapsedBio(html)
 
     const meta: ExternalProfileMeta = {
       displayName: extractDisplayName(html),
@@ -217,13 +299,14 @@ export async function fetchExternalProfileMeta(
       websiteLabel,
       twitterHandle,
       twitterUrl,
+      favoriteFilms,
     }
 
     profileCache.set(username, { meta, fetchedAt: Date.now() })
     return meta
   } catch (err) {
     console.error(`Failed to fetch profile for ${username}:`, err)
-    return { displayName: '', bio: '' }
+    return { displayName: '', bio: '', favoriteFilms: [] }
   }
 }
 

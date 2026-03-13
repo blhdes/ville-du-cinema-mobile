@@ -116,6 +116,7 @@ export default function ExternalProfileScreen() {
           websiteLabel={meta?.websiteLabel}
           twitterHandle={meta?.twitterHandle}
           twitterUrl={meta?.twitterUrl}
+          favoriteFilms={meta?.favoriteFilms}
           isFollowing={isFollowing}
           onFollowToggle={handleFollowToggle}
         />
