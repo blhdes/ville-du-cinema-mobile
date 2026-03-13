@@ -264,7 +264,7 @@ export default function ExternalProfileHeader({
         style={styles.letterboxdButton}
         onPress={() => Linking.openURL(letterboxdUrl)}
       >
-        <LetterboxdDots size={20} fill={colors.teal} />
+        <LetterboxdDots size={20} />
       </Pressable>
 
       {/* Bottom hairline divider */}
