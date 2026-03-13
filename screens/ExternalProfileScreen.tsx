@@ -187,10 +187,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   list: {
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
   emptyList: {
     flexGrow: 1,
+    paddingBottom: 100,
   },
   emptyContainer: {
     alignItems: 'center',
