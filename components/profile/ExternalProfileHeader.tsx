@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { Linking, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import * as Haptics from 'expo-haptics'
 import * as WebBrowser from 'expo-web-browser'
 import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
@@ -17,6 +18,8 @@ interface ExternalProfileHeaderProps {
   websiteLabel?: string
   twitterHandle?: string
   twitterUrl?: string
+  isFollowing: boolean
+  onFollowToggle: () => void
 }
 
 const AVATAR_SIZE = 72
@@ -41,6 +44,8 @@ export default function ExternalProfileHeader({
   websiteLabel,
   twitterHandle,
   twitterUrl,
+  isFollowing,
+  onFollowToggle,
 }: ExternalProfileHeaderProps) {
   const [bioExpanded, setBioExpanded] = useState(false)
   const [bioOverflows, setBioOverflows] = useState(false)
@@ -203,6 +208,19 @@ export default function ExternalProfileHeader({
         </View>
       ) : null}
 
+      {/* Follow / Following */}
+      <Pressable
+        style={[styles.followButton, isFollowing && styles.followButtonActive]}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+          onFollowToggle()
+        }}
+      >
+        <Text style={[styles.followText, isFollowing && styles.followTextActive]}>
+          {isFollowing ? 'FOLLOWING' : 'FOLLOW'}
+        </Text>
+      </Pressable>
+
       {/* Letterboxd link */}
       <Pressable
         style={styles.letterboxdButton}
@@ -333,6 +351,27 @@ const styles = StyleSheet.create({
     fontSize: typography.caption.fontSize,
     lineHeight: typography.caption.lineHeight,
     color: colors.teal,
+  },
+  followButton: {
+    marginTop: spacing.md,
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.teal,
+    borderRadius: 4,
+  },
+  followButtonActive: {
+    backgroundColor: colors.teal,
+    borderColor: colors.teal,
+  },
+  followText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: typography.magazineMeta.fontSize,
+    letterSpacing: typography.magazineMeta.letterSpacing,
+    color: colors.teal,
+  },
+  followTextActive: {
+    color: colors.white,
   },
   letterboxdButton: {
     marginTop: spacing.md,

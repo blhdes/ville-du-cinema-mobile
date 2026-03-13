@@ -18,6 +18,9 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { useNavigation, DrawerActions } from '@react-navigation/native'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { Ionicons } from '@expo/vector-icons'
+import type { FeedStackParamList } from '@/navigation/types'
 import { useUserLists } from '@/hooks/useUserLists'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { useTabBar } from '@/contexts/TabBarContext'
@@ -40,7 +43,7 @@ export default function FeedScreen() {
   const insets = useSafeAreaInsets()
   const tabBarHeight = useBottomTabBarHeight()
   const tabBarMax = tabBarHeight + insets.bottom
-  const navigation = useNavigation()
+  const navigation = useNavigation<NativeStackNavigationProp<FeedStackParamList>>()
   const { users, usernames, isLoading: isListLoading, error: listError, clearError } = useUserLists()
   const { preferences } = useDisplayPreferences()
   const { translateY, feedRefreshRequested, setIsFeedRefreshing } = useTabBar()
@@ -358,7 +361,13 @@ export default function FeedScreen() {
           )}
         </Pressable>
         <LogoIcon size={40} fill={colors.foreground} />
-        <View style={styles.headerSpacer} />
+        <Pressable
+          onPress={() => navigation.navigate('UserSearch')}
+          style={styles.searchButton}
+          hitSlop={8}
+        >
+          <Ionicons name="search-outline" size={20} color={colors.foreground} />
+        </Pressable>
       </Animated.View>
     </View>
   )
@@ -408,8 +417,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.secondaryText,
   },
-  headerSpacer: {
+  searchButton: {
     width: 60,
+    alignItems: 'flex-end',
   },
   list: {},
   emptyList: {

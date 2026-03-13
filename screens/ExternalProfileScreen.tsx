@@ -19,6 +19,7 @@ import {
 import { fetchUserFeed, clearFeedCache } from '@/services/feed'
 import { useAvatarUrl } from '@/services/avatarCache'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
+import { useUserLists } from '@/hooks/useUserLists'
 import { colors, fonts, spacing, typography } from '@/theme'
 import Spinner from '@/components/ui/Spinner'
 import ErrorBanner from '@/components/ui/ErrorBanner'
@@ -34,6 +35,8 @@ export default function ExternalProfileScreen() {
 
   const avatarUrl = useAvatarUrl(username)
   const { preferences } = useDisplayPreferences()
+  const { usernames, addUser, removeUser } = useUserLists()
+  const isFollowing = usernames.includes(username)
 
   const [reviews, setReviews] = useState<Review[]>([])
   const [meta, setMeta] = useState<ExternalProfileMeta | null>(null)
@@ -86,6 +89,14 @@ export default function ExternalProfileScreen() {
     return <ReviewCard review={item} hideAuthor />
   }, [])
 
+  const handleFollowToggle = useCallback(() => {
+    if (isFollowing) {
+      removeUser(username)
+    } else {
+      addUser(username)
+    }
+  }, [isFollowing, username, addUser, removeUser])
+
   const headerComponent = useMemo(() => {
     const displayName = meta?.displayName || username
     return (
@@ -105,10 +116,12 @@ export default function ExternalProfileScreen() {
           websiteLabel={meta?.websiteLabel}
           twitterHandle={meta?.twitterHandle}
           twitterUrl={meta?.twitterUrl}
+          isFollowing={isFollowing}
+          onFollowToggle={handleFollowToggle}
         />
       </>
     )
-  }, [meta, username, avatarUrl, refreshing])
+  }, [meta, username, avatarUrl, refreshing, isFollowing, handleFollowToggle])
 
   const renderEmpty = useCallback(() => {
     if (isLoading) return null
