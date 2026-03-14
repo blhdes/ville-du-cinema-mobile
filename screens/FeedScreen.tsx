@@ -64,7 +64,9 @@ export default function FeedScreen() {
   const headerTranslateY = useSharedValue(0)
   const downAccumulator = useSharedValue(0)
   const isDragging = useSharedValue(false)
+  const scrollY = useSharedValue(0)
   const lastScrollDirection = useSharedValue(0)
+  const spinnerProgress = useSharedValue(1)
 
   const onHeaderLayout = useCallback((e: LayoutChangeEvent) => {
     setHeaderHeight(e.nativeEvent.layout.height)
@@ -86,10 +88,10 @@ export default function FeedScreen() {
   }))
 
   // Snap bars to a definitive visible/hidden state — no halfway positions.
-  const snapToFinalState = (scrollY: number) => {
+  const snapToFinalState = (currentScrollY: number) => {
     'worklet'
     // Top safe zone — always animate back to fully visible.
-    if (scrollY < TOP_THRESHOLD) {
+    if (currentScrollY < TOP_THRESHOLD) {
       translateY.value = withSpring(0, SNAP_SPRING)
       headerTranslateY.value = withSpring(0, SNAP_SPRING)
       return
@@ -120,6 +122,7 @@ export default function FeedScreen() {
     },
     onScroll: (event, ctx: { prevY: number }) => {
       const currentY = event.contentOffset.y
+      scrollY.value = currentY
       const delta = currentY - ctx.prevY
       ctx.prevY = currentY
 
@@ -252,24 +255,25 @@ export default function FeedScreen() {
     }
   }, [loadFeed, usernames])
 
-  // Refresh feed when the Feed tab icon is tapped while already on Feed:
-  // scroll to top, reveal header + tab bar, show the RefreshControl spinner, keep existing content
+  // Smart tab press: scroll-to-top if scrolled down, refresh only if already at top
   useEffect(() => {
     if (feedRefreshRequested > 0) {
-      // Scroll the list to the top
-      flatListRef.current?.scrollToOffset({ offset: 0, animated: true })
-
-      // Reveal the header and tab bar
+      // Always reveal header + tab bar
       headerTranslateY.value = withTiming(0, { duration: 200 })
       translateY.value = withTiming(0, { duration: 200 })
 
-      // Trigger refresh but keep cached content visible (keepContent = true)
-      setIsFeedRefreshing(true)
-      setIsRefreshing(true)
-      clearFeedCache()
-      loadFeed(1, false, true)
-      if (usernames.length > 0) {
-        refreshAvatarUrls(usernames).catch(() => {})
+      if (scrollY.value > 5) {
+        // Scrolled down — only scroll to top, no data fetch
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: true })
+      } else {
+        // Already at top — trigger refresh with existing content visible
+        setIsFeedRefreshing(true)
+        setIsRefreshing(true)
+        clearFeedCache()
+        loadFeed(1, false, true)
+        if (usernames.length > 0) {
+          refreshAvatarUrls(usernames).catch(() => {})
+        }
       }
     }
   }, [feedRefreshRequested]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -295,6 +299,20 @@ export default function FeedScreen() {
   const filteredReviews = preferences.showWatchNotifications
     ? reviews
     : reviews.filter((r) => r.type !== 'watch')
+
+  const isInitialLoad = (isLoading || isListLoading) && page === 1 && reviews.length === 0
+
+  useEffect(() => {
+    const visible = isRefreshing || isInitialLoad
+    spinnerProgress.value = withTiming(visible ? 1 : 0, {
+      duration: visible ? 200 : 600,
+    })
+  }, [isRefreshing, isInitialLoad])
+
+  const spinnerCollapseStyle = useAnimatedStyle(() => ({
+    height: interpolate(spinnerProgress.value, [0, 1], [0, 52]),
+    opacity: spinnerProgress.value,
+  }))
 
   const renderItem = useCallback(({ item }: { item: Review }) => {
     if (item.type === 'watch') {
@@ -326,11 +344,26 @@ export default function FeedScreen() {
   }
 
   const renderHeader = () => {
-    if (!isRefreshing) return null
+    if (isInitialLoad) {
+      return (
+        <View>
+          <Animated.View style={[styles.spinnerCollapse, spinnerCollapseStyle]}>
+            <View style={styles.refreshSpinner}>
+              <Spinner size={20} />
+            </View>
+          </Animated.View>
+          <ReviewCardSkeleton />
+          <ReviewCardSkeleton />
+          <ReviewCardSkeleton />
+        </View>
+      )
+    }
     return (
-      <View style={styles.refreshSpinner}>
-        <Spinner size={20} />
-      </View>
+      <Animated.View style={[styles.spinnerCollapse, spinnerCollapseStyle]}>
+        <View style={styles.refreshSpinner}>
+          <Spinner size={20} />
+        </View>
+      </Animated.View>
     )
   }
 
@@ -358,41 +391,33 @@ export default function FeedScreen() {
         <ErrorBanner message={error} onDismiss={clearError} />
       )}
 
-      {(isLoading || isListLoading) && page === 1 && reviews.length === 0 ? (
-        <View style={[styles.skeletonContainer, { paddingTop: headerHeight + spacing.md }]}>
-          <ReviewCardSkeleton />
-          <ReviewCardSkeleton />
-          <ReviewCardSkeleton />
-        </View>
-      ) : (
-        <Animated.FlatList
-          ref={flatListRef}
-          key={layoutKey}
-          data={filteredReviews}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          ListHeaderComponent={renderHeader}
-          ListEmptyComponent={renderEmpty}
-          ListFooterComponent={renderFooter}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.3}
-          onScroll={scrollHandler}
-          scrollEventThrottle={16}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={handleRefresh}
-              tintColor="transparent"
-              colors={['transparent']}
-            />
-          }
-          contentContainerStyle={
-            filteredReviews.length === 0
-              ? styles.emptyList
-              : [styles.list, { paddingTop: headerHeight + spacing.md, paddingBottom: tabBarHeight + 20 }]
-          }
-        />
-      )}
+      <Animated.FlatList
+        ref={flatListRef}
+        key={layoutKey}
+        data={filteredReviews}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={renderEmpty}
+        ListFooterComponent={renderFooter}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.3}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={false}
+            onRefresh={handleRefresh}
+            tintColor="transparent"
+            colors={['transparent']}
+          />
+        }
+        contentContainerStyle={
+          filteredReviews.length === 0 && !isInitialLoad
+            ? styles.emptyList
+            : [styles.list, { paddingTop: headerHeight + spacing.md, paddingBottom: tabBarHeight + 20 }]
+        }
+      />
 
       {/* Header: outer shell stays opaque, inner content fades on scroll */}
       <Animated.View
@@ -485,8 +510,8 @@ function createStyles(colors: ThemeColors) {
     emptyList: {
       flexGrow: 1,
     },
-    skeletonContainer: {
-      flex: 1,
+    spinnerCollapse: {
+      overflow: 'hidden',
     },
     refreshSpinner: {
       alignItems: 'center',
