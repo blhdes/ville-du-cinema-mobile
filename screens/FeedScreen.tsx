@@ -437,7 +437,16 @@ export default function FeedScreen() {
               </View>
             )}
           </Pressable>
-          <LogoIcon size={40} fill={colors.foreground} />
+          <Pressable
+            onPress={() => {
+              headerTranslateY.value = withTiming(0, { duration: 200 })
+              translateY.value = withTiming(0, { duration: 200 })
+              flatListRef.current?.scrollToOffset({ offset: 0, animated: true })
+            }}
+            hitSlop={8}
+          >
+            <LogoIcon size={40} fill={colors.foreground} />
+          </Pressable>
           <Pressable
             onPress={() => navigation.navigate('UserSearch')}
             style={styles.searchButton}

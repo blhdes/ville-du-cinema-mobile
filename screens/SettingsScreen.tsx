@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { useUser } from '@/hooks/useUser'
 import { useGuestMode } from '@/contexts/GuestModeContext'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
@@ -11,7 +10,7 @@ import DisplaySettings from '@/components/settings/DisplaySettings'
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets()
-  const tabBarHeight = useBottomTabBarHeight()
+  const bottomPadding = insets.bottom + 49 + 20
   const { user, signOut } = useUser()
   const { isGuest, exitGuestMode } = useGuestMode()
   const { colors } = useTheme()
@@ -36,7 +35,7 @@ export default function SettingsScreen() {
         <Text style={styles.headerTitle}>Settings</Text>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + 20 }]}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}>
         {/* Account section */}
         <Text style={styles.sectionLabel}>Account</Text>
         <View style={styles.card}>
@@ -166,6 +165,7 @@ function createStyles(colors: ThemeColors) {
     signOutSection: {
       alignItems: 'center',
       paddingTop: spacing.xxl,
+      paddingBottom: spacing.xxl,
     },
     signOutText: {
       fontFamily: fonts.bodyBold,

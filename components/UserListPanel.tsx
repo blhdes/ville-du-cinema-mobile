@@ -124,7 +124,7 @@ export default function UserListPanel({
                   pressed && { opacity: 0.6 },
                 ]}
               >
-                <Text style={styles.removeText}>REMOVE</Text>
+                <Text style={styles.removeText}>UNFOLLOW</Text>
               </Pressable>
             </View>
           ))}
@@ -152,7 +152,7 @@ export default function UserListPanel({
                   onAdd(username)
                 }}
               >
-                <Text style={styles.suggestionText}>{username}</Text>
+                <Text style={styles.suggestionText}>@{username}</Text>
                 <Text style={styles.suggestionAction}>ADD</Text>
               </Pressable>
             ))}
