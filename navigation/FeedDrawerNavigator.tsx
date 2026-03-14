@@ -1,10 +1,12 @@
+import { useMemo } from 'react'
 import { createDrawerNavigator } from '@react-navigation/drawer'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useUserLists } from '@/hooks/useUserLists'
 import FeedScreen from '@/screens/FeedScreen'
 import UserListPanel from '@/components/UserListPanel'
-import { colors, fonts, spacing, typography } from '@/theme'
+import { useTheme } from '@/contexts/ThemeContext'
+import { fonts, spacing, typography, type ThemeColors } from '@/theme'
 import type { FeedDrawerParamList } from '@/navigation/types'
 
 const Drawer = createDrawerNavigator<FeedDrawerParamList>()
@@ -12,6 +14,8 @@ const Drawer = createDrawerNavigator<FeedDrawerParamList>()
 function DrawerContent({ navigation }: { navigation: any }) {
   const insets = useSafeAreaInsets()
   const { users, isAuthenticated, addUser, removeUser } = useUserLists()
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
 
   return (
     <View style={[styles.drawer, { paddingTop: insets.top + spacing.md }]}>
@@ -32,6 +36,8 @@ function DrawerContent({ navigation }: { navigation: any }) {
 }
 
 export default function FeedDrawerNavigator() {
+  const { colors } = useTheme()
+
   return (
     <Drawer.Navigator
       drawerContent={(props) => <DrawerContent {...props} />}
@@ -39,7 +45,11 @@ export default function FeedDrawerNavigator() {
         headerShown: false,
         drawerPosition: 'left',
         drawerType: 'front',
-        drawerStyle: styles.drawerContainer,
+        drawerStyle: {
+          width: '85%',
+          maxWidth: 360,
+          backgroundColor: colors.background,
+        },
         overlayColor: 'rgba(0, 0, 0, 0.3)',
         swipeEdgeWidth: 40,
       }}
@@ -49,34 +59,31 @@ export default function FeedDrawerNavigator() {
   )
 }
 
-const styles = StyleSheet.create({
-  drawerContainer: {
-    width: '85%',
-    maxWidth: 360,
-    backgroundColor: colors.background,
-  },
-  drawer: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  drawerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  drawerTitle: {
-    fontFamily: fonts.heading,
-    fontSize: typography.title2.fontSize,
-    lineHeight: typography.title2.lineHeight,
-    color: colors.foreground,
-  },
-  doneButton: {
-    fontFamily: fonts.body,
-    fontSize: typography.body.fontSize,
-    color: colors.blue,
-  },
-})
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    drawer: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    drawerHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+      paddingBottom: spacing.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    drawerTitle: {
+      fontFamily: fonts.heading,
+      fontSize: typography.title2.fontSize,
+      lineHeight: typography.title2.lineHeight,
+      color: colors.foreground,
+    },
+    doneButton: {
+      fontFamily: fonts.body,
+      fontSize: typography.body.fontSize,
+      color: colors.blue,
+    },
+  })
+}

@@ -1,9 +1,13 @@
+import { useMemo } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { getQuoteOfTheWeek } from '@/constants/filmmakerQuotes'
-import { colors, fonts, spacing } from '@/theme'
+import { useTheme } from '@/contexts/ThemeContext'
+import { fonts, spacing, type ThemeColors } from '@/theme'
 
 export default function QuoteOfTheDay() {
   const quote = getQuoteOfTheWeek()
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
 
   return (
     <View style={styles.container}>
@@ -13,26 +17,28 @@ export default function QuoteOfTheDay() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    marginTop: spacing.xl,
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.sepiaLight,
-  },
-  text: {
-    fontFamily: fonts.bodyItalic,
-    fontSize: 15,
-    color: colors.sepia,
-    lineHeight: 24,
-  },
-  author: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 14,
-    color: colors.sepia,
-    textAlign: 'right',
-    marginTop: spacing.sm,
-  },
-})
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      marginTop: spacing.xl,
+      marginHorizontal: spacing.md,
+      marginBottom: spacing.lg,
+      padding: spacing.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    text: {
+      fontFamily: fonts.bodyItalic,
+      fontSize: 15,
+      color: colors.secondaryText,
+      lineHeight: 24,
+    },
+    author: {
+      fontFamily: fonts.bodyBold,
+      fontSize: 14,
+      color: colors.secondaryText,
+      textAlign: 'right',
+      marginTop: spacing.sm,
+    },
+  })
+}

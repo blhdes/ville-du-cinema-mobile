@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Pressable,
   ScrollView,
@@ -12,7 +12,8 @@ import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { DISCOVERY_USERS } from '@/constants/discoveryUsers'
-import { colors, fonts, spacing, typography } from '@/theme'
+import { useTheme } from '@/contexts/ThemeContext'
+import { fonts, spacing, typography, type ThemeColors } from '@/theme'
 import type { FeedStackParamList } from '@/navigation/types'
 import type { FollowedUser } from '@/types/database'
 
@@ -32,6 +33,8 @@ export default function UserListPanel({
   const navigation = useNavigation<NativeStackNavigationProp<FeedStackParamList>>()
   const insets = useSafeAreaInsets()
   const bottomPadding = insets.bottom + 49 + 20
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
 
   const [input, setInput] = useState('')
   const [addError, setAddError] = useState<string | null>(null)
@@ -160,136 +163,138 @@ export default function UserListPanel({
   )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: spacing.lg,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  input: {
-    flex: 1,
-    height: 44,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    paddingHorizontal: 0,
-    fontFamily: fonts.body,
-    fontSize: typography.body.fontSize,
-    color: colors.foreground,
-    backgroundColor: 'transparent',
-  },
-  addButton: {
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.sm,
-  },
-  addButtonText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: typography.magazineMeta.fontSize,
-    letterSpacing: typography.magazineMeta.letterSpacing,
-    color: colors.teal,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  errorText: {
-    fontFamily: fonts.body,
-    fontSize: typography.magazineMeta.fontSize,
-    letterSpacing: typography.magazineMeta.letterSpacing,
-    textTransform: 'uppercase',
-    color: colors.red,
-    marginTop: spacing.xs,
-  },
-  modeText: {
-    fontFamily: fonts.body,
-    fontSize: typography.magazineMeta.fontSize,
-    lineHeight: typography.magazineMeta.lineHeight,
-    letterSpacing: typography.magazineMeta.letterSpacing,
-    textTransform: 'uppercase',
-    color: colors.secondaryText,
-    marginTop: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  sectionLabel: {
-    fontFamily: fonts.bodyBold,
-    fontSize: typography.magazineMeta.fontSize,
-    lineHeight: typography.magazineMeta.lineHeight,
-    color: colors.secondaryText,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  userList: {
-    overflow: 'hidden',
-  },
-  userRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: 20,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  username: {
-    fontFamily: fonts.body,
-    fontSize: typography.magazineBody.fontSize,
-    lineHeight: typography.magazineBody.lineHeight,
-    color: colors.foreground,
-  },
-  removeButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  removeText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: typography.magazineMeta.fontSize,
-    letterSpacing: typography.magazineMeta.letterSpacing,
-    textTransform: 'uppercase',
-    color: colors.red,
-  },
-  emptyText: {
-    fontFamily: fonts.bodyItalic,
-    fontSize: typography.magazineBody.fontSize,
-    lineHeight: typography.magazineBody.lineHeight,
-    color: colors.secondaryText,
-    textAlign: 'center',
-    paddingVertical: spacing.lg,
-  },
-  discovery: {
-    marginTop: spacing.lg,
-  },
-  suggestionList: {
-    overflow: 'hidden',
-  },
-  suggestionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: 20,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  suggestionText: {
-    fontFamily: fonts.body,
-    fontSize: typography.magazineBody.fontSize,
-    lineHeight: typography.magazineBody.lineHeight,
-    color: colors.foreground,
-  },
-  suggestionAction: {
-    fontFamily: fonts.bodyBold,
-    fontSize: typography.magazineMeta.fontSize,
-    letterSpacing: typography.magazineMeta.letterSpacing,
-    textTransform: 'uppercase',
-    color: colors.teal,
-  },
-})
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    content: {
+      paddingHorizontal: 20,
+      paddingTop: spacing.lg,
+    },
+    inputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    input: {
+      flex: 1,
+      height: 44,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+      paddingHorizontal: 0,
+      fontFamily: fonts.body,
+      fontSize: typography.body.fontSize,
+      color: colors.foreground,
+      backgroundColor: 'transparent',
+    },
+    addButton: {
+      height: 44,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: spacing.sm,
+    },
+    addButtonText: {
+      fontFamily: fonts.bodyBold,
+      fontSize: typography.magazineMeta.fontSize,
+      letterSpacing: typography.magazineMeta.letterSpacing,
+      color: colors.teal,
+    },
+    disabled: {
+      opacity: 0.5,
+    },
+    errorText: {
+      fontFamily: fonts.body,
+      fontSize: typography.magazineMeta.fontSize,
+      letterSpacing: typography.magazineMeta.letterSpacing,
+      textTransform: 'uppercase',
+      color: colors.red,
+      marginTop: spacing.xs,
+    },
+    modeText: {
+      fontFamily: fonts.body,
+      fontSize: typography.magazineMeta.fontSize,
+      lineHeight: typography.magazineMeta.lineHeight,
+      letterSpacing: typography.magazineMeta.letterSpacing,
+      textTransform: 'uppercase',
+      color: colors.secondaryText,
+      marginTop: spacing.sm,
+      marginBottom: spacing.lg,
+    },
+    sectionLabel: {
+      fontFamily: fonts.bodyBold,
+      fontSize: typography.magazineMeta.fontSize,
+      lineHeight: typography.magazineMeta.lineHeight,
+      color: colors.secondaryText,
+      textTransform: 'uppercase',
+      letterSpacing: 1.5,
+      marginTop: spacing.lg,
+      marginBottom: spacing.sm,
+    },
+    userList: {
+      overflow: 'hidden',
+    },
+    userRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      paddingHorizontal: 20,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    username: {
+      fontFamily: fonts.body,
+      fontSize: typography.magazineBody.fontSize,
+      lineHeight: typography.magazineBody.lineHeight,
+      color: colors.foreground,
+    },
+    removeButton: {
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+    },
+    removeText: {
+      fontFamily: fonts.bodyBold,
+      fontSize: typography.magazineMeta.fontSize,
+      letterSpacing: typography.magazineMeta.letterSpacing,
+      textTransform: 'uppercase',
+      color: colors.red,
+    },
+    emptyText: {
+      fontFamily: fonts.bodyItalic,
+      fontSize: typography.magazineBody.fontSize,
+      lineHeight: typography.magazineBody.lineHeight,
+      color: colors.secondaryText,
+      textAlign: 'center',
+      paddingVertical: spacing.lg,
+    },
+    discovery: {
+      marginTop: spacing.lg,
+    },
+    suggestionList: {
+      overflow: 'hidden',
+    },
+    suggestionRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      paddingHorizontal: 20,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    suggestionText: {
+      fontFamily: fonts.body,
+      fontSize: typography.magazineBody.fontSize,
+      lineHeight: typography.magazineBody.lineHeight,
+      color: colors.foreground,
+    },
+    suggestionAction: {
+      fontFamily: fonts.bodyBold,
+      fontSize: typography.magazineMeta.fontSize,
+      letterSpacing: typography.magazineMeta.letterSpacing,
+      textTransform: 'uppercase',
+      color: colors.teal,
+    },
+  })
+}

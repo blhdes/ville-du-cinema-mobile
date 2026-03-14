@@ -1,10 +1,12 @@
+import { useMemo } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { useUser } from '@/hooks/useUser'
 import { useGuestMode } from '@/contexts/GuestModeContext'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
-import { colors, fonts, spacing, typography } from '@/theme'
+import { useTheme } from '@/contexts/ThemeContext'
+import { fonts, spacing, typography, type ThemeColors } from '@/theme'
 import DisplaySettings from '@/components/settings/DisplaySettings'
 
 export default function SettingsScreen() {
@@ -12,6 +14,8 @@ export default function SettingsScreen() {
   const tabBarHeight = useBottomTabBarHeight()
   const { user, signOut } = useUser()
   const { isGuest, exitGuestMode } = useGuestMode()
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
   const {
     preferences,
     isAuthenticated,
@@ -89,87 +93,89 @@ export default function SettingsScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  headerTitle: {
-    fontFamily: fonts.heading,
-    fontSize: typography.title3.fontSize,
-    color: colors.foreground,
-  },
-  content: {},
-  sectionLabel: {
-    fontFamily: fonts.bodyBold,
-    fontSize: typography.magazineMeta.fontSize,
-    lineHeight: typography.magazineMeta.lineHeight,
-    color: colors.secondaryText,
-    textTransform: 'uppercase',
-    letterSpacing: typography.magazineMeta.letterSpacing,
-    paddingHorizontal: 20,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.sm,
-  },
-  sectionFooter: {
-    fontFamily: fonts.body,
-    fontSize: typography.magazineMeta.fontSize,
-    color: colors.secondaryText,
-    textTransform: 'uppercase',
-    letterSpacing: typography.magazineMeta.letterSpacing,
-    paddingHorizontal: 20,
-    paddingTop: spacing.xs,
-  },
-  card: {
-    marginHorizontal: 20,
-    overflow: 'hidden',
-  },
-  cardWrapper: {
-    marginHorizontal: 20,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: 20,
-    minHeight: 44,
-  },
-  rowBorder: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  rowLabel: {
-    fontFamily: fonts.body,
-    fontSize: typography.body.fontSize,
-    color: colors.foreground,
-  },
-  rowValue: {
-    fontFamily: fonts.body,
-    fontSize: typography.body.fontSize,
-    color: colors.secondaryText,
-  },
-  rowValueFlex: {
-    flex: 1,
-    textAlign: 'right',
-    marginLeft: spacing.md,
-  },
-  signOutSection: {
-    alignItems: 'center',
-    paddingTop: spacing.xxl,
-  },
-  signOutText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: typography.magazineMeta.fontSize,
-    color: colors.red,
-    textTransform: 'uppercase',
-    letterSpacing: typography.magazineMeta.letterSpacing,
-  },
-  signOutPressed: {
-    opacity: 0.6,
-  },
-})
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+    },
+    headerTitle: {
+      fontFamily: fonts.heading,
+      fontSize: typography.title3.fontSize,
+      color: colors.foreground,
+    },
+    content: {},
+    sectionLabel: {
+      fontFamily: fonts.bodyBold,
+      fontSize: typography.magazineMeta.fontSize,
+      lineHeight: typography.magazineMeta.lineHeight,
+      color: colors.secondaryText,
+      textTransform: 'uppercase',
+      letterSpacing: typography.magazineMeta.letterSpacing,
+      paddingHorizontal: 20,
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.sm,
+    },
+    sectionFooter: {
+      fontFamily: fonts.body,
+      fontSize: typography.magazineMeta.fontSize,
+      color: colors.secondaryText,
+      textTransform: 'uppercase',
+      letterSpacing: typography.magazineMeta.letterSpacing,
+      paddingHorizontal: 20,
+      paddingTop: spacing.xs,
+    },
+    card: {
+      marginHorizontal: 20,
+      overflow: 'hidden',
+    },
+    cardWrapper: {
+      marginHorizontal: 20,
+    },
+    row: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      paddingHorizontal: 20,
+      minHeight: 44,
+    },
+    rowBorder: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    rowLabel: {
+      fontFamily: fonts.body,
+      fontSize: typography.body.fontSize,
+      color: colors.foreground,
+    },
+    rowValue: {
+      fontFamily: fonts.body,
+      fontSize: typography.body.fontSize,
+      color: colors.secondaryText,
+    },
+    rowValueFlex: {
+      flex: 1,
+      textAlign: 'right',
+      marginLeft: spacing.md,
+    },
+    signOutSection: {
+      alignItems: 'center',
+      paddingTop: spacing.xxl,
+    },
+    signOutText: {
+      fontFamily: fonts.bodyBold,
+      fontSize: typography.magazineMeta.fontSize,
+      color: colors.red,
+      textTransform: 'uppercase',
+      letterSpacing: typography.magazineMeta.letterSpacing,
+    },
+    signOutPressed: {
+      opacity: 0.6,
+    },
+  })
+}

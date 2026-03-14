@@ -15,7 +15,8 @@ import { Ionicons } from '@expo/vector-icons'
 import RenderHtml, { defaultSystemFonts } from 'react-native-render-html'
 import LetterboxdDots from '@/components/ui/LetterboxdDots'
 import type { FavoriteFilm } from '@/services/externalProfile'
-import { colors, fonts, spacing, typography } from '@/theme'
+import { useTheme } from '@/contexts/ThemeContext'
+import { fonts, spacing, typography, type ThemeColors } from '@/theme'
 
 interface ExternalProfileHeaderProps {
   displayName: string
@@ -57,6 +58,8 @@ function FavouritesSkeleton({
   posterWidth: number
   posterHeight: number
 }) {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
   const shimmer = useSharedValue(0.06)
 
   useEffect(() => {
@@ -94,6 +97,8 @@ function FavouritesSkeleton({
 }
 
 function FollowButton({ isFollowing, onPress }: { isFollowing: boolean; onPress: () => void }) {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
   const progress = useSharedValue(isFollowing ? 1 : 0)
 
   useEffect(() => {
@@ -101,20 +106,22 @@ function FollowButton({ isFollowing, onPress }: { isFollowing: boolean; onPress:
   }, [isFollowing, progress])
 
   const buttonStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(
+    borderColor: interpolateColor(
       progress.value,
       [0, 1],
-      ['transparent', colors.teal],
+      [colors.border, 'transparent'],
     ),
-    borderColor: colors.teal,
   }))
 
-  const textStyle = useAnimatedStyle(() => ({
-    color: interpolateColor(
-      progress.value,
-      [0, 1],
-      [colors.teal, colors.white],
-    ),
+  // Crossfade: FOLLOW fades out while FOLLOWING fades in
+  const followOpacity = useAnimatedStyle(() => ({ opacity: 1 - progress.value }))
+  const followingOpacity = useAnimatedStyle(() => ({ opacity: progress.value }))
+
+  const followColor = useAnimatedStyle(() => ({
+    color: colors.foreground,
+  }))
+  const followingColor = useAnimatedStyle(() => ({
+    color: colors.secondaryText,
   }))
 
   return (
@@ -122,9 +129,16 @@ function FollowButton({ isFollowing, onPress }: { isFollowing: boolean; onPress:
       style={[styles.followButton, buttonStyle]}
       onPress={onPress}
     >
-      <Animated.Text style={[styles.followText, textStyle]}>
-        {isFollowing ? 'FOLLOWING' : 'FOLLOW'}
-      </Animated.Text>
+      <View style={styles.followTextContainer}>
+        {/* FOLLOWING sits in normal flow to size the container (it's the longer label) */}
+        <Animated.Text style={[styles.followText, followingColor, followingOpacity]}>
+          FOLLOWING
+        </Animated.Text>
+        {/* FOLLOW overlays on top, centered */}
+        <Animated.Text style={[styles.followText, styles.followTextOverlay, followColor, followOpacity]}>
+          FOLLOW
+        </Animated.Text>
+      </View>
     </AnimatedPressable>
   )
 }
@@ -147,6 +161,8 @@ export default function ExternalProfileHeader({
   const [bioOverflows, setBioOverflows] = useState(false)
   const [avatarOpen, setAvatarOpen] = useState(false)
   const { width } = useWindowDimensions()
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
   const contentWidth = width - HORIZONTAL_PAD * 2
   const hasMetadata = !!location || !!websiteUrl || !!twitterUrl
   const posterWidth = (contentWidth - spacing.sm * 3) / 4
@@ -199,7 +215,7 @@ export default function ExternalProfileHeader({
     em: { fontFamily: fonts.bodyItalic, fontStyle: 'normal' as const },
     b: { fontFamily: fonts.bodyBold, fontWeight: 'normal' as const },
     strong: { fontFamily: fonts.bodyBold, fontWeight: 'normal' as const },
-  }), [])
+  }), [colors])
 
   const bioRenderersProps = useMemo(() => ({
     a: {
@@ -224,7 +240,7 @@ export default function ExternalProfileHeader({
         )}
       </View>
 
-      {/* Enlarged avatar modal */}
+      {/* Enlarged avatar modal — overlay stays dark (photo context, not themed) */}
       {avatarUrl ? (
         <Modal
           visible={avatarOpen}
@@ -317,7 +333,7 @@ export default function ExternalProfileHeader({
               style={styles.metadataItem}
               onPress={() => Linking.openURL(twitterUrl)}
             >
-              <Text style={styles.xLogo}>𝕏</Text>
+              <Text style={styles.xLogo}>{'\u{1D54F}'}</Text>
               <Text style={styles.metadataLink}>{twitterHandle || 'X'}</Text>
             </Pressable>
           ) : null}
@@ -388,172 +404,182 @@ export default function ExternalProfileHeader({
   )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: spacing.xl,
-  },
-  avatarWrapper: {
-    marginBottom: spacing.md,
-  },
-  avatar: {
-    width: AVATAR_SIZE,
-    height: AVATAR_SIZE,
-    borderRadius: AVATAR_SIZE / 2,
-  },
-  avatarOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarEnlarged: {
-    borderRadius: 9999,
-  },
-  avatarOverlayName: {
-    fontFamily: fonts.heading,
-    fontSize: typography.title1.fontSize,
-    color: colors.white,
-    marginTop: spacing.lg,
-    textAlign: 'center',
-  },
-  avatarPlaceholder: {
-    backgroundColor: colors.background,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitial: {
-    fontFamily: fonts.heading,
-    fontSize: 28,
-    color: colors.secondaryText,
-  },
-  displayName: {
-    fontFamily: fonts.heading,
-    fontSize: typography.magazineTitle.fontSize,
-    lineHeight: typography.magazineTitle.lineHeight,
-    color: colors.foreground,
-    textAlign: 'center',
-  },
-  username: {
-    fontFamily: fonts.body,
-    fontSize: typography.magazineMeta.fontSize,
-    lineHeight: typography.magazineMeta.lineHeight,
-    letterSpacing: typography.magazineMeta.letterSpacing,
-    color: colors.secondaryText,
-    textAlign: 'center',
-    marginTop: 2,
-  },
-  bioWrapper: {
-    alignSelf: 'stretch',
-    marginTop: spacing.lg,
-  },
-  bioFade: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 32,
-    flexDirection: 'column',
-  },
-  bioFadeStep: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  readMoreButton: {
-    alignItems: 'center',
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
-  },
-  readMoreText: {
-    fontFamily: fonts.bodyItalic,
-    fontStyle: 'normal',
-    fontSize: typography.callout.fontSize,
-    lineHeight: typography.callout.lineHeight,
-    color: colors.secondaryText,
-    letterSpacing: 0.3,
-  },
-  metadataRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-  metadataItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  metadataLabel: {
-    fontFamily: fonts.body,
-    fontSize: typography.caption.fontSize,
-    lineHeight: typography.caption.lineHeight,
-    color: colors.secondaryText,
-  },
-  xLogo: {
-    fontSize: 14,
-    fontWeight: '700' as const,
-    color: colors.teal,
-  },
-  metadataLink: {
-    fontFamily: fonts.body,
-    fontSize: typography.caption.fontSize,
-    lineHeight: typography.caption.lineHeight,
-    color: colors.teal,
-  },
-  favoritesSection: {
-    alignSelf: 'stretch',
-    marginTop: spacing.lg,
-    alignItems: 'center',
-  },
-  favoritesLabel: {
-    fontFamily: fonts.body,
-    fontSize: typography.magazineMeta.fontSize,
-    lineHeight: typography.magazineMeta.lineHeight,
-    letterSpacing: typography.magazineMeta.letterSpacing,
-    color: colors.secondaryText,
-    textTransform: 'uppercase',
-    marginBottom: spacing.sm,
-  },
-  favoritesRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.sm,
-  },
-  skeletonOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  posterPressed: {
-    opacity: 0.6,
-  },
-  followButton: {
-    marginTop: spacing.md,
-    paddingVertical: 8,
-    minWidth: 120,
-    alignItems: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 4,
-  },
-  followText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: typography.magazineMeta.fontSize,
-    letterSpacing: typography.magazineMeta.letterSpacing,
-  },
-  letterboxdButton: {
-    marginTop: spacing.md,
-    padding: spacing.sm,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
-    alignSelf: 'stretch',
-    marginTop: spacing.xl,
-  },
-})
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingTop: spacing.xl,
+    },
+    avatarWrapper: {
+      marginBottom: spacing.md,
+    },
+    avatar: {
+      width: AVATAR_SIZE,
+      height: AVATAR_SIZE,
+      borderRadius: AVATAR_SIZE / 2,
+    },
+    avatarOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.85)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarEnlarged: {
+      borderRadius: 9999,
+    },
+    avatarOverlayName: {
+      fontFamily: fonts.heading,
+      fontSize: typography.title1.fontSize,
+      color: colors.white,
+      marginTop: spacing.lg,
+      textAlign: 'center',
+    },
+    avatarPlaceholder: {
+      backgroundColor: colors.background,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarInitial: {
+      fontFamily: fonts.heading,
+      fontSize: 28,
+      color: colors.secondaryText,
+    },
+    displayName: {
+      fontFamily: fonts.heading,
+      fontSize: typography.magazineTitle.fontSize,
+      lineHeight: typography.magazineTitle.lineHeight,
+      color: colors.foreground,
+      textAlign: 'center',
+    },
+    username: {
+      fontFamily: fonts.body,
+      fontSize: typography.magazineMeta.fontSize,
+      lineHeight: typography.magazineMeta.lineHeight,
+      letterSpacing: typography.magazineMeta.letterSpacing,
+      color: colors.secondaryText,
+      textAlign: 'center',
+      marginTop: 2,
+    },
+    bioWrapper: {
+      alignSelf: 'stretch',
+      marginTop: spacing.lg,
+    },
+    bioFade: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 32,
+      flexDirection: 'column',
+    },
+    bioFadeStep: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    readMoreButton: {
+      alignItems: 'center',
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.xs,
+    },
+    readMoreText: {
+      fontFamily: fonts.bodyItalic,
+      fontStyle: 'normal',
+      fontSize: typography.callout.fontSize,
+      lineHeight: typography.callout.lineHeight,
+      color: colors.secondaryText,
+      letterSpacing: 0.3,
+    },
+    metadataRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+      marginTop: spacing.md,
+    },
+    metadataItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    metadataLabel: {
+      fontFamily: fonts.body,
+      fontSize: typography.caption.fontSize,
+      lineHeight: typography.caption.lineHeight,
+      color: colors.secondaryText,
+    },
+    xLogo: {
+      fontSize: 14,
+      fontWeight: '700' as const,
+      color: colors.teal,
+    },
+    metadataLink: {
+      fontFamily: fonts.body,
+      fontSize: typography.caption.fontSize,
+      lineHeight: typography.caption.lineHeight,
+      color: colors.teal,
+    },
+    favoritesSection: {
+      alignSelf: 'stretch',
+      marginTop: spacing.lg,
+      alignItems: 'center',
+    },
+    favoritesLabel: {
+      fontFamily: fonts.body,
+      fontSize: typography.magazineMeta.fontSize,
+      lineHeight: typography.magazineMeta.lineHeight,
+      letterSpacing: typography.magazineMeta.letterSpacing,
+      color: colors.secondaryText,
+      textTransform: 'uppercase',
+      marginBottom: spacing.sm,
+    },
+    favoritesRow: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: spacing.sm,
+    },
+    skeletonOverlay: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+    },
+    posterPressed: {
+      opacity: 0.6,
+    },
+    followButton: {
+      marginTop: spacing.md,
+      paddingVertical: 8,
+      paddingHorizontal: spacing.md,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderRadius: 4,
+      backgroundColor: 'transparent',
+    },
+    followTextContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    followText: {
+      fontFamily: fonts.body,
+      fontSize: typography.magazineMeta.fontSize,
+      letterSpacing: typography.magazineMeta.letterSpacing,
+    },
+    followTextOverlay: {
+      position: 'absolute',
+    },
+    letterboxdButton: {
+      marginTop: spacing.md,
+      padding: spacing.sm,
+    },
+    divider: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.border,
+      alignSelf: 'stretch',
+      marginTop: spacing.xl,
+    },
+  })
+}

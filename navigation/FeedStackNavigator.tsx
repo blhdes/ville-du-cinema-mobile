@@ -2,16 +2,18 @@ import { Pressable } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { useNavigation } from '@react-navigation/native'
+import { useTheme } from '@/contexts/ThemeContext'
 import FeedDrawerNavigator from '@/navigation/FeedDrawerNavigator'
 import ExternalProfileScreen from '@/screens/ExternalProfileScreen'
 import UserSearchScreen from '@/screens/UserSearchScreen'
 import type { FeedStackParamList } from '@/navigation/types'
-import { colors, fonts, typography } from '@/theme'
+import { fonts, typography } from '@/theme'
 
 const Stack = createNativeStackNavigator<FeedStackParamList>()
 
 function BackButton() {
   const navigation = useNavigation()
+  const { colors } = useTheme()
   return (
     <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
       <Ionicons name="chevron-back" size={28} color={colors.foreground} />
@@ -20,6 +22,8 @@ function BackButton() {
 }
 
 export default function FeedStackNavigator() {
+  const { colors } = useTheme()
+
   return (
     <Stack.Navigator
       screenOptions={{

@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import * as WebBrowser from 'expo-web-browser'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import type { FeedStackParamList } from '@/navigation/types'
 import type { Review } from '@/types/database'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
-import { colors, fonts, spacing, typography } from '@/theme'
+import { useTheme } from '@/contexts/ThemeContext'
+import { fonts, spacing, typography, type ThemeColors } from '@/theme'
 
 interface WatchNotificationProps {
   review: Review
@@ -16,6 +17,8 @@ export default function WatchNotification({ review, hideAuthor = false }: WatchN
   const { preferences } = useDisplayPreferences()
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const [titlePressed, setTitlePressed] = useState(false)
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
 
   return (
     <Pressable
@@ -56,46 +59,48 @@ export default function WatchNotification({ review, hideAuthor = false }: WatchN
   )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  pressed: {
-    opacity: 0.6,
-  },
-  text: {
-    flex: 1,
-    fontFamily: fonts.body,
-    fontSize: typography.caption.fontSize,
-    lineHeight: typography.caption.lineHeight,
-    letterSpacing: typography.magazineMeta.letterSpacing,
-    color: colors.secondaryText,
-    marginRight: spacing.sm,
-  },
-  author: {
-    fontFamily: fonts.bodyBold,
-  },
-  watchedLabel: {
-    fontFamily: fonts.body,
-    textTransform: 'uppercase',
-    fontSize: typography.magazineMeta.fontSize,
-    letterSpacing: typography.magazineMeta.letterSpacing,
-  },
-  movie: {
-    fontFamily: fonts.bodyItalic,
-    color: colors.foreground,
-  },
-  moviePressed: {
-    opacity: 0.6,
-  },
-  rating: {
-    fontSize: typography.magazineMeta.fontSize,
-    letterSpacing: typography.magazineMeta.letterSpacing,
-    color: colors.yellow,
-  },
-})
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    pressed: {
+      opacity: 0.6,
+    },
+    text: {
+      flex: 1,
+      fontFamily: fonts.body,
+      fontSize: typography.caption.fontSize,
+      lineHeight: typography.caption.lineHeight,
+      letterSpacing: typography.magazineMeta.letterSpacing,
+      color: colors.secondaryText,
+      marginRight: spacing.sm,
+    },
+    author: {
+      fontFamily: fonts.bodyBold,
+    },
+    watchedLabel: {
+      fontFamily: fonts.body,
+      textTransform: 'uppercase',
+      fontSize: typography.magazineMeta.fontSize,
+      letterSpacing: typography.magazineMeta.letterSpacing,
+    },
+    movie: {
+      fontFamily: fonts.bodyItalic,
+      color: colors.foreground,
+    },
+    moviePressed: {
+      opacity: 0.6,
+    },
+    rating: {
+      fontSize: typography.magazineMeta.fontSize,
+      letterSpacing: typography.magazineMeta.letterSpacing,
+      color: colors.yellow,
+    },
+  })
+}

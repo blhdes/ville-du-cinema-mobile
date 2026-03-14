@@ -8,7 +8,8 @@ import type { FeedStackParamList } from '@/navigation/types'
 import type { Review } from '@/types/database'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { useAvatarUrl } from '@/services/avatarCache'
-import { colors, fonts, spacing, typography, getScaledTypography } from '@/theme'
+import { useTheme } from '@/contexts/ThemeContext'
+import { fonts, spacing, typography, getScaledTypography, type ThemeColors } from '@/theme'
 
 interface ReviewCardProps {
   review: Review
@@ -71,6 +72,8 @@ export default function ReviewCard({ review, hideAuthor = false }: ReviewCardPro
   const { width } = useWindowDimensions()
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const cachedAvatarUrl = useAvatarUrl(review.username)
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
   const contentWidth = width - HORIZONTAL_PAD * 2
   const scaled = useMemo(() => getScaledTypography(preferences.fontMultiplier), [preferences.fontMultiplier])
 
@@ -128,7 +131,7 @@ export default function ReviewCard({ review, hideAuthor = false }: ReviewCardPro
       marginTop: spacing.sm,
       marginBottom: spacing.sm,
     },
-  }), [scaled])
+  }), [scaled, colors])
 
   /** Extract the first letter for native drop cap rendering. */
   const dropCapData = useMemo(() => {
@@ -263,86 +266,88 @@ export default function ReviewCard({ review, hideAuthor = false }: ReviewCardPro
   )
 }
 
-const styles = StyleSheet.create({
-  article: {
-    paddingHorizontal: HORIZONTAL_PAD,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xs,
-  },
-  titlePressed: {
-    opacity: 0.6,
-  },
-  movieTitle: {
-    fontFamily: fonts.heading,
-    fontSize: typography.magazineTitle.fontSize,
-    lineHeight: typography.magazineTitle.lineHeight,
-    color: colors.foreground,
-    marginBottom: spacing.md,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  metaPressed: {
-    opacity: 0.6,
-  },
-  avatar: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    marginRight: 8,
-  },
-  meta: {
-    fontFamily: fonts.body,
-    fontSize: typography.magazineMeta.fontSize,
-    lineHeight: typography.magazineMeta.lineHeight,
-    letterSpacing: typography.magazineMeta.letterSpacing,
-    color: colors.secondaryText,
-  },
-  rating: {
-    color: colors.yellow,
-  },
-  expandToggle: {
-    fontFamily: fonts.bodyBold,
-    fontSize: typography.caption.fontSize,
-    color: colors.teal,
-    marginTop: spacing.sm,
-  },
-  linkButton: {
-    marginTop: spacing.lg,
-    paddingVertical: spacing.xs,
-    alignSelf: 'flex-end',
-  },
-  linkText: {
-    fontFamily: fonts.body,
-    fontSize: typography.magazineMeta.fontSize,
-    lineHeight: typography.magazineMeta.lineHeight,
-    letterSpacing: typography.magazineMeta.letterSpacing,
-    color: colors.secondaryText,
-  },
-  linkPressed: {
-    color: colors.teal,
-  },
-  dropCapRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  dropCapLetter: {
-    fontFamily: fonts.heading,
-    color: colors.foreground,
-    textShadowColor: colors.teal,
-    textShadowOffset: { width: 1.5, height: 1.5 },
-    textShadowRadius: 0,
-    marginRight: spacing.xs,
-  },
-  dropCapBody: {
-    flex: 1,
-    paddingTop: spacing.xs,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
-    marginTop: spacing.lg,
-  },
-})
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    article: {
+      paddingHorizontal: HORIZONTAL_PAD,
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.xs,
+    },
+    titlePressed: {
+      opacity: 0.6,
+    },
+    movieTitle: {
+      fontFamily: fonts.heading,
+      fontSize: typography.magazineTitle.fontSize,
+      lineHeight: typography.magazineTitle.lineHeight,
+      color: colors.foreground,
+      marginBottom: spacing.md,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+    },
+    metaPressed: {
+      opacity: 0.6,
+    },
+    avatar: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      marginRight: 8,
+    },
+    meta: {
+      fontFamily: fonts.body,
+      fontSize: typography.magazineMeta.fontSize,
+      lineHeight: typography.magazineMeta.lineHeight,
+      letterSpacing: typography.magazineMeta.letterSpacing,
+      color: colors.secondaryText,
+    },
+    rating: {
+      color: colors.yellow,
+    },
+    expandToggle: {
+      fontFamily: fonts.bodyBold,
+      fontSize: typography.caption.fontSize,
+      color: colors.teal,
+      marginTop: spacing.sm,
+    },
+    linkButton: {
+      marginTop: spacing.lg,
+      paddingVertical: spacing.xs,
+      alignSelf: 'flex-end',
+    },
+    linkText: {
+      fontFamily: fonts.body,
+      fontSize: typography.magazineMeta.fontSize,
+      lineHeight: typography.magazineMeta.lineHeight,
+      letterSpacing: typography.magazineMeta.letterSpacing,
+      color: colors.secondaryText,
+    },
+    linkPressed: {
+      color: colors.teal,
+    },
+    dropCapRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+    },
+    dropCapLetter: {
+      fontFamily: fonts.heading,
+      color: colors.foreground,
+      textShadowColor: colors.teal,
+      textShadowOffset: { width: 1.5, height: 1.5 },
+      textShadowRadius: 0,
+      marginRight: spacing.xs,
+    },
+    dropCapBody: {
+      flex: 1,
+      paddingTop: spacing.xs,
+    },
+    divider: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.border,
+      marginTop: spacing.lg,
+    },
+  })
+}

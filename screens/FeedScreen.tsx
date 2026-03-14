@@ -7,7 +7,6 @@ import {
   Text,
   View,
 } from 'react-native'
-import * as SplashScreen from 'expo-splash-screen'
 import Animated, {
   interpolate,
   useAnimatedScrollHandler,
@@ -25,12 +24,14 @@ import type { FeedStackParamList } from '@/navigation/types'
 import { useUserLists } from '@/hooks/useUserLists'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { useTabBar } from '@/contexts/TabBarContext'
+import { useTheme } from '@/contexts/ThemeContext'
 import { fetchFeed, clearFeedCache, refreshAvatarUrls, type FeedResult } from '@/services/feed'
 import { hydrateAvatarCache } from '@/services/avatarCache'
 import type { Review } from '@/types/database'
-import { colors, fonts, spacing, typography } from '@/theme'
+import { fonts, spacing, typography, type ThemeColors } from '@/theme'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import ReviewCard from '@/components/ReviewCard'
+import ReviewCardSkeleton from '@/components/feed/ReviewCardSkeleton'
 import WatchNotification from '@/components/WatchNotification'
 import QuoteOfTheDay from '@/components/QuoteOfTheDay'
 import Spinner from '@/components/ui/Spinner'
@@ -55,6 +56,8 @@ export default function FeedScreen() {
   const { users, usernames, isLoading: isListLoading, error: listError, clearError } = useUserLists()
   const { preferences } = useDisplayPreferences()
   const { translateY, feedRefreshRequested, setIsFeedRefreshing } = useTabBar()
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
 
   // Header hide/show
   const [headerHeight, setHeaderHeight] = useState(0)
@@ -189,7 +192,6 @@ export default function FeedScreen() {
 
   const flatListRef = useRef<Animated.FlatList<Review>>(null)
   const [cacheReady, setCacheReady] = useState(false)
-  const splashHidden = useRef(false)
 
   // Hydrate the avatar cache from AsyncStorage before loading the feed
   useEffect(() => {
@@ -231,26 +233,6 @@ export default function FeedScreen() {
       setIsFeedRefreshing(false)
     }
   }, [usernames, setIsFeedRefreshing])
-
-  const hideSplash = useCallback(() => {
-    if (!splashHidden.current) {
-      splashHidden.current = true
-      SplashScreen.hideAsync()
-    }
-  }, [])
-
-  // Hide splash once loading finishes (runs after React renders the loaded state)
-  useEffect(() => {
-    if (!isLoading && !isListLoading) {
-      hideSplash()
-    }
-  }, [isLoading, isListLoading, hideSplash])
-
-  // Safety: hide splash after 5s no matter what, so users aren't stuck
-  useEffect(() => {
-    const timer = setTimeout(hideSplash, 5000)
-    return () => clearTimeout(timer)
-  }, [hideSplash])
 
   // Wait for cache hydration + user list before loading the feed.
   // fetchUserFeed already scrapes any missing avatars, so no extra refresh needed here.
@@ -376,9 +358,11 @@ export default function FeedScreen() {
         <ErrorBanner message={error} onDismiss={clearError} />
       )}
 
-      {isLoading && page === 1 && reviews.length === 0 ? (
-        <View style={styles.loadingContainer}>
-          <Spinner size={24} />
+      {(isLoading || isListLoading) && page === 1 && reviews.length === 0 ? (
+        <View style={[styles.skeletonContainer, { paddingTop: headerHeight + spacing.md }]}>
+          <ReviewCardSkeleton />
+          <ReviewCardSkeleton />
+          <ReviewCardSkeleton />
         </View>
       ) : (
         <Animated.FlatList
@@ -442,95 +426,95 @@ export default function FeedScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingBottom: 12,
-    backgroundColor: colors.background,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    zIndex: 1,
-  },
-  headerContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  usersButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  usersButtonText: {
-    fontFamily: fonts.body,
-    fontSize: typography.body.fontSize,
-    color: colors.blue,
-  },
-  badge: {
-    backgroundColor: colors.backgroundSecondary,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  badgeText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 12,
-    color: colors.secondaryText,
-  },
-  searchButton: {
-    width: 60,
-    alignItems: 'flex-end',
-  },
-  list: {},
-  emptyList: {
-    flexGrow: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  refreshSpinner: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xl,
-  },
-  emptyTitle: {
-    fontFamily: fonts.heading,
-    fontSize: typography.title1.fontSize,
-    lineHeight: typography.title1.lineHeight,
-    color: colors.foreground,
-    marginBottom: spacing.sm,
-  },
-  emptySubtitle: {
-    fontFamily: fonts.body,
-    fontSize: typography.body.fontSize,
-    lineHeight: typography.body.lineHeight,
-    color: colors.secondaryText,
-    textAlign: 'center',
-  },
-  footerLoader: {
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-  },
-})
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.md,
+      paddingBottom: 12,
+      backgroundColor: colors.background,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+      zIndex: 1,
+    },
+    headerContent: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    usersButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    usersButtonText: {
+      fontFamily: fonts.body,
+      fontSize: typography.body.fontSize,
+      color: colors.blue,
+    },
+    badge: {
+      backgroundColor: colors.backgroundSecondary,
+      borderRadius: 10,
+      minWidth: 20,
+      height: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 6,
+    },
+    badgeText: {
+      fontFamily: fonts.bodyBold,
+      fontSize: 12,
+      color: colors.secondaryText,
+    },
+    searchButton: {
+      width: 60,
+      alignItems: 'flex-end',
+    },
+    list: {},
+    emptyList: {
+      flexGrow: 1,
+    },
+    skeletonContainer: {
+      flex: 1,
+    },
+    refreshSpinner: {
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+    },
+    emptyContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: spacing.xl,
+    },
+    emptyTitle: {
+      fontFamily: fonts.heading,
+      fontSize: typography.title1.fontSize,
+      lineHeight: typography.title1.lineHeight,
+      color: colors.foreground,
+      marginBottom: spacing.sm,
+    },
+    emptySubtitle: {
+      fontFamily: fonts.body,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
+      color: colors.secondaryText,
+      textAlign: 'center',
+    },
+    footerLoader: {
+      paddingVertical: spacing.lg,
+      alignItems: 'center',
+    },
+  })
+}

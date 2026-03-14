@@ -8,7 +8,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated'
 import Svg, { Circle } from 'react-native-svg'
-import { colors } from '@/theme'
+import { useTheme } from '@/contexts/ThemeContext'
 
 interface SpinnerProps {
   size?: number
@@ -18,9 +18,11 @@ interface SpinnerProps {
 
 export default function Spinner({
   size = 20,
-  color = colors.secondaryText,
+  color,
   strokeWidth = 2,
 }: SpinnerProps) {
+  const { colors } = useTheme()
+  const strokeColor = color ?? colors.secondaryText
   const rotation = useSharedValue(0)
 
   useEffect(() => {
@@ -45,7 +47,7 @@ export default function Spinner({
           cx={center}
           cy={center}
           r={radius}
-          stroke={color}
+          stroke={strokeColor}
           strokeWidth={strokeWidth}
           fill="none"
           strokeLinecap="round"

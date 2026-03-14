@@ -20,7 +20,8 @@ import { fetchUserFeed, clearFeedCache } from '@/services/feed'
 import { useAvatarUrl } from '@/services/avatarCache'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { useUserLists } from '@/hooks/useUserLists'
-import { colors, fonts, spacing, typography } from '@/theme'
+import { useTheme } from '@/contexts/ThemeContext'
+import { fonts, spacing, typography, type ThemeColors } from '@/theme'
 import Spinner from '@/components/ui/Spinner'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import ExternalProfileHeader from '@/components/profile/ExternalProfileHeader'
@@ -37,6 +38,8 @@ export default function ExternalProfileScreen() {
   const { preferences } = useDisplayPreferences()
   const { usernames, addUser, removeUser } = useUserLists()
   const isFollowing = usernames.includes(username)
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
 
   const [reviews, setReviews] = useState<Review[]>([])
   const [meta, setMeta] = useState<ExternalProfileMeta | null>(null)
@@ -122,7 +125,7 @@ export default function ExternalProfileScreen() {
         />
       </>
     )
-  }, [meta, username, avatarUrl, refreshing, isFollowing, handleFollowToggle])
+  }, [meta, username, avatarUrl, refreshing, isFollowing, handleFollowToggle, styles])
 
   const renderEmpty = useCallback(() => {
     if (isLoading) return null
@@ -131,7 +134,7 @@ export default function ExternalProfileScreen() {
         <Text style={styles.emptyText}>No activity yet</Text>
       </View>
     )
-  }, [isLoading])
+  }, [isLoading, styles])
 
   // Loading state — centered spinner (same pattern as ProfileScreen)
   if (isLoading) {
@@ -186,45 +189,47 @@ export default function ExternalProfileScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  refreshSpinner: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  list: {
-    paddingBottom: 100,
-  },
-  emptyList: {
-    flexGrow: 1,
-    paddingBottom: 100,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: spacing.xxl,
-  },
-  emptyText: {
-    fontFamily: fonts.body,
-    fontSize: typography.body.fontSize,
-    lineHeight: typography.body.lineHeight,
-    color: colors.secondaryText,
-  },
-  fallbackContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fallbackLink: {
-    fontFamily: fonts.body,
-    fontSize: typography.body.fontSize,
-    color: colors.teal,
-  },
-})
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    loadingContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    refreshSpinner: {
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+    },
+    list: {
+      paddingBottom: 100,
+    },
+    emptyList: {
+      flexGrow: 1,
+      paddingBottom: 100,
+    },
+    emptyContainer: {
+      alignItems: 'center',
+      paddingVertical: spacing.xxl,
+    },
+    emptyText: {
+      fontFamily: fonts.body,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
+      color: colors.secondaryText,
+    },
+    fallbackContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    fallbackLink: {
+      fontFamily: fonts.body,
+      fontSize: typography.body.fontSize,
+      color: colors.teal,
+    },
+  })
+}

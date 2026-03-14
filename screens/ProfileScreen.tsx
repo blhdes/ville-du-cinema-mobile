@@ -1,10 +1,12 @@
+import { useMemo } from 'react'
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { useUser } from '@/hooks/useUser'
 import { useProfile } from '@/hooks/useProfile'
 import { useUserLists } from '@/hooks/useUserLists'
-import { colors, fonts, spacing, typography } from '@/theme'
+import { useTheme } from '@/contexts/ThemeContext'
+import { fonts, spacing, typography, type ThemeColors } from '@/theme'
 import Spinner from '@/components/ui/Spinner'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import ProfileHeader from '@/components/profile/ProfileHeader'
@@ -18,6 +20,8 @@ export default function ProfileScreen() {
   const { user } = useUser()
   const { profile, isLoading, error } = useProfile()
   const { users: followedUsers } = useUserLists()
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
 
   // Guest mode — prompt to sign in
   if (!user) {
@@ -71,51 +75,53 @@ export default function ProfileScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    paddingHorizontal: HORIZONTAL_PAD,
-    paddingVertical: 12,
-  },
-  headerTitle: {
-    fontFamily: fonts.heading,
-    fontSize: typography.title3.fontSize,
-    color: colors.foreground,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
-    marginHorizontal: HORIZONTAL_PAD,
-  },
-  followingSection: {
-    paddingTop: spacing.xl,
-  },
-  guestContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xxl,
-  },
-  guestTitle: {
-    fontFamily: fonts.heading,
-    fontSize: typography.magazineTitle.fontSize,
-    lineHeight: typography.magazineTitle.lineHeight,
-    color: colors.foreground,
-    marginBottom: spacing.md,
-  },
-  guestText: {
-    fontFamily: fonts.body,
-    fontSize: typography.magazineBody.fontSize,
-    lineHeight: typography.magazineBody.lineHeight,
-    color: colors.secondaryText,
-    textAlign: 'center',
-  },
-})
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      paddingHorizontal: HORIZONTAL_PAD,
+      paddingVertical: 12,
+    },
+    headerTitle: {
+      fontFamily: fonts.heading,
+      fontSize: typography.title3.fontSize,
+      color: colors.foreground,
+    },
+    loadingContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    divider: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.border,
+      marginHorizontal: HORIZONTAL_PAD,
+    },
+    followingSection: {
+      paddingTop: spacing.xl,
+    },
+    guestContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: spacing.xxl,
+    },
+    guestTitle: {
+      fontFamily: fonts.heading,
+      fontSize: typography.magazineTitle.fontSize,
+      lineHeight: typography.magazineTitle.lineHeight,
+      color: colors.foreground,
+      marginBottom: spacing.md,
+    },
+    guestText: {
+      fontFamily: fonts.body,
+      fontSize: typography.magazineBody.fontSize,
+      lineHeight: typography.magazineBody.lineHeight,
+      color: colors.secondaryText,
+      textAlign: 'center',
+    },
+  })
+}

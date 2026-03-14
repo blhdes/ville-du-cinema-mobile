@@ -18,7 +18,7 @@ import SettingsScreen from '@/screens/SettingsScreen'
 import FeedTabIcon from '@/components/ui/FeedTabIcon'
 import { useProfile } from '@/hooks/useProfile'
 import { TabBarProvider, useTabBar } from '@/contexts/TabBarContext'
-import { colors } from '@/theme'
+import { useTheme } from '@/contexts/ThemeContext'
 
 const AVATAR_SIZE = 24
 const BOUNCE_SPRING = { damping: 14, stiffness: 300, mass: 0.6 }
@@ -92,13 +92,14 @@ function SettingsIcon({ color, size }: { color: string; size: number }) {
 
 function AnimatedTabBar(props: BottomTabBarProps) {
   const { translateY } = useTabBar()
+  const { colors } = useTheme()
   const insets = useSafeAreaInsets()
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
   }))
 
   return (
-    <Animated.View style={[styles.tabBarWrapper, { paddingBottom: insets.bottom }, animatedStyle]}>
+    <Animated.View style={[styles.tabBarWrapper, { backgroundColor: colors.background, paddingBottom: insets.bottom }, animatedStyle]}>
       <BottomTabBar {...props} />
     </Animated.View>
   )
@@ -107,6 +108,7 @@ function AnimatedTabBar(props: BottomTabBarProps) {
 const Tab = createBottomTabNavigator<AppTabsParamList>()
 
 function AppTabsInner() {
+  const { colors } = useTheme()
   const { requestFeedRefresh, isFeedRefreshing } = useTabBar()
   const onFeedPress = useCallback(() => onTabFocus('Feed'), [])
   const onProfileBounce = useCallback(() => onTabFocus('Profile'), [])
@@ -217,6 +219,5 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: colors.background,
   },
 })

@@ -1,6 +1,8 @@
+import { useMemo } from 'react'
 import { Image, StyleSheet, Text, View } from 'react-native'
 import type { UserProfile } from '@/types/database'
-import { colors, fonts, spacing, typography } from '@/theme'
+import { useTheme } from '@/contexts/ThemeContext'
+import { fonts, spacing, typography, type ThemeColors } from '@/theme'
 
 interface ProfileHeaderProps {
   profile: UserProfile
@@ -11,6 +13,9 @@ const AVATAR_SIZE = 72
 const HORIZONTAL_PAD = 20
 
 export default function ProfileHeader({ profile, email }: ProfileHeaderProps) {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
+
   return (
     <View style={styles.container}>
       {/* Avatar + identity row */}
@@ -48,59 +53,61 @@ export default function ProfileHeader({ profile, email }: ProfileHeaderProps) {
   )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: HORIZONTAL_PAD,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarContainer: {
-    marginRight: spacing.md,
-  },
-  avatar: {
-    width: AVATAR_SIZE,
-    height: AVATAR_SIZE,
-    borderRadius: AVATAR_SIZE / 2,
-  },
-  avatarPlaceholder: {
-    backgroundColor: colors.background,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitial: {
-    fontFamily: fonts.heading,
-    fontSize: 28,
-    color: colors.secondaryText,
-  },
-  identity: {
-    flex: 1,
-  },
-  displayName: {
-    fontFamily: fonts.heading,
-    fontSize: typography.magazineTitle.fontSize,
-    lineHeight: typography.magazineTitle.lineHeight,
-    color: colors.foreground,
-    marginBottom: spacing.xs,
-  },
-  meta: {
-    fontFamily: fonts.body,
-    fontSize: typography.magazineMeta.fontSize,
-    lineHeight: typography.magazineMeta.lineHeight,
-    letterSpacing: typography.magazineMeta.letterSpacing,
-    color: colors.secondaryText,
-    marginTop: 2,
-  },
-  bioText: {
-    fontFamily: fonts.bodyItalic,
-    fontSize: typography.magazineBody.fontSize,
-    lineHeight: typography.magazineBody.lineHeight,
-    color: colors.foreground,
-    marginTop: spacing.lg,
-  },
-})
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      paddingHorizontal: HORIZONTAL_PAD,
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.lg,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    avatarContainer: {
+      marginRight: spacing.md,
+    },
+    avatar: {
+      width: AVATAR_SIZE,
+      height: AVATAR_SIZE,
+      borderRadius: AVATAR_SIZE / 2,
+    },
+    avatarPlaceholder: {
+      backgroundColor: colors.background,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarInitial: {
+      fontFamily: fonts.heading,
+      fontSize: 28,
+      color: colors.secondaryText,
+    },
+    identity: {
+      flex: 1,
+    },
+    displayName: {
+      fontFamily: fonts.heading,
+      fontSize: typography.magazineTitle.fontSize,
+      lineHeight: typography.magazineTitle.lineHeight,
+      color: colors.foreground,
+      marginBottom: spacing.xs,
+    },
+    meta: {
+      fontFamily: fonts.body,
+      fontSize: typography.magazineMeta.fontSize,
+      lineHeight: typography.magazineMeta.lineHeight,
+      letterSpacing: typography.magazineMeta.letterSpacing,
+      color: colors.secondaryText,
+      marginTop: 2,
+    },
+    bioText: {
+      fontFamily: fonts.bodyItalic,
+      fontSize: typography.magazineBody.fontSize,
+      lineHeight: typography.magazineBody.lineHeight,
+      color: colors.foreground,
+      marginTop: spacing.lg,
+    },
+  })
+}
