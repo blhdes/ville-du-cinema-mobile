@@ -1,17 +1,26 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native'
+import * as SplashScreen from 'expo-splash-screen'
 import { useUser } from '@/hooks/useUser'
 import { useGuestMode } from '@/contexts/GuestModeContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import AuthStack from '@/navigation/AuthStack'
 import AppTabs from '@/navigation/AppTabs'
-import Spinner from '@/components/ui/Spinner'
 
 export default function RootNavigator() {
   const { user, isLoading: isAuthLoading } = useUser()
   const { isGuest, isLoading: isGuestLoading } = useGuestMode()
   const { resolved, colors } = useTheme()
+  const splashHidden = useRef(false)
+
+  // Hide splash once the auth screen paints (logged-in flow is handled by FeedScreen)
+  const onAuthLayout = useCallback(() => {
+    if (!splashHidden.current) {
+      splashHidden.current = true
+      SplashScreen.hideAsync()
+    }
+  }, [])
 
   const navTheme = useMemo(() => {
     const base = resolved === 'dark' ? DarkTheme : DefaultTheme
@@ -31,15 +40,19 @@ export default function RootNavigator() {
 
   if (isAuthLoading || isGuestLoading) {
     return (
-      <View style={[styles.loading, { backgroundColor: colors.background }]}>
-        <Spinner size={24} />
-      </View>
+      <View style={[styles.loading, { backgroundColor: colors.background }]} />
     )
   }
 
   return (
     <NavigationContainer theme={navTheme}>
-      {user || isGuest ? <AppTabs /> : <AuthStack />}
+      {user || isGuest ? (
+        <AppTabs />
+      ) : (
+        <View style={styles.authWrapper} onLayout={onAuthLayout}>
+          <AuthStack />
+        </View>
+      )}
     </NavigationContainer>
   )
 }
@@ -49,5 +62,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  authWrapper: {
+    flex: 1,
   },
 })

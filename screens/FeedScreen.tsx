@@ -20,6 +20,7 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { useNavigation, useFocusEffect, DrawerActions } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Ionicons } from '@expo/vector-icons'
+import * as SplashScreen from 'expo-splash-screen'
 import type { FeedStackParamList } from '@/navigation/types'
 import { useUserLists } from '@/hooks/useUserLists'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
@@ -303,11 +304,10 @@ export default function FeedScreen() {
   const isInitialLoad = (isLoading || isListLoading) && page === 1 && reviews.length === 0
 
   useEffect(() => {
-    const visible = isRefreshing || isInitialLoad
-    spinnerProgress.value = withTiming(visible ? 1 : 0, {
-      duration: visible ? 200 : 600,
+    spinnerProgress.value = withTiming(isRefreshing ? 1 : 0, {
+      duration: isRefreshing ? 200 : 600,
     })
-  }, [isRefreshing, isInitialLoad])
+  }, [isRefreshing])
 
   const spinnerCollapseStyle = useAnimatedStyle(() => ({
     height: interpolate(spinnerProgress.value, [0, 1], [0, 52]),
@@ -347,11 +347,6 @@ export default function FeedScreen() {
     if (isInitialLoad) {
       return (
         <View>
-          <Animated.View style={[styles.spinnerCollapse, spinnerCollapseStyle]}>
-            <View style={styles.refreshSpinner}>
-              <Spinner size={20} />
-            </View>
-          </Animated.View>
           <ReviewCardSkeleton />
           <ReviewCardSkeleton />
           <ReviewCardSkeleton />
@@ -383,10 +378,18 @@ export default function FeedScreen() {
     return null
   }
 
+  const splashHidden = useRef(false)
+  const onContainerLayout = useCallback(() => {
+    if (!splashHidden.current) {
+      splashHidden.current = true
+      SplashScreen.hideAsync()
+    }
+  }, [])
+
   const error = listError || feedError
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} onLayout={onContainerLayout}>
       {error && (
         <ErrorBanner message={error} onDismiss={clearError} />
       )}

@@ -1,5 +1,5 @@
 import 'react-native-gesture-handler'
-import { useEffect, useRef } from 'react'
+import { View } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import * as SplashScreen from 'expo-splash-screen'
@@ -15,15 +15,15 @@ import RootNavigator from '@/navigation/RootNavigator'
 SplashScreen.preventAutoHideAsync()
 
 function AppShell() {
-  const { resolved, isReady } = useTheme()
-  const splashHidden = useRef(false)
+  const { resolved, colors, isReady } = useTheme()
 
-  useEffect(() => {
-    if (isReady && !splashHidden.current) {
-      splashHidden.current = true
-      SplashScreen.hideAsync()
-    }
-  }, [isReady])
+  // While the saved preference loads from storage, render a full-screen view
+  // matching the theme background. This sits behind the splash so that when
+  // hideAsync() fades the splash out, the correct color is already visible
+  // (instead of the default white native root view).
+  if (!isReady) {
+    return <View style={{ flex: 1, backgroundColor: colors.background }} />
+  }
 
   return (
     <>
