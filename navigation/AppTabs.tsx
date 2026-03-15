@@ -3,13 +3,16 @@ import { createBottomTabNavigator, type BottomTabBarProps } from '@react-navigat
 import { BottomTabBar } from '@react-navigation/bottom-tabs'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, {
+  Easing,
   makeMutable,
   useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
   withSequence,
   withSpring,
   withTiming,
 } from 'react-native-reanimated'
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { AppTabsParamList } from '@/navigation/types'
 import FeedStackNavigator from '@/navigation/FeedStackNavigator'
@@ -62,8 +65,30 @@ function FeedIcon({ color, size }: { color: string; size: number }) {
 }
 
 function ProfileIcon({ color }: { color: string }) {
-  const { profile } = useProfile()
+  const { profile, isLoading } = useProfile()
+  const { colors } = useTheme()
   const style = useAnimatedStyle(() => ({ transform: [{ scale: scales.Profile.value }] }))
+  const pulse = useSharedValue(0.4)
+
+  useEffect(() => {
+    if (isLoading) {
+      pulse.value = withRepeat(
+        withTiming(0.8, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+        -1,
+        true,
+      )
+    }
+  }, [isLoading, pulse])
+
+  if (isLoading) {
+    return (
+      <Animated.View style={style}>
+        <Animated.View
+          style={[styles.avatarSkeleton, { backgroundColor: colors.border, opacity: pulse }]}
+        />
+      </Animated.View>
+    )
+  }
 
   if (profile?.avatar_url) {
     return (
@@ -210,6 +235,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   avatar: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
+  },
+  avatarSkeleton: {
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
     borderRadius: AVATAR_SIZE / 2,
