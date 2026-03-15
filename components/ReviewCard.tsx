@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import { Image } from 'expo-image'
 import * as WebBrowser from 'expo-web-browser'
@@ -76,6 +76,18 @@ export default function ReviewCard({ review, hideAuthor = false }: ReviewCardPro
   const styles = useMemo(() => createStyles(colors), [colors])
   const contentWidth = width - HORIZONTAL_PAD * 2
   const scaled = useMemo(() => getScaledTypography(preferences.fontMultiplier), [preferences.fontMultiplier])
+  const handleLongPress = useCallback(() => {
+    if (review.review) {
+      navigation.navigate('ReviewReader', {
+        reviewText: review.review,
+        author: review.creator,
+        username: review.username,
+        avatarUrl: cachedAvatarUrl,
+        movieTitle: review.movieTitle,
+        rating: review.rating,
+      })
+    }
+  }, [navigation, review, cachedAvatarUrl])
 
   const textLength = useMemo(() => htmlTextLength(review.review), [review.review])
   const isLong = textLength > MAX_PREVIEW_LENGTH * (1 + TOLERANCE_RATIO)
@@ -155,6 +167,7 @@ export default function ReviewCard({ review, hideAuthor = false }: ReviewCardPro
   }), [])
 
   return (
+    <Pressable onLongPress={handleLongPress} delayLongPress={500}>
     <View style={styles.article}>
       {/* Title */}
       <Pressable
@@ -263,6 +276,7 @@ export default function ReviewCard({ review, hideAuthor = false }: ReviewCardPro
       {/* Hairline separator */}
       <View style={styles.divider} />
     </View>
+    </Pressable>
   )
 }
 

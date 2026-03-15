@@ -1,4 +1,5 @@
 import 'react-native-gesture-handler'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { View } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
@@ -58,10 +59,12 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <AppShell />
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <AppShell />
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   )
 }

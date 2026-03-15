@@ -6,6 +6,8 @@ import { useTheme } from '@/contexts/ThemeContext'
 import FeedDrawerNavigator from '@/navigation/FeedDrawerNavigator'
 import ExternalProfileScreen from '@/screens/ExternalProfileScreen'
 import UserSearchScreen from '@/screens/UserSearchScreen'
+import ReviewReaderScreen from '@/screens/ReviewReaderScreen'
+import QuotePreviewScreen from '@/screens/QuotePreviewScreen'
 import type { FeedStackParamList } from '@/navigation/types'
 import { fonts, typography } from '@/theme'
 
@@ -62,6 +64,16 @@ export default function FeedStackNavigator() {
         name="UserSearch"
         component={UserSearchScreen}
         options={{ headerTitle: 'Search' }}
+      />
+      <Stack.Screen
+        name="ReviewReader"
+        component={ReviewReaderScreen}
+        options={{ headerTitle: '' }}
+      />
+      <Stack.Screen
+        name="QuotePreview"
+        component={QuotePreviewScreen}
+        options={{ headerTitle: 'Quote' }}
       />
     </Stack.Navigator>
   )

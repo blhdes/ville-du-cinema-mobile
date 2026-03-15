@@ -7,6 +7,8 @@ import ProfileScreen from '@/screens/ProfileScreen'
 import EditProfileScreen from '@/screens/EditProfileScreen'
 import ExternalProfileScreen from '@/screens/ExternalProfileScreen'
 import UserSearchScreen from '@/screens/UserSearchScreen'
+import ReviewReaderScreen from '@/screens/ReviewReaderScreen'
+import QuotePreviewScreen from '@/screens/QuotePreviewScreen'
 import type { ProfileStackParamList } from '@/navigation/types'
 import { fonts, typography } from '@/theme'
 
@@ -72,6 +74,16 @@ export default function ProfileStackNavigator() {
         name="UserSearch"
         component={UserSearchScreen}
         options={{ headerTitle: 'Search' }}
+      />
+      <Stack.Screen
+        name="ReviewReader"
+        component={ReviewReaderScreen}
+        options={{ headerTitle: '' }}
+      />
+      <Stack.Screen
+        name="QuotePreview"
+        component={QuotePreviewScreen}
+        options={{ headerTitle: 'Quote' }}
       />
     </Stack.Navigator>
   )
