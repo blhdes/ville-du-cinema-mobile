@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useUser } from '@/hooks/useUser'
@@ -7,16 +7,17 @@ import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, typography, type ThemeColors } from '@/theme'
 import DisplaySettings from '@/components/settings/DisplaySettings'
+import SettingsSkeleton from '@/components/settings/SettingsSkeleton'
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets()
-  const bottomPadding = insets.bottom + 49 + 20
-  const { user, signOut } = useUser()
+  const { user, isLoading: isAuthLoading, signOut } = useUser()
   const { isGuest, exitGuestMode } = useGuestMode()
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
   const {
     preferences,
+    isLoading: isPrefsLoading,
     isAuthenticated,
     setShowWatchNotifications,
     setUseDropCap,
@@ -24,10 +25,17 @@ export default function SettingsScreen() {
     setFontMultiplier,
   } = useDisplayPreferences()
 
-  const handleSignOut = async () => {
+  const isLoading = isAuthLoading || isPrefsLoading
+
+  const handleSignOut = useCallback(async () => {
     if (user) await signOut()
     if (isGuest) await exitGuestMode()
-  }
+  }, [user, isGuest, signOut, exitGuestMode])
+
+  const scrollContentStyle = useMemo(
+    () => [styles.content, { paddingBottom: insets.bottom + 49 + 20 }],
+    [styles, insets.bottom],
+  )
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -35,59 +43,63 @@ export default function SettingsScreen() {
         <Text style={styles.headerTitle}>Settings</Text>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}>
-        {/* Account section */}
-        <Text style={styles.sectionLabel}>Account</Text>
-        <View style={styles.card}>
-          <View style={[styles.row, styles.rowBorder]}>
-            <Text style={styles.rowLabel}>Status</Text>
-            <Text style={styles.rowValue}>
-              {user ? 'Signed in' : 'Guest mode'}
-            </Text>
-          </View>
-          {user && (
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Email</Text>
-              <Text style={[styles.rowValue, styles.rowValueFlex]} numberOfLines={1}>
-                {user.email}
+      {isLoading ? (
+        <SettingsSkeleton />
+      ) : (
+        <ScrollView contentContainerStyle={scrollContentStyle}>
+          {/* Account section */}
+          <Text style={styles.sectionLabel}>Account</Text>
+          <View style={styles.card}>
+            <View style={[styles.row, styles.rowBorder]}>
+              <Text style={styles.rowLabel}>Status</Text>
+              <Text style={styles.rowValue}>
+                {user ? 'Signed in' : 'Guest mode'}
               </Text>
             </View>
-          )}
-        </View>
+            {user && (
+              <View style={styles.row}>
+                <Text style={styles.rowLabel}>Email</Text>
+                <Text style={[styles.rowValue, styles.rowValueFlex]} numberOfLines={1}>
+                  {user.email}
+                </Text>
+              </View>
+            )}
+          </View>
 
-        {/* Display preferences */}
-        <Text style={styles.sectionLabel}>Display</Text>
-        <View style={styles.cardWrapper}>
-          <DisplaySettings
-            showWatchNotifications={preferences.showWatchNotifications}
-            useDropCap={preferences.useDropCap}
-            showRatings={preferences.showRatings}
-            fontMultiplier={preferences.fontMultiplier}
-            onSetShowWatchNotifications={setShowWatchNotifications}
-            onSetUseDropCap={setUseDropCap}
-            onSetShowRatings={setShowRatings}
-            onSetFontMultiplier={setFontMultiplier}
-            disableRemote={!isAuthenticated}
-          />
-        </View>
-        {!isAuthenticated && (
-          <Text style={styles.sectionFooter}>
-            Sign in to save display preferences across devices.
-          </Text>
-        )}
-
-        {/* Sign out */}
-        <View style={styles.signOutSection}>
-          <Pressable
-            onPress={handleSignOut}
-            style={({ pressed }) => pressed && styles.signOutPressed}
-          >
-            <Text style={styles.signOutText}>
-              {user ? 'Sign Out' : 'Exit Guest Mode'}
+          {/* Display preferences */}
+          <Text style={styles.sectionLabel}>Display</Text>
+          <View style={styles.cardWrapper}>
+            <DisplaySettings
+              showWatchNotifications={preferences.showWatchNotifications}
+              useDropCap={preferences.useDropCap}
+              showRatings={preferences.showRatings}
+              fontMultiplier={preferences.fontMultiplier}
+              onSetShowWatchNotifications={setShowWatchNotifications}
+              onSetUseDropCap={setUseDropCap}
+              onSetShowRatings={setShowRatings}
+              onSetFontMultiplier={setFontMultiplier}
+              disableRemote={!isAuthenticated}
+            />
+          </View>
+          {!isAuthenticated && (
+            <Text style={styles.sectionFooter}>
+              Sign in to save display preferences across devices.
             </Text>
-          </Pressable>
-        </View>
-      </ScrollView>
+          )}
+
+          {/* Sign out */}
+          <View style={styles.signOutSection}>
+            <Pressable
+              onPress={handleSignOut}
+              style={({ pressed }) => pressed && styles.signOutPressed}
+            >
+              <Text style={styles.signOutText}>
+                {user ? 'Sign Out' : 'Exit Guest Mode'}
+              </Text>
+            </Pressable>
+          </View>
+        </ScrollView>
+      )}
     </View>
   )
 }

@@ -49,6 +49,8 @@ const TOP_THRESHOLD = 250
 // Spring config for snap animations — relaxed, deliberate settling for an editorial feel.
 const SNAP_SPRING = { damping: 24, stiffness: 120, mass: 1.0, overshootClamping: true }
 
+const keyExtractor = (item: Review) => item.id
+
 export default function FeedScreen() {
   const insets = useSafeAreaInsets()
   const tabBarHeight = useBottomTabBarHeight()
@@ -297,9 +299,12 @@ export default function FeedScreen() {
   )
 
   // Filter watch notifications if preference is set
-  const filteredReviews = preferences.showWatchNotifications
-    ? reviews
-    : reviews.filter((r) => r.type !== 'watch')
+  const filteredReviews = useMemo(
+    () => preferences.showWatchNotifications
+      ? reviews
+      : reviews.filter((r) => r.type !== 'watch'),
+    [reviews, preferences.showWatchNotifications],
+  )
 
   const isInitialLoad = (isLoading || isListLoading) && page === 1 && reviews.length === 0
 
@@ -321,7 +326,7 @@ export default function FeedScreen() {
     return <ReviewCard review={item} />
   }, [])
 
-  const renderEmpty = () => {
+  const renderEmpty = useCallback(() => {
     if (isLoading || isListLoading) return null
 
     if (usernames.length === 0) {
@@ -341,9 +346,9 @@ export default function FeedScreen() {
         <Text style={styles.emptySubtitle}>No activity found</Text>
       </View>
     )
-  }
+  }, [isLoading, isListLoading, usernames.length, styles])
 
-  const renderHeader = () => {
+  const renderHeader = useCallback(() => {
     if (isInitialLoad) {
       return (
         <View>
@@ -360,9 +365,11 @@ export default function FeedScreen() {
         </View>
       </Animated.View>
     )
-  }
+  }, [isInitialLoad, styles, spinnerCollapseStyle])
 
-  const renderFooter = () => {
+  const hasReviews = filteredReviews.length > 0
+
+  const renderFooter = useCallback(() => {
     if (isLoadingMore) {
       return (
         <View style={styles.footerLoader}>
@@ -371,12 +378,12 @@ export default function FeedScreen() {
       )
     }
 
-    if (filteredReviews.length > 0 && !hasMore) {
+    if (hasReviews && !hasMore) {
       return <QuoteOfTheDay />
     }
 
     return null
-  }
+  }, [isLoadingMore, hasReviews, hasMore, styles])
 
   const splashHidden = useRef(false)
   const onContainerLayout = useCallback(() => {
@@ -387,6 +394,13 @@ export default function FeedScreen() {
   }, [])
 
   const error = listError || feedError
+
+  const listContentStyle = useMemo(
+    () => !hasReviews && !isInitialLoad
+      ? styles.emptyList
+      : [styles.list, { paddingTop: headerHeight + spacing.md, paddingBottom: tabBarHeight + 20 }],
+    [hasReviews, isInitialLoad, styles, headerHeight, tabBarHeight],
+  )
 
   return (
     <View style={styles.container} onLayout={onContainerLayout}>
@@ -399,7 +413,7 @@ export default function FeedScreen() {
         key={layoutKey}
         data={filteredReviews}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={renderFooter}
@@ -407,6 +421,9 @@ export default function FeedScreen() {
         onEndReachedThreshold={0.3}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
+        initialNumToRender={8}
+        maxToRenderPerBatch={6}
+        windowSize={11}
         refreshControl={
           <RefreshControl
             refreshing={false}
@@ -415,11 +432,7 @@ export default function FeedScreen() {
             colors={['transparent']}
           />
         }
-        contentContainerStyle={
-          filteredReviews.length === 0 && !isInitialLoad
-            ? styles.emptyList
-            : [styles.list, { paddingTop: headerHeight + spacing.md, paddingBottom: tabBarHeight + 20 }]
-        }
+        contentContainerStyle={listContentStyle}
       />
 
       {/* Header: outer shell stays opaque, inner content fades on scroll */}

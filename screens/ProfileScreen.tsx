@@ -7,9 +7,9 @@ import { useProfile } from '@/hooks/useProfile'
 import { useUserLists } from '@/hooks/useUserLists'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, typography, type ThemeColors } from '@/theme'
-import Spinner from '@/components/ui/Spinner'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import ProfileHeader from '@/components/profile/ProfileHeader'
+import ProfileSkeleton from '@/components/profile/ProfileSkeleton'
 import FollowingList from '@/components/profile/FollowingList'
 
 const HORIZONTAL_PAD = 20
@@ -40,18 +40,10 @@ export default function ProfileScreen() {
     )
   }
 
-  if (isLoading) {
-    return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Profile</Text>
-        </View>
-        <View style={styles.loadingContainer}>
-          <Spinner size={24} />
-        </View>
-      </View>
-    )
-  }
+  const scrollContentStyle = useMemo(
+    () => ({ paddingBottom: tabBarHeight + insets.bottom + 20 }),
+    [tabBarHeight, insets.bottom],
+  )
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -61,16 +53,20 @@ export default function ProfileScreen() {
 
       {error && <ErrorBanner message={error} />}
 
-      <ScrollView contentContainerStyle={{ paddingBottom: tabBarHeight + insets.bottom + 20 }}>
-        {profile && <ProfileHeader profile={profile} email={user.email} />}
+      {isLoading ? (
+        <ProfileSkeleton variant="self" />
+      ) : (
+        <ScrollView contentContainerStyle={scrollContentStyle}>
+          {profile && <ProfileHeader profile={profile} email={user.email} />}
 
-        {/* Hairline before following */}
-        <View style={styles.divider} />
+          {/* Hairline before following */}
+          <View style={styles.divider} />
 
-        <View style={styles.followingSection}>
-          <FollowingList users={followedUsers} />
-        </View>
-      </ScrollView>
+          <View style={styles.followingSection}>
+            <FollowingList users={followedUsers} />
+          </View>
+        </ScrollView>
+      )}
     </View>
   )
 }
@@ -89,11 +85,6 @@ function createStyles(colors: ThemeColors) {
       fontFamily: fonts.heading,
       fontSize: typography.title3.fontSize,
       color: colors.foreground,
-    },
-    loadingContainer: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
     },
     divider: {
       height: StyleSheet.hairlineWidth,

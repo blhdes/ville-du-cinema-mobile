@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   FlatList,
+  InteractionManager,
   Linking,
   Pressable,
   RefreshControl,
@@ -22,13 +23,16 @@ import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { useUserLists } from '@/hooks/useUserLists'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, typography, type ThemeColors } from '@/theme'
-import Spinner from '@/components/ui/Spinner'
 import ErrorBanner from '@/components/ui/ErrorBanner'
+import Spinner from '@/components/ui/Spinner'
 import ExternalProfileHeader from '@/components/profile/ExternalProfileHeader'
+import ProfileSkeleton from '@/components/profile/ProfileSkeleton'
 import ReviewCard from '@/components/ReviewCard'
 import WatchNotification from '@/components/WatchNotification'
 
 type ExternalProfileRoute = RouteProp<FeedStackParamList, 'ExternalProfile'>
+
+const keyExtractor = (item: Review) => item.id
 
 export default function ExternalProfileScreen() {
   const { params } = useRoute<ExternalProfileRoute>()
@@ -68,9 +72,20 @@ export default function ExternalProfileScreen() {
     }
   }, [username])
 
+  // Defer the initial fetch until the push animation finishes so heavy
+  // XML/HTML parsing doesn't compete with the animation for the JS thread.
+  // The ProfileSkeleton covers the wait, so there's no visual gap.
+  const isMounted = useRef(true)
+  useEffect(() => () => { isMounted.current = false }, [])
+
   useEffect(() => {
     setIsLoading(true)
-    loadData().finally(() => setIsLoading(false))
+    const task = InteractionManager.runAfterInteractions(() => {
+      loadData().finally(() => {
+        if (isMounted.current) setIsLoading(false)
+      })
+    })
+    return () => task.cancel()
   }, [loadData])
 
   const handleRefresh = useCallback(async () => {
@@ -81,9 +96,12 @@ export default function ExternalProfileScreen() {
     setRefreshing(false)
   }, [loadData])
 
-  const filteredReviews = preferences.showWatchNotifications
-    ? reviews
-    : reviews.filter((r) => r.type !== 'watch')
+  const filteredReviews = useMemo(
+    () => preferences.showWatchNotifications
+      ? reviews
+      : reviews.filter((r) => r.type !== 'watch'),
+    [reviews, preferences.showWatchNotifications],
+  )
 
   const renderItem = useCallback(({ item }: { item: Review }) => {
     if (item.type === 'watch') {
@@ -101,6 +119,10 @@ export default function ExternalProfileScreen() {
   }, [isFollowing, username, addUser, removeUser])
 
   const headerComponent = useMemo(() => {
+    if (isLoading) {
+      return <ProfileSkeleton variant="external" />
+    }
+
     const displayName = meta?.displayName || username
     return (
       <>
@@ -125,7 +147,7 @@ export default function ExternalProfileScreen() {
         />
       </>
     )
-  }, [meta, username, avatarUrl, refreshing, isFollowing, handleFollowToggle, styles])
+  }, [isLoading, meta, username, avatarUrl, refreshing, isFollowing, handleFollowToggle, styles])
 
   const renderEmpty = useCallback(() => {
     if (isLoading) return null
@@ -135,17 +157,6 @@ export default function ExternalProfileScreen() {
       </View>
     )
   }, [isLoading, styles])
-
-  // Loading state — centered spinner (same pattern as ProfileScreen)
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Spinner size={24} />
-        </View>
-      </View>
-    )
-  }
 
   // Error state — both fetches failed
   if (error && reviews.length === 0 && !meta) {
@@ -171,7 +182,7 @@ export default function ExternalProfileScreen() {
       <FlatList
         data={filteredReviews}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
         ListHeaderComponent={headerComponent}
         ListEmptyComponent={renderEmpty}
         refreshControl={
@@ -194,11 +205,6 @@ function createStyles(colors: ThemeColors) {
     container: {
       flex: 1,
       backgroundColor: colors.background,
-    },
-    loadingContainer: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
     },
     refreshSpinner: {
       alignItems: 'center',
