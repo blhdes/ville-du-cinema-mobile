@@ -10,6 +10,7 @@ import { withTiming } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useFocusEffect, useRoute, type RouteProp } from '@react-navigation/native'
 import type ViewShot from 'react-native-view-shot'
+import { File, Paths } from 'expo-file-system'
 import * as Sharing from 'expo-sharing'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -19,6 +20,11 @@ import ExportCanvas from '@/components/quote/ExportCanvas'
 import type { FeedStackParamList } from '@/navigation/types'
 
 type RouteProps = RouteProp<FeedStackParamList, 'QuotePreview'>
+
+/** Replace non-alphanumeric characters with underscores, collapse runs. */
+function sanitize(text: string): string {
+  return text.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '')
+}
 
 export default function QuotePreviewScreen() {
   const { params } = useRoute<RouteProps>()
@@ -39,17 +45,24 @@ export default function QuotePreviewScreen() {
   const handleShare = useCallback(async () => {
     if (!viewShotRef.current?.capture) return
     try {
-      const uri = await viewShotRef.current.capture()
+      const tmpUri = await viewShotRef.current.capture()
+
+      // Copy to a clean file name
+      const fileName = `Village_${sanitize(params.movieTitle)}.png`
+      const tmpFile = new File(tmpUri)
+      const dest = new File(Paths.cache, fileName)
+      tmpFile.copy(dest)
+
       const available = await Sharing.isAvailableAsync()
       if (!available) {
         Alert.alert('Sharing not available', 'Sharing is not supported on this device.')
         return
       }
-      await Sharing.shareAsync(uri, { mimeType: 'image/png' })
+      await Sharing.shareAsync(dest.uri, { mimeType: 'image/png' })
     } catch (error) {
       console.error('Share failed:', error)
     }
-  }, [])
+  }, [params.movieTitle])
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -67,7 +80,7 @@ export default function QuotePreviewScreen() {
       </View>
 
       {/* Floating share pill */}
-      <View style={[styles.pillWrapper, { paddingBottom: insets.bottom + spacing.lg }]}>
+      <View style={[styles.pillWrapper, { paddingBottom: insets.bottom + 54 + spacing.lg }]}>
         <Pressable
           onPress={handleShare}
           style={({ pressed }) => [

@@ -27,8 +27,9 @@ const AVATAR_SIZE = 28
 const BRAND_ICON_SIZE = 44
 
 /**
- * Premium quote card captured by ViewShot.
- * Magazine-style layout with author avatar, @handle, and app branding.
+ * 9:16 story-sized canvas captured by ViewShot.
+ * The quote card is centered inside a full-bleed background so exports
+ * fill Instagram Stories without awkward zooming.
  */
 const ExportCanvas = forwardRef<ViewShot, ExportCanvasProps>(
   ({ quote, author, username, avatarUrl, movieTitle, rating }, ref) => {
@@ -36,7 +37,8 @@ const ExportCanvas = forwardRef<ViewShot, ExportCanvasProps>(
     const { preferences } = useDisplayPreferences()
     const { width: screenWidth } = useWindowDimensions()
 
-    const cardWidth = Math.round(screenWidth * 0.85)
+    // Preview fits on screen; the 9:16 ratio ensures a tall story frame
+    const storyWidth = Math.round(screenWidth * 0.75)
     const quoteFontStyle = useMemo(() => getQuoteFontSize(quote.length), [quote.length])
 
     return (
@@ -44,54 +46,57 @@ const ExportCanvas = forwardRef<ViewShot, ExportCanvasProps>(
         ref={ref}
         options={{ format: 'png', quality: 1 }}
         style={[
-          styles.card,
+          styles.storyFrame,
           {
-            width: cardWidth,
-            backgroundColor: colors.backgroundSecondary,
+            width: storyWidth,
+            backgroundColor: colors.background,
           },
         ]}
       >
-        {/* ── Top row: Author + Logo ── */}
-        <View style={styles.topRow}>
-          <View style={styles.authorRow}>
-            {avatarUrl ? (
-            <Image
-              source={avatarUrl}
-              style={[styles.avatar, { borderColor: colors.border }]}
-              cachePolicy="memory-disk"
-            />
-          ) : (
-            <View style={[styles.avatarFallback, { backgroundColor: colors.border }]}>
-              <Text style={[styles.avatarInitial, { color: colors.secondaryText }]}>
-                {author.charAt(0).toUpperCase()}
-              </Text>
+        {/* Quote card — centered in the story frame */}
+        <View style={[styles.card, { backgroundColor: colors.backgroundSecondary }]}>
+          {/* ── Top row: Author + Logo ── */}
+          <View style={styles.topRow}>
+            <View style={styles.authorRow}>
+              {avatarUrl ? (
+                <Image
+                  source={avatarUrl}
+                  style={[styles.avatar, { borderColor: colors.border }]}
+                  cachePolicy="memory-disk"
+                />
+              ) : (
+                <View style={[styles.avatarFallback, { backgroundColor: colors.border }]}>
+                  <Text style={[styles.avatarInitial, { color: colors.secondaryText }]}>
+                    {author.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.authorInfo}>
+                <Text style={[styles.authorName, { color: colors.foreground }]} numberOfLines={1}>
+                  {author}
+                </Text>
+                <Text style={[styles.handle, { color: colors.secondaryText }]} numberOfLines={1}>
+                  @{username}
+                </Text>
+              </View>
             </View>
-          )}
-          <View style={styles.authorInfo}>
-            <Text style={[styles.authorName, { color: colors.foreground }]} numberOfLines={1}>
-              {author}
-            </Text>
-            <Text style={[styles.handle, { color: colors.secondaryText }]} numberOfLines={1}>
-              @{username}
-            </Text>
+            <LogoIcon size={BRAND_ICON_SIZE} fill={colors.foreground} />
           </View>
+
+          {/* ── Hairline divider ── */}
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+          {/* ── Quote body ── */}
+          <Text style={[styles.quoteText, quoteFontStyle, { color: colors.foreground }]}>
+            {quote}
+          </Text>
+
+          {/* ── Movie title + rating ── */}
+          <Text style={[styles.movieTitle, { color: colors.secondaryText }]}>
+            {movieTitle.toUpperCase()}
+            {rating && preferences.showRatings ? `  ${rating}` : ''}
+          </Text>
         </View>
-          <LogoIcon size={BRAND_ICON_SIZE} fill={colors.foreground} />
-        </View>
-
-        {/* ── Hairline divider ── */}
-        <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-        {/* ── Quote body ── */}
-        <Text style={[styles.quoteText, quoteFontStyle, { color: colors.foreground }]}>
-          {quote}
-        </Text>
-
-        {/* ── Movie title + rating ── */}
-        <Text style={[styles.movieTitle, { color: colors.secondaryText }]}>
-          {movieTitle.toUpperCase()}
-          {rating && preferences.showRatings ? `  ${rating}` : ''}
-        </Text>
       </ViewShot>
     )
   },
@@ -101,7 +106,19 @@ ExportCanvas.displayName = 'ExportCanvas'
 export default ExportCanvas
 
 const styles = StyleSheet.create({
+  // ── 9:16 story frame ──
+  storyFrame: {
+    aspectRatio: 9 / 16,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    overflow: 'hidden',
+  },
+
+  // ── Inner card ──
   card: {
+    width: '100%',
     borderRadius: 16,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,

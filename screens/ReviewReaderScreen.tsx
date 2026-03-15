@@ -28,12 +28,39 @@ interface WordToken {
   paragraphEnd: boolean
 }
 
+/** Decode common HTML entities into their real characters. */
+function decodeEntities(text: string): string {
+  const entities: Record<string, string> = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#39;': "'",
+    '&apos;': "'",
+    '&ndash;': '\u2013',
+    '&mdash;': '\u2014',
+    '&lsquo;': '\u2018',
+    '&rsquo;': '\u2019',
+    '&ldquo;': '\u201C',
+    '&rdquo;': '\u201D',
+    '&hellip;': '\u2026',
+    '&nbsp;': ' ',
+  }
+  return text
+    .replace(/&(?:#(\d+)|#x([0-9a-fA-F]+)|[a-z]+);/gi, (match, dec, hex) => {
+      if (dec) return String.fromCharCode(Number(dec))
+      if (hex) return String.fromCharCode(parseInt(hex, 16))
+      return entities[match] ?? match
+    })
+}
+
 function parseWords(html: string): WordToken[] {
-  const plain = html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n\n')
-    .replace(/<[^>]*>/g, '')
-    .trim()
+  const plain = decodeEntities(
+    html
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>/gi, '\n\n')
+      .replace(/<[^>]*>/g, '')
+  ).trim()
 
   const tokens: WordToken[] = []
   const paragraphs = plain.split(/\n\n+/)
@@ -266,7 +293,7 @@ export default function ReviewReaderScreen() {
           BY {params.author.toUpperCase()}
           {params.rating ? ` \u00B7 ${params.rating}` : ''}
         </Text>
-        <Text style={styles.hint}>Hold &amp; drag to highlight text</Text>
+        <Text style={styles.hint}>Hold & drag to highlight text</Text>
 
         {/* Swipe-to-highlight word grid */}
         <GestureDetector gesture={composed}>
