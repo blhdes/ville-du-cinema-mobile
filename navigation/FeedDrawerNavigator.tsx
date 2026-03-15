@@ -20,7 +20,7 @@ function DrawerContent({ navigation }: { navigation: any }) {
   return (
     <View style={[styles.drawer, { paddingTop: insets.top + spacing.md }]}>
       <View style={styles.drawerHeader}>
-        <Text style={styles.drawerTitle}>Users</Text>
+        <Text style={styles.drawerTitle}>Your Village</Text>
         <Pressable onPress={() => navigation.closeDrawer()} hitSlop={8}>
           <Text style={styles.doneButton}>Done</Text>
         </Pressable>

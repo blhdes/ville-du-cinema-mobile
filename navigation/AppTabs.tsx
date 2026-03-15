@@ -23,7 +23,7 @@ import { useProfile } from '@/contexts/ProfileContext'
 import { TabBarProvider, useTabBar } from '@/contexts/TabBarContext'
 import { useTheme } from '@/contexts/ThemeContext'
 
-const AVATAR_SIZE = 24
+const AVATAR_SIZE = 26
 const BOUNCE_SPRING = { damping: 14, stiffness: 300, mass: 0.6 }
 const PROFILE_IN_SPRING = { damping: 14, stiffness: 260, mass: 0.6 }
 const PROFILE_OUT_SPRING = { damping: 14, stiffness: 260, mass: 0.6 }
@@ -99,7 +99,7 @@ function ProfileIcon({ color }: { color: string }) {
   }
   return (
     <Animated.View style={style}>
-      <Ionicons name="person-outline" size={22} color={color} />
+      <Ionicons name="person-outline" size={26} color={color} />
     </Animated.View>
   )
 }

@@ -7,6 +7,7 @@ import type { Review } from '@/types/database'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, typography, type ThemeColors } from '@/theme'
+import EyeIcon from '@/components/ui/EyeIcon'
 
 interface WatchNotificationProps {
   review: Review
@@ -25,20 +26,19 @@ export default function WatchNotification({ review, hideAuthor = false }: WatchN
       style={({ pressed }) => [styles.container, pressed && styles.pressed]}
       onPress={() => Linking.openURL(review.link)}
     >
-      <Text style={styles.text} numberOfLines={1}>
+      <EyeIcon size={14} color={colors.secondaryText} />
+      <View style={styles.content}>
         {!hideAuthor && (
-          <>
-            <Text
-              style={styles.author}
-              onPress={() => navigation.navigate('ExternalProfile', { username: review.username })}
-              suppressHighlighting
-            >
-              {review.creator}
-            </Text>
-            {'  '}
-          </>
+          <Text
+            style={styles.author}
+            onPress={() => navigation.navigate('ExternalProfile', { username: review.username })}
+            suppressHighlighting
+            numberOfLines={1}
+          >
+            {review.creator}
+          </Text>
         )}
-        <Text style={styles.watchedLabel}>Watched </Text>
+        <Text style={styles.watchedLabel} numberOfLines={1}>Watched</Text>
         <Text
           style={[styles.movie, titlePressed && styles.moviePressed]}
           onPressIn={() => setTitlePressed(true)}
@@ -48,10 +48,11 @@ export default function WatchNotification({ review, hideAuthor = false }: WatchN
             WebBrowser.openBrowserAsync(`https://www.google.com/search?q=${query}`)
           }}
           suppressHighlighting
+          numberOfLines={1}
         >
           {review.movieTitle}
         </Text>
-      </Text>
+      </View>
       {review.rating && preferences.showRatings ? (
         <Text style={styles.rating}>{review.rating}</Text>
       ) : null}
@@ -66,32 +67,39 @@ function createStyles(colors: ThemeColors) {
       alignItems: 'center',
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.md,
+      gap: spacing.sm,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
     },
     pressed: {
       opacity: 0.6,
     },
-    text: {
+    content: {
       flex: 1,
-      fontFamily: fonts.body,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    author: {
+      fontFamily: fonts.bodyBold,
       fontSize: typography.caption.fontSize,
       lineHeight: typography.caption.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,
       color: colors.secondaryText,
-      marginRight: spacing.sm,
-    },
-    author: {
-      fontFamily: fonts.bodyBold,
     },
     watchedLabel: {
       fontFamily: fonts.body,
       textTransform: 'uppercase',
       fontSize: typography.magazineMeta.fontSize,
       letterSpacing: typography.magazineMeta.letterSpacing,
+      color: colors.secondaryText,
     },
     movie: {
+      flex: 1,
       fontFamily: fonts.bodyItalic,
+      fontSize: typography.caption.fontSize,
+      lineHeight: typography.caption.lineHeight,
+      letterSpacing: typography.magazineMeta.letterSpacing,
       color: colors.foreground,
     },
     moviePressed: {

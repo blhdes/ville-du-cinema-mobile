@@ -244,7 +244,7 @@ function createStyles(colors: ThemeColors) {
       borderBottomColor: colors.border,
     },
     username: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.bodyBold,
       fontSize: typography.magazineBody.fontSize,
       lineHeight: typography.magazineBody.lineHeight,
       color: colors.foreground,

@@ -37,6 +37,7 @@ import WatchNotification from '@/components/WatchNotification'
 import QuoteOfTheDay from '@/components/QuoteOfTheDay'
 import Spinner from '@/components/ui/Spinner'
 import LogoIcon from '@/components/ui/LogoIcon'
+import DrawerTrigger from '@/components/feed/DrawerTrigger'
 
 // Deadzone: header only starts hiding after this many px of continuous downward scroll.
 // Scrolling up has 0px threshold — the header reveals immediately.
@@ -56,7 +57,7 @@ export default function FeedScreen() {
   const tabBarHeight = useBottomTabBarHeight()
   const tabBarMax = tabBarHeight + insets.bottom
   const navigation = useNavigation<NativeStackNavigationProp<FeedStackParamList>>()
-  const { users, usernames, isLoading: isListLoading, error: listError, clearError } = useUserLists()
+  const { usernames, isLoading: isListLoading, error: listError, clearError } = useUserLists()
   const { preferences } = useDisplayPreferences()
   const { translateY, feedRefreshRequested, setIsFeedRefreshing } = useTabBar()
   const { colors } = useTheme()
@@ -441,18 +442,7 @@ export default function FeedScreen() {
         style={[styles.header, { paddingTop: insets.top + 12 }, headerAnimatedStyle]}
       >
         <Animated.View style={[styles.headerContent, headerContentOpacity]}>
-          <Pressable
-            onPress={openDrawer}
-            style={styles.usersButton}
-            hitSlop={8}
-          >
-            <Text style={styles.usersButtonText}>Users</Text>
-            {users.length > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{users.length}</Text>
-              </View>
-            )}
-          </Pressable>
+          <DrawerTrigger onPress={openDrawer} />
           <Pressable
             onPress={() => {
               headerTranslateY.value = withTiming(0, { duration: 200 })
@@ -502,30 +492,6 @@ function createStyles(colors: ThemeColors) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-    },
-    usersButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-    },
-    usersButtonText: {
-      fontFamily: fonts.body,
-      fontSize: typography.body.fontSize,
-      color: colors.blue,
-    },
-    badge: {
-      backgroundColor: colors.backgroundSecondary,
-      borderRadius: 10,
-      minWidth: 20,
-      height: 20,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 6,
-    },
-    badgeText: {
-      fontFamily: fonts.bodyBold,
-      fontSize: 12,
-      color: colors.secondaryText,
     },
     searchButton: {
       width: 60,
