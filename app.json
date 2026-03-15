@@ -5,11 +5,16 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FCFAF8"
+      "backgroundColor": "#FCFAF8",
+      "dark": {
+        "image": "./assets/splash-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#171717"
+      }
     },
     "ios": {
       "supportsTablet": true,
@@ -39,7 +44,13 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 120,
           "resizeMode": "contain",
-          "backgroundColor": "#FCFAF8"
+          "backgroundColor": "#FCFAF8",
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "imageWidth": 120,
+            "resizeMode": "contain",
+            "backgroundColor": "#171717"
+          }
         }
       ]
     ]

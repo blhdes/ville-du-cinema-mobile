@@ -7,55 +7,83 @@ import {
   Text,
   View,
 } from 'react-native'
-import * as SplashScreen from 'expo-splash-screen'
 import Animated, {
   interpolate,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
-import { useNavigation, DrawerActions } from '@react-navigation/native'
+import { useNavigation, useFocusEffect, DrawerActions } from '@react-navigation/native'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { Ionicons } from '@expo/vector-icons'
+import * as SplashScreen from 'expo-splash-screen'
+import type { FeedStackParamList } from '@/navigation/types'
 import { useUserLists } from '@/hooks/useUserLists'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { useTabBar } from '@/contexts/TabBarContext'
-import { fetchFeed, refreshAvatarUrls, type FeedResult } from '@/services/feed'
+import { useTheme } from '@/contexts/ThemeContext'
+import { fetchFeed, clearFeedCache, refreshAvatarUrls, type FeedResult } from '@/services/feed'
 import { hydrateAvatarCache } from '@/services/avatarCache'
 import type { Review } from '@/types/database'
-import { colors, fonts, spacing, typography } from '@/theme'
+import { fonts, spacing, typography, type ThemeColors } from '@/theme'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import ReviewCard from '@/components/ReviewCard'
+import ReviewCardSkeleton from '@/components/feed/ReviewCardSkeleton'
 import WatchNotification from '@/components/WatchNotification'
 import QuoteOfTheDay from '@/components/QuoteOfTheDay'
 import Spinner from '@/components/ui/Spinner'
 import LogoIcon from '@/components/ui/LogoIcon'
+import DrawerTrigger from '@/components/feed/DrawerTrigger'
 
 // Deadzone: header only starts hiding after this many px of continuous downward scroll.
 // Scrolling up has 0px threshold — the header reveals immediately.
 const DOWN_DEADZONE = 8
 
+// Scroll positions below this are a "safe zone" — the tab bar always snaps back to
+// visible so users who just opened the app can switch tabs freely.
+const TOP_THRESHOLD = 250
+
+// Spring config for snap animations — relaxed, deliberate settling for an editorial feel.
+const SNAP_SPRING = { damping: 24, stiffness: 120, mass: 1.0, overshootClamping: true }
+
+const keyExtractor = (item: Review) => item.id
+
 export default function FeedScreen() {
   const insets = useSafeAreaInsets()
   const tabBarHeight = useBottomTabBarHeight()
   const tabBarMax = tabBarHeight + insets.bottom
-  const navigation = useNavigation()
-  const { users, usernames, isLoading: isListLoading, error: listError, clearError } = useUserLists()
+  const navigation = useNavigation<NativeStackNavigationProp<FeedStackParamList>>()
+  const { usernames, isLoading: isListLoading, error: listError, clearError } = useUserLists()
   const { preferences } = useDisplayPreferences()
   const { translateY, feedRefreshRequested, setIsFeedRefreshing } = useTabBar()
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
 
   // Header hide/show
   const [headerHeight, setHeaderHeight] = useState(0)
   const headerTranslateY = useSharedValue(0)
   const downAccumulator = useSharedValue(0)
+  const isDragging = useSharedValue(false)
+  const scrollY = useSharedValue(0)
+  const lastScrollDirection = useSharedValue(0)
+  const spinnerProgress = useSharedValue(1)
 
   const onHeaderLayout = useCallback((e: LayoutChangeEvent) => {
     setHeaderHeight(e.nativeEvent.layout.height)
   }, [])
 
+  // Outer container: translateY only — background stays 100% opaque.
   const headerAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: headerTranslateY.value }],
+    opacity: 1,
+  }))
+
+  // Inner content: opacity fades the buttons/logo, leaving a clean solid bar behind.
+  const headerContentOpacity = useAnimatedStyle(() => ({
     opacity: interpolate(
       headerTranslateY.value,
       [-headerHeight, 0],
@@ -63,14 +91,52 @@ export default function FeedScreen() {
     ),
   }))
 
+  // Snap bars to a definitive visible/hidden state — no halfway positions.
+  const snapToFinalState = (currentScrollY: number) => {
+    'worklet'
+    // Top safe zone — always animate back to fully visible.
+    if (currentScrollY < TOP_THRESHOLD) {
+      translateY.value = withSpring(0, SNAP_SPRING)
+      headerTranslateY.value = withSpring(0, SNAP_SPRING)
+      return
+    }
+
+    if (lastScrollDirection.value > 0) {
+      // Was scrolling DOWN → snap fully hidden.
+      translateY.value = withSpring(tabBarMax, SNAP_SPRING)
+      headerTranslateY.value = withSpring(-headerHeight, SNAP_SPRING)
+    } else {
+      // Was scrolling UP → only lock visible if the user scrolled hard enough
+      // to fully reveal the bar (translateY ≈ 0). Otherwise snap back to hidden.
+      if (translateY.value < 1) {
+        translateY.value = withSpring(0, SNAP_SPRING)
+        headerTranslateY.value = withSpring(0, SNAP_SPRING)
+      } else {
+        translateY.value = withSpring(tabBarMax, SNAP_SPRING)
+        headerTranslateY.value = withSpring(-headerHeight, SNAP_SPRING)
+      }
+    }
+  }
+
   const scrollHandler = useAnimatedScrollHandler({
+    onBeginDrag: (event, ctx: { prevY: number }) => {
+      isDragging.value = true
+      ctx.prevY = event.contentOffset.y
+      downAccumulator.value = 0
+    },
     onScroll: (event, ctx: { prevY: number }) => {
       const currentY = event.contentOffset.y
+      scrollY.value = currentY
       const delta = currentY - ctx.prevY
       ctx.prevY = currentY
 
+      // Track direction during both drag and momentum (needed for snap decisions).
+      if (delta !== 0) {
+        lastScrollDirection.value = delta
+      }
+
       if (currentY <= 0) {
-        // At the top — always fully visible
+        // At the very top — always fully visible.
         headerTranslateY.value = 0
         translateY.value = 0
         downAccumulator.value = 0
@@ -78,18 +144,19 @@ export default function FeedScreen() {
       }
 
       if (delta > 0) {
-        // Scrolling down — apply deadzone, then 1:1
-        downAccumulator.value += delta
-        if (downAccumulator.value > DOWN_DEADZONE) {
-          headerTranslateY.value = Math.max(
-            -headerHeight,
-            Math.min(0, headerTranslateY.value - delta),
-          )
-          translateY.value = Math.min(
-            tabBarMax,
-            Math.max(0, translateY.value + delta),
-          )
+        // Scrolling down — deadzone only applies during active drag, not momentum.
+        if (isDragging.value) {
+          downAccumulator.value += delta
+          if (downAccumulator.value <= DOWN_DEADZONE) return
         }
+        headerTranslateY.value = Math.max(
+          -headerHeight,
+          Math.min(0, headerTranslateY.value - delta),
+        )
+        translateY.value = Math.min(
+          tabBarMax,
+          Math.max(0, translateY.value + delta),
+        )
       } else if (delta < 0) {
         // Scrolling up — immediate 1:1 (0px threshold)
         downAccumulator.value = 0
@@ -103,11 +170,24 @@ export default function FeedScreen() {
         )
       }
     },
-    onBeginDrag: (event, ctx: { prevY: number }) => {
-      ctx.prevY = event.contentOffset.y
-      downAccumulator.value = 0
+    onEndDrag: (event) => {
+      isDragging.value = false
+      snapToFinalState(event.contentOffset.y)
+    },
+    onMomentumEnd: (event) => {
+      snapToFinalState(event.contentOffset.y)
     },
   })
+
+  // Reset tab bar + header when leaving FeedScreen (fixes stuck-hidden bug on screen transitions).
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        translateY.value = withTiming(0, { duration: 200 })
+        headerTranslateY.value = withTiming(0, { duration: 200 })
+      }
+    }, [translateY, headerTranslateY])
+  )
 
   const [reviews, setReviews] = useState<Review[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -119,7 +199,6 @@ export default function FeedScreen() {
 
   const flatListRef = useRef<Animated.FlatList<Review>>(null)
   const [cacheReady, setCacheReady] = useState(false)
-  const splashHidden = useRef(false)
 
   // Hydrate the avatar cache from AsyncStorage before loading the feed
   useEffect(() => {
@@ -162,26 +241,6 @@ export default function FeedScreen() {
     }
   }, [usernames, setIsFeedRefreshing])
 
-  const hideSplash = useCallback(() => {
-    if (!splashHidden.current) {
-      splashHidden.current = true
-      SplashScreen.hideAsync()
-    }
-  }, [])
-
-  // Hide splash once loading finishes (runs after React renders the loaded state)
-  useEffect(() => {
-    if (!isLoading && !isListLoading) {
-      hideSplash()
-    }
-  }, [isLoading, isListLoading, hideSplash])
-
-  // Safety: hide splash after 5s no matter what, so users aren't stuck
-  useEffect(() => {
-    const timer = setTimeout(hideSplash, 5000)
-    return () => clearTimeout(timer)
-  }, [hideSplash])
-
   // Wait for cache hydration + user list before loading the feed.
   // fetchUserFeed already scrapes any missing avatars, so no extra refresh needed here.
   useEffect(() => {
@@ -192,6 +251,7 @@ export default function FeedScreen() {
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true)
+    clearFeedCache()
     loadFeed(1)
     // Background-refresh avatar URLs on pull-to-refresh
     if (usernames.length > 0) {
@@ -199,23 +259,25 @@ export default function FeedScreen() {
     }
   }, [loadFeed, usernames])
 
-  // Refresh feed when the Feed tab icon is tapped while already on Feed:
-  // scroll to top, reveal header + tab bar, show the RefreshControl spinner, keep existing content
+  // Smart tab press: scroll-to-top if scrolled down, refresh only if already at top
   useEffect(() => {
     if (feedRefreshRequested > 0) {
-      // Scroll the list to the top
-      flatListRef.current?.scrollToOffset({ offset: 0, animated: true })
-
-      // Reveal the header and tab bar
+      // Always reveal header + tab bar
       headerTranslateY.value = withTiming(0, { duration: 200 })
       translateY.value = withTiming(0, { duration: 200 })
 
-      // Trigger refresh but keep cached content visible (keepContent = true)
-      setIsFeedRefreshing(true)
-      setIsRefreshing(true)
-      loadFeed(1, false, true)
-      if (usernames.length > 0) {
-        refreshAvatarUrls(usernames).catch(() => {})
+      if (scrollY.value > 5) {
+        // Scrolled down — only scroll to top, no data fetch
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: true })
+      } else {
+        // Already at top — trigger refresh with existing content visible
+        setIsFeedRefreshing(true)
+        setIsRefreshing(true)
+        clearFeedCache()
+        loadFeed(1, false, true)
+        if (usernames.length > 0) {
+          refreshAvatarUrls(usernames).catch(() => {})
+        }
       }
     }
   }, [feedRefreshRequested]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -238,9 +300,25 @@ export default function FeedScreen() {
   )
 
   // Filter watch notifications if preference is set
-  const filteredReviews = preferences.showWatchNotifications
-    ? reviews
-    : reviews.filter((r) => r.type !== 'watch')
+  const filteredReviews = useMemo(
+    () => preferences.showWatchNotifications
+      ? reviews
+      : reviews.filter((r) => r.type !== 'watch'),
+    [reviews, preferences.showWatchNotifications],
+  )
+
+  const isInitialLoad = (isLoading || isListLoading) && page === 1 && reviews.length === 0
+
+  useEffect(() => {
+    spinnerProgress.value = withTiming(isRefreshing ? 1 : 0, {
+      duration: isRefreshing ? 200 : 600,
+    })
+  }, [isRefreshing])
+
+  const spinnerCollapseStyle = useAnimatedStyle(() => ({
+    height: interpolate(spinnerProgress.value, [0, 1], [0, 52]),
+    opacity: spinnerProgress.value,
+  }))
 
   const renderItem = useCallback(({ item }: { item: Review }) => {
     if (item.type === 'watch') {
@@ -249,7 +327,7 @@ export default function FeedScreen() {
     return <ReviewCard review={item} />
   }, [])
 
-  const renderEmpty = () => {
+  const renderEmpty = useCallback(() => {
     if (isLoading || isListLoading) return null
 
     if (usernames.length === 0) {
@@ -269,18 +347,30 @@ export default function FeedScreen() {
         <Text style={styles.emptySubtitle}>No activity found</Text>
       </View>
     )
-  }
+  }, [isLoading, isListLoading, usernames.length, styles])
 
-  const renderHeader = () => {
-    if (!isRefreshing) return null
+  const renderHeader = useCallback(() => {
+    if (isInitialLoad) {
+      return (
+        <View>
+          <ReviewCardSkeleton />
+          <ReviewCardSkeleton />
+          <ReviewCardSkeleton />
+        </View>
+      )
+    }
     return (
-      <View style={styles.refreshSpinner}>
-        <Spinner size={20} />
-      </View>
+      <Animated.View style={[styles.spinnerCollapse, spinnerCollapseStyle]}>
+        <View style={styles.refreshSpinner}>
+          <Spinner size={20} />
+        </View>
+      </Animated.View>
     )
-  }
+  }, [isInitialLoad, styles, spinnerCollapseStyle])
 
-  const renderFooter = () => {
+  const hasReviews = filteredReviews.length > 0
+
+  const renderFooter = useCallback(() => {
     if (isLoadingMore) {
       return (
         <View style={styles.footerLoader}>
@@ -289,161 +379,158 @@ export default function FeedScreen() {
       )
     }
 
-    if (filteredReviews.length > 0 && !hasMore) {
+    if (hasReviews && !hasMore) {
       return <QuoteOfTheDay />
     }
 
     return null
-  }
+  }, [isLoadingMore, hasReviews, hasMore, styles])
+
+  const splashHidden = useRef(false)
+  const onContainerLayout = useCallback(() => {
+    if (!splashHidden.current) {
+      splashHidden.current = true
+      SplashScreen.hideAsync()
+    }
+  }, [])
 
   const error = listError || feedError
 
+  const listContentStyle = useMemo(
+    () => !hasReviews && !isInitialLoad
+      ? styles.emptyList
+      : [styles.list, { paddingTop: headerHeight + spacing.md, paddingBottom: tabBarHeight + 20 }],
+    [hasReviews, isInitialLoad, styles, headerHeight, tabBarHeight],
+  )
+
   return (
-    <View style={styles.container}>
+    <View style={styles.container} onLayout={onContainerLayout}>
       {error && (
         <ErrorBanner message={error} onDismiss={clearError} />
       )}
 
-      {isLoading && page === 1 && reviews.length === 0 ? (
-        <View style={styles.loadingContainer}>
-          <Spinner size={24} />
-        </View>
-      ) : (
-        <Animated.FlatList
-          ref={flatListRef}
-          key={layoutKey}
-          data={filteredReviews}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          ListHeaderComponent={renderHeader}
-          ListEmptyComponent={renderEmpty}
-          ListFooterComponent={renderFooter}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.3}
-          onScroll={scrollHandler}
-          scrollEventThrottle={16}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={handleRefresh}
-              tintColor="transparent"
-              colors={['transparent']}
-            />
-          }
-          contentContainerStyle={
-            filteredReviews.length === 0
-              ? styles.emptyList
-              : [styles.list, { paddingTop: headerHeight + spacing.md, paddingBottom: tabBarHeight + 20 }]
-          }
-        />
-      )}
+      <Animated.FlatList
+        ref={flatListRef}
+        key={layoutKey}
+        data={filteredReviews}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={renderEmpty}
+        ListFooterComponent={renderFooter}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.3}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        initialNumToRender={8}
+        maxToRenderPerBatch={6}
+        windowSize={11}
+        refreshControl={
+          <RefreshControl
+            refreshing={false}
+            onRefresh={handleRefresh}
+            tintColor="transparent"
+            colors={['transparent']}
+          />
+        }
+        contentContainerStyle={listContentStyle}
+      />
 
-      {/* Header floats above content so it can slide out of view */}
+      {/* Header: outer shell stays opaque, inner content fades on scroll */}
       <Animated.View
         onLayout={onHeaderLayout}
         style={[styles.header, { paddingTop: insets.top + 12 }, headerAnimatedStyle]}
       >
-        <Pressable
-          onPress={openDrawer}
-          style={styles.usersButton}
-          hitSlop={8}
-        >
-          <Text style={styles.usersButtonText}>Users</Text>
-          {users.length > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{users.length}</Text>
-            </View>
-          )}
-        </Pressable>
-        <LogoIcon size={40} fill={colors.foreground} />
-        <View style={styles.headerSpacer} />
+        <Animated.View style={[styles.headerContent, headerContentOpacity]}>
+          <DrawerTrigger onPress={openDrawer} />
+          <Pressable
+            onPress={() => {
+              headerTranslateY.value = withTiming(0, { duration: 200 })
+              translateY.value = withTiming(0, { duration: 200 })
+              flatListRef.current?.scrollToOffset({ offset: 0, animated: true })
+            }}
+            hitSlop={8}
+          >
+            <LogoIcon size={40} fill={colors.foreground} />
+          </Pressable>
+          <Pressable
+            onPress={() => navigation.navigate('UserSearch')}
+            style={styles.searchButton}
+            hitSlop={8}
+          >
+            <Ionicons name="search-outline" size={20} color={colors.foreground} />
+          </Pressable>
+        </Animated.View>
       </Animated.View>
     </View>
   )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingBottom: 12,
-    backgroundColor: colors.background,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    zIndex: 1,
-  },
-  usersButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  usersButtonText: {
-    fontFamily: fonts.body,
-    fontSize: typography.body.fontSize,
-    color: colors.blue,
-  },
-  badge: {
-    backgroundColor: colors.backgroundSecondary,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  badgeText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 12,
-    color: colors.secondaryText,
-  },
-  headerSpacer: {
-    width: 60,
-  },
-  list: {},
-  emptyList: {
-    flexGrow: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  refreshSpinner: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xl,
-  },
-  emptyTitle: {
-    fontFamily: fonts.heading,
-    fontSize: typography.title1.fontSize,
-    lineHeight: typography.title1.lineHeight,
-    color: colors.foreground,
-    marginBottom: spacing.sm,
-  },
-  emptySubtitle: {
-    fontFamily: fonts.body,
-    fontSize: typography.body.fontSize,
-    lineHeight: typography.body.lineHeight,
-    color: colors.secondaryText,
-    textAlign: 'center',
-  },
-  footerLoader: {
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-  },
-})
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.md,
+      paddingBottom: 12,
+      backgroundColor: colors.background,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+      zIndex: 1,
+    },
+    headerContent: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    searchButton: {
+      width: 60,
+      alignItems: 'flex-end',
+    },
+    list: {},
+    emptyList: {
+      flexGrow: 1,
+    },
+    spinnerCollapse: {
+      overflow: 'hidden',
+    },
+    refreshSpinner: {
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+    },
+    emptyContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: spacing.xl,
+    },
+    emptyTitle: {
+      fontFamily: fonts.heading,
+      fontSize: typography.title1.fontSize,
+      lineHeight: typography.title1.lineHeight,
+      color: colors.foreground,
+      marginBottom: spacing.sm,
+    },
+    emptySubtitle: {
+      fontFamily: fonts.body,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
+      color: colors.secondaryText,
+      textAlign: 'center',
+    },
+    footerLoader: {
+      paddingVertical: spacing.lg,
+      alignItems: 'center',
+    },
+  })
+}

@@ -1,3 +1,5 @@
+import type { NavigatorScreenParams } from '@react-navigation/native'
+
 export type AuthStackParamList = {
   Welcome: undefined
   Login: undefined
@@ -8,8 +10,21 @@ export type FeedDrawerParamList = {
   FeedMain: undefined
 }
 
+export type FeedStackParamList = {
+  FeedDrawer: NavigatorScreenParams<FeedDrawerParamList> | undefined
+  ExternalProfile: { username: string }
+  UserSearch: undefined
+}
+
+export type ProfileStackParamList = {
+  ProfileMain: undefined
+  EditProfile: undefined
+  ExternalProfile: { username: string }
+  UserSearch: undefined
+}
+
 export type AppTabsParamList = {
-  Feed: undefined
+  Feed: NavigatorScreenParams<FeedStackParamList> | undefined
   Profile: undefined
   Settings: undefined
 }

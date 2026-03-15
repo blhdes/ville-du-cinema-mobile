@@ -3,24 +3,27 @@ import { createBottomTabNavigator, type BottomTabBarProps } from '@react-navigat
 import { BottomTabBar } from '@react-navigation/bottom-tabs'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, {
+  Easing,
   makeMutable,
   useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
   withSequence,
   withSpring,
   withTiming,
 } from 'react-native-reanimated'
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { AppTabsParamList } from '@/navigation/types'
-import FeedDrawerNavigator from '@/navigation/FeedDrawerNavigator'
-import ProfileScreen from '@/screens/ProfileScreen'
+import FeedStackNavigator from '@/navigation/FeedStackNavigator'
+import ProfileStackNavigator from '@/navigation/ProfileStackNavigator'
 import SettingsScreen from '@/screens/SettingsScreen'
 import FeedTabIcon from '@/components/ui/FeedTabIcon'
-import { useProfile } from '@/hooks/useProfile'
+import { useProfile } from '@/contexts/ProfileContext'
 import { TabBarProvider, useTabBar } from '@/contexts/TabBarContext'
-import { colors } from '@/theme'
+import { useTheme } from '@/contexts/ThemeContext'
 
-const AVATAR_SIZE = 24
+const AVATAR_SIZE = 26
 const BOUNCE_SPRING = { damping: 14, stiffness: 300, mass: 0.6 }
 const PROFILE_IN_SPRING = { damping: 14, stiffness: 260, mass: 0.6 }
 const PROFILE_OUT_SPRING = { damping: 14, stiffness: 260, mass: 0.6 }
@@ -62,8 +65,30 @@ function FeedIcon({ color, size }: { color: string; size: number }) {
 }
 
 function ProfileIcon({ color }: { color: string }) {
-  const { profile } = useProfile()
+  const { profile, isLoading } = useProfile()
+  const { colors } = useTheme()
   const style = useAnimatedStyle(() => ({ transform: [{ scale: scales.Profile.value }] }))
+  const pulse = useSharedValue(0.4)
+
+  useEffect(() => {
+    if (isLoading) {
+      pulse.value = withRepeat(
+        withTiming(0.8, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+        -1,
+        true,
+      )
+    }
+  }, [isLoading, pulse])
+
+  if (isLoading) {
+    return (
+      <Animated.View style={style}>
+        <Animated.View
+          style={[styles.avatarSkeleton, { backgroundColor: colors.border, opacity: pulse }]}
+        />
+      </Animated.View>
+    )
+  }
 
   if (profile?.avatar_url) {
     return (
@@ -74,7 +99,7 @@ function ProfileIcon({ color }: { color: string }) {
   }
   return (
     <Animated.View style={style}>
-      <Ionicons name="person-outline" size={22} color={color} />
+      <Ionicons name="person-outline" size={26} color={color} />
     </Animated.View>
   )
 }
@@ -92,13 +117,14 @@ function SettingsIcon({ color, size }: { color: string; size: number }) {
 
 function AnimatedTabBar(props: BottomTabBarProps) {
   const { translateY } = useTabBar()
+  const { colors } = useTheme()
   const insets = useSafeAreaInsets()
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
   }))
 
   return (
-    <Animated.View style={[styles.tabBarWrapper, { paddingBottom: insets.bottom }, animatedStyle]}>
+    <Animated.View style={[styles.tabBarWrapper, { backgroundColor: colors.background, paddingBottom: insets.bottom }, animatedStyle]}>
       <BottomTabBar {...props} />
     </Animated.View>
   )
@@ -107,6 +133,7 @@ function AnimatedTabBar(props: BottomTabBarProps) {
 const Tab = createBottomTabNavigator<AppTabsParamList>()
 
 function AppTabsInner() {
+  const { colors } = useTheme()
   const { requestFeedRefresh, isFeedRefreshing } = useTabBar()
   const onFeedPress = useCallback(() => onTabFocus('Feed'), [])
   const onProfileBounce = useCallback(() => onTabFocus('Profile'), [])
@@ -142,22 +169,41 @@ function AppTabsInner() {
     >
       <Tab.Screen
         name="Feed"
-        component={FeedDrawerNavigator}
+        component={FeedStackNavigator}
         options={{
           tabBarIcon: ({ color, size }) => <FeedIcon color={color} size={size} />,
         }}
         listeners={({ navigation }) => ({
-          tabPress: () => {
+          tabPress: (e) => {
             onFeedPress()
-            if (navigation.isFocused() && !isFeedRefreshing) {
-              requestFeedRefresh()
+
+            // Only refresh when already viewing the root FeedScreen.
+            // Condition A: Different tab is active → isFocused() is false → normal tab switch.
+            // Condition B: Feed tab active but deep in stack → popToTop, no refresh.
+            // Condition C: Feed tab active at root → scroll to top + refresh.
+            if (!navigation.isFocused()) return
+
+            const state = navigation.getState()
+            const feedRoute = state.routes.find((r: { name: string }) => r.name === 'Feed')
+            const feedStack = feedRoute?.state
+
+            // feedStack is undefined on first render (only root visible), or index 0 means root
+            const isAtFeedRoot = !feedStack || feedStack.index === 0
+
+            if (isAtFeedRoot) {
+              // Condition C — already at root: scroll to top + refresh
+              e.preventDefault()
+              if (!isFeedRefreshing) {
+                requestFeedRefresh()
+              }
             }
+            // Condition B — deep in stack: let default popToTop behavior happen (no refresh)
           },
         })}
       />
       <Tab.Screen
         name="Profile"
-        component={ProfileScreen}
+        component={ProfileStackNavigator}
         options={{
           tabBarIcon: ({ color }) => <ProfileIcon color={color} />,
         }}
@@ -193,11 +239,15 @@ const styles = StyleSheet.create({
     height: AVATAR_SIZE,
     borderRadius: AVATAR_SIZE / 2,
   },
+  avatarSkeleton: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
+  },
   tabBarWrapper: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: colors.background,
   },
 })

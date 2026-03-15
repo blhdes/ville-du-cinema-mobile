@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native'
-import { colors, fonts, spacing } from '@/theme'
+import { useTheme } from '@/contexts/ThemeContext'
+import { fonts, spacing } from '@/theme'
 
 interface SectionHeaderProps {
   title: string
@@ -7,9 +8,11 @@ interface SectionHeaderProps {
 }
 
 export default function SectionHeader({ title, color = 'white' }: SectionHeaderProps) {
+  const { colors } = useTheme()
+
   return (
-    <View style={styles.container}>
-      <Text style={[styles.title, { color: color === 'yellow' ? colors.yellow : colors.white }]}>
+    <View style={[styles.container, { backgroundColor: colors.foreground }]}>
+      <Text style={[styles.title, { color: color === 'yellow' ? colors.yellow : colors.background }]}>
         {title}
       </Text>
     </View>
@@ -18,7 +21,6 @@ export default function SectionHeader({ title, color = 'white' }: SectionHeaderP
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.black,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
   },

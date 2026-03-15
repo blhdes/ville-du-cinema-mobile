@@ -1,10 +1,41 @@
 import { StyleSheet, Platform } from 'react-native'
 
 // ---------------------------------------------------------------------------
-// Colors — Apple HIG-inspired flat palette
+// Color Types
 // ---------------------------------------------------------------------------
-export const colors = {
+export interface ThemeColors {
   // ---- Semantic tokens (primary API) ----
+  background: string
+  backgroundSecondary: string
+  foreground: string
+  secondaryText: string
+  border: string
+  accent: string
+  blue: string
+  white: string
+
+  // ---- Brand accent palette (logo-derived) ----
+  teal: string
+  red: string
+  yellow: string
+
+  // ---- Legacy aliases ----
+  /** @deprecated use `background` */
+  cream: string
+  /** @deprecated use `foreground` */
+  black: string
+  /** @deprecated use `secondaryText` */
+  sepia: string
+  /** @deprecated use `secondaryText` */
+  sepiaLight: string
+  /** @deprecated use `backgroundSecondary` */
+  surface: string
+}
+
+// ---------------------------------------------------------------------------
+// Light Palette (current defaults)
+// ---------------------------------------------------------------------------
+export const lightColors: ThemeColors = {
   background: '#FCFAF8',
   backgroundSecondary: '#F2F2F7',
   foreground: '#1C1C1E',
@@ -14,23 +45,54 @@ export const colors = {
   blue: '#2E86AB',
   white: '#FFFFFF',
 
-  // ---- Brand accent palette (logo-derived) ----
   teal: '#2E86AB',
   red: '#D7263D',
   yellow: '#F2C14E',
 
-  // ---- Legacy aliases (keep consumers compiling) ----
-  /** @deprecated use `background` */
   cream: '#FCFAF8',
-  /** @deprecated use `foreground` */
   black: '#1C1C1E',
-  /** @deprecated use `secondaryText` */
   sepia: '#8E8E93',
-  /** @deprecated use `secondaryText` */
   sepiaLight: '#C6C6C8',
-  /** @deprecated use `backgroundSecondary` */
   surface: '#F2F2F7',
-} as const
+}
+
+// ---------------------------------------------------------------------------
+// Dark Palette — charcoal base avoids OLED halation, warm tints
+// keep the editorial feel, accent colors bumped for WCAG AA contrast
+// ---------------------------------------------------------------------------
+export const darkColors: ThemeColors = {
+  background: '#171717',
+  backgroundSecondary: '#1E1E1E',
+  foreground: '#E8E4DF',
+  secondaryText: '#9A9A9F',
+  border: '#2C2C2E',
+  accent: '#FF2D55',
+  blue: '#3DA5CC',
+  white: '#FFFFFF',
+
+  teal: '#3DA5CC',
+  red: '#E5475D',
+  yellow: '#F2C14E',
+
+  cream: '#171717',
+  black: '#E8E4DF',
+  sepia: '#9A9A9F',
+  sepiaLight: '#2C2C2E',
+  surface: '#1E1E1E',
+}
+
+// ---------------------------------------------------------------------------
+// Helper — resolve palette by mode
+// ---------------------------------------------------------------------------
+export function getColors(mode: 'light' | 'dark'): ThemeColors {
+  return mode === 'dark' ? darkColors : lightColors
+}
+
+/**
+ * Static color reference — defaults to light palette.
+ * Prefer `useTheme().colors` in components for dark mode support.
+ */
+export const colors = lightColors
 
 // ---------------------------------------------------------------------------
 // Typography

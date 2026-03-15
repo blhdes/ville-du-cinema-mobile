@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import storage from '@/lib/storage'
-import { useProfile } from '@/hooks/useProfile'
+import { useProfile } from '@/contexts/ProfileContext'
 
 const STORAGE_KEY_DROP_CAP = 'display_use_drop_cap'
 const STORAGE_KEY_SHOW_RATINGS = 'display_show_ratings'

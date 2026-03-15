@@ -3,13 +3,17 @@ import { Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 
 import { Image } from 'expo-image'
 import * as WebBrowser from 'expo-web-browser'
 import RenderHtml, { defaultSystemFonts } from 'react-native-render-html'
+import { useNavigation, type NavigationProp } from '@react-navigation/native'
+import type { FeedStackParamList } from '@/navigation/types'
 import type { Review } from '@/types/database'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { useAvatarUrl } from '@/services/avatarCache'
-import { colors, fonts, spacing, typography, getScaledTypography } from '@/theme'
+import { useTheme } from '@/contexts/ThemeContext'
+import { fonts, spacing, typography, getScaledTypography, type ThemeColors } from '@/theme'
 
 interface ReviewCardProps {
   review: Review
+  hideAuthor?: boolean
 }
 
 const MAX_PREVIEW_LENGTH = 300
@@ -62,11 +66,14 @@ function truncateHtml(html: string, max: number): string {
   return html.slice(0, i) + suffix
 }
 
-export default function ReviewCard({ review }: ReviewCardProps) {
+export default function ReviewCard({ review, hideAuthor = false }: ReviewCardProps) {
   const [expanded, setExpanded] = useState(false)
   const { preferences } = useDisplayPreferences()
   const { width } = useWindowDimensions()
+  const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const cachedAvatarUrl = useAvatarUrl(review.username)
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
   const contentWidth = width - HORIZONTAL_PAD * 2
   const scaled = useMemo(() => getScaledTypography(preferences.fontMultiplier), [preferences.fontMultiplier])
 
@@ -124,7 +131,7 @@ export default function ReviewCard({ review }: ReviewCardProps) {
       marginTop: spacing.sm,
       marginBottom: spacing.sm,
     },
-  }), [scaled])
+  }), [scaled, colors])
 
   /** Extract the first letter for native drop cap rendering. */
   const dropCapData = useMemo(() => {
@@ -163,25 +170,36 @@ export default function ReviewCard({ review }: ReviewCardProps) {
       </Pressable>
 
       {/* Meta: avatar · BY AUTHOR · DATE · ★★★★ — links to profile */}
-      <Pressable
-        onPress={() => Linking.openURL(`https://letterboxd.com/${review.username}/`)}
-        style={({ pressed }) => [styles.metaRow, pressed && styles.metaPressed]}
-      >
-        {cachedAvatarUrl ? (
-          <Image
-            source={cachedAvatarUrl}
-            style={styles.avatar}
-            cachePolicy="memory-disk"
-          />
-        ) : null}
-        <Text style={styles.meta}>
-          BY {review.creator.toUpperCase()}
-          {dateStr ? ` \u00B7 ${dateStr}` : ''}
-          {review.rating && preferences.showRatings ? (
-            <Text style={styles.rating}>{` \u00B7 ${review.rating}`}</Text>
+      {!hideAuthor ? (
+        <Pressable
+          onPress={() => navigation.navigate('ExternalProfile', { username: review.username })}
+          style={({ pressed }) => [styles.metaRow, pressed && styles.metaPressed]}
+        >
+          {cachedAvatarUrl ? (
+            <Image
+              source={cachedAvatarUrl}
+              style={styles.avatar}
+              cachePolicy="memory-disk"
+            />
           ) : null}
-        </Text>
-      </Pressable>
+          <Text style={styles.meta}>
+            BY {review.creator.toUpperCase()}
+            {dateStr ? ` \u00B7 ${dateStr}` : ''}
+            {review.rating && preferences.showRatings ? (
+              <Text style={styles.rating}>{` \u00B7 ${review.rating}`}</Text>
+            ) : null}
+          </Text>
+        </Pressable>
+      ) : (
+        <View style={styles.metaRow}>
+          <Text style={styles.meta}>
+            {dateStr}
+            {review.rating && preferences.showRatings ? (
+              <Text style={styles.rating}>{dateStr ? ` \u00B7 ${review.rating}` : review.rating}</Text>
+            ) : null}
+          </Text>
+        </View>
+      )}
 
       {/* Review body */}
       {review.review ? (
@@ -248,86 +266,88 @@ export default function ReviewCard({ review }: ReviewCardProps) {
   )
 }
 
-const styles = StyleSheet.create({
-  article: {
-    paddingHorizontal: HORIZONTAL_PAD,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xs,
-  },
-  titlePressed: {
-    opacity: 0.6,
-  },
-  movieTitle: {
-    fontFamily: fonts.heading,
-    fontSize: typography.magazineTitle.fontSize,
-    lineHeight: typography.magazineTitle.lineHeight,
-    color: colors.foreground,
-    marginBottom: spacing.md,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  metaPressed: {
-    opacity: 0.6,
-  },
-  avatar: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    marginRight: 8,
-  },
-  meta: {
-    fontFamily: fonts.body,
-    fontSize: typography.magazineMeta.fontSize,
-    lineHeight: typography.magazineMeta.lineHeight,
-    letterSpacing: typography.magazineMeta.letterSpacing,
-    color: colors.secondaryText,
-  },
-  rating: {
-    color: colors.yellow,
-  },
-  expandToggle: {
-    fontFamily: fonts.bodyBold,
-    fontSize: typography.caption.fontSize,
-    color: colors.teal,
-    marginTop: spacing.sm,
-  },
-  linkButton: {
-    marginTop: spacing.lg,
-    paddingVertical: spacing.xs,
-    alignSelf: 'flex-end',
-  },
-  linkText: {
-    fontFamily: fonts.body,
-    fontSize: typography.magazineMeta.fontSize,
-    lineHeight: typography.magazineMeta.lineHeight,
-    letterSpacing: typography.magazineMeta.letterSpacing,
-    color: colors.secondaryText,
-  },
-  linkPressed: {
-    color: colors.teal,
-  },
-  dropCapRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  dropCapLetter: {
-    fontFamily: fonts.heading,
-    color: colors.foreground,
-    textShadowColor: colors.teal,
-    textShadowOffset: { width: 1.5, height: 1.5 },
-    textShadowRadius: 0,
-    marginRight: spacing.xs,
-  },
-  dropCapBody: {
-    flex: 1,
-    paddingTop: spacing.xs,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
-    marginTop: spacing.lg,
-  },
-})
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    article: {
+      paddingHorizontal: HORIZONTAL_PAD,
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.xs,
+    },
+    titlePressed: {
+      opacity: 0.6,
+    },
+    movieTitle: {
+      fontFamily: fonts.heading,
+      fontSize: typography.magazineTitle.fontSize,
+      lineHeight: typography.magazineTitle.lineHeight,
+      color: colors.foreground,
+      marginBottom: spacing.md,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+    },
+    metaPressed: {
+      opacity: 0.6,
+    },
+    avatar: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      marginRight: 8,
+    },
+    meta: {
+      fontFamily: fonts.body,
+      fontSize: typography.magazineMeta.fontSize,
+      lineHeight: typography.magazineMeta.lineHeight,
+      letterSpacing: typography.magazineMeta.letterSpacing,
+      color: colors.secondaryText,
+    },
+    rating: {
+      color: colors.yellow,
+    },
+    expandToggle: {
+      fontFamily: fonts.bodyBold,
+      fontSize: typography.caption.fontSize,
+      color: colors.teal,
+      marginTop: spacing.sm,
+    },
+    linkButton: {
+      marginTop: spacing.lg,
+      paddingVertical: spacing.xs,
+      alignSelf: 'flex-end',
+    },
+    linkText: {
+      fontFamily: fonts.body,
+      fontSize: typography.magazineMeta.fontSize,
+      lineHeight: typography.magazineMeta.lineHeight,
+      letterSpacing: typography.magazineMeta.letterSpacing,
+      color: colors.secondaryText,
+    },
+    linkPressed: {
+      color: colors.teal,
+    },
+    dropCapRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+    },
+    dropCapLetter: {
+      fontFamily: fonts.heading,
+      color: colors.foreground,
+      textShadowColor: colors.teal,
+      textShadowOffset: { width: 1.5, height: 1.5 },
+      textShadowRadius: 0,
+      marginRight: spacing.xs,
+    },
+    dropCapBody: {
+      flex: 1,
+      paddingTop: spacing.xs,
+    },
+    divider: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.border,
+      marginTop: spacing.lg,
+    },
+  })
+}

@@ -3,6 +3,14 @@ import type { Review } from '@/types/database'
 import { getAvatarUrl, setAvatarUrl, setAvatarUrls } from '@/services/avatarCache'
 
 const PAGE_SIZE = 50
+const FEED_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+interface FeedCacheEntry {
+  reviews: Review[]
+  fetchedAt: number
+}
+
+const feedCache = new Map<string, FeedCacheEntry>()
 
 /**
  * Match the 220px avatar from a Letterboxd profile page.
@@ -141,7 +149,7 @@ export async function fetchDisplayName(username: string): Promise<string | undef
   }
 }
 
-async function fetchUserFeed(username: string): Promise<Review[]> {
+async function _fetchUserFeed(username: string): Promise<Review[]> {
   try {
     // Fetch RSS feed and avatar in parallel — avatar is cached after first call
     const [response, avatarUrl] = await Promise.all([
@@ -197,6 +205,27 @@ async function fetchUserFeed(username: string): Promise<Review[]> {
     console.warn(`Failed to fetch feed for ${username}:`, err)
     return []
   }
+}
+
+/**
+ * Fetch a user's RSS feed with 5-minute in-memory caching.
+ * Both FeedScreen and ExternalProfileScreen go through this,
+ * so a user's data is fetched at most once per 5 minutes.
+ */
+export async function fetchUserFeed(username: string): Promise<Review[]> {
+  const cached = feedCache.get(username)
+  if (cached && Date.now() - cached.fetchedAt < FEED_CACHE_TTL) {
+    return cached.reviews
+  }
+
+  const reviews = await _fetchUserFeed(username)
+  feedCache.set(username, { reviews, fetchedAt: Date.now() })
+  return reviews
+}
+
+/** Clear the in-memory feed cache. Call before re-fetching on pull-to-refresh. */
+export function clearFeedCache(): void {
+  feedCache.clear()
 }
 
 export interface FeedResult {

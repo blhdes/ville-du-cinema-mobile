@@ -40,7 +40,7 @@ This lets the user tap a username, see the profile, and tap `< Back` to return t
 
 ## 2. Hybrid Data Fetching Strategy
 
-We need two things Letterboxd doesn't offer via API: **profile metadata** (bio, website) and **activity feed** (reviews/watches, which we already get via RSS).
+We need two things Letterboxd doesn't offer via API: **profile metadata** (bio, location, links) and **activity feed** (reviews/watches, which we already get via RSS).
 
 ### New Service: `services/externalProfile.ts`
 
@@ -59,8 +59,11 @@ ExternalProfileScreen mounts
   ├─ fetchUserFeed(username)            ← reuse existing (RSS reviews + avatar)
   └─ fetchExternalProfileMeta(username) ← NEW (scrape profile page HTML)
        ├─ Avatar URL (already handled by fetchAvatarUrl)
-       ├─ Bio text (from <meta name="description"> or .body-text)
-       └─ Display name (from <title> or dc:creator in RSS)
+       ├─ Bio text (from <div class="bio js-bio"> or <meta name="description">)
+       ├─ Display name (from <title> tag)
+       ├─ Location (from profile-metadata pin icon)
+       ├─ Website URL + label (from profile-metadata cursor icon)
+       └─ Twitter/X handle + URL (from profile-metadata X icon)
 ```
 
 ### Scraping Targets
@@ -69,18 +72,24 @@ From `letterboxd.com/{username}/`:
 
 | Data Point | Extraction Method |
 |---|---|
-| **Bio** | Regex or DOM parse the `<div class="body-text -bio">` block. Fallback: `<meta name="description" content="...">` tag |
-| **Display Name** | Already available from RSS `dc:creator`. The `<title>` tag also contains it: `"Name's profile • Letterboxd"` |
+| **Bio** | Inner text of `<div class="bio js-bio">` block. Fallback: `Bio:` portion of `<meta name="description">` tag |
+| **Display Name** | `<title>` tag, stripping `"'s profile • Letterboxd"` suffix. HTML entities decoded. |
 | **Avatar** | Already handled by `fetchAvatarUrl()` in `feed.ts` — reuse directly |
-| **Website/links** | Optional stretch goal: parse `<a class="icon-link">` elements from the profile sidebar |
+| **Location** | `<div class="profile-metadata">` → metadatum with pin SVG (`viewBox="0 0 8 16"`) → `<span class="label">` text |
+| **Website** | Same metadata block → metadatum with cursor SVG (`viewBox="0 0 14 16"`) → `href` + `<span class="label">` |
+| **Twitter/X** | Same metadata block → metadatum with X SVG (`viewBox="0 0 15 16"`) → `href` + `<span class="label">` |
 
 ### Return Type
 
 ```typescript
 interface ExternalProfileMeta {
   displayName: string
-  bio: string          // empty string if none found
-  websiteUrl?: string  // optional, scraped from profile sidebar
+  bio: string            // empty string if none found
+  location?: string      // city/country from pin icon metadatum
+  websiteUrl?: string    // personal site URL
+  websiteLabel?: string  // display label (e.g. "serializd.com")
+  twitterHandle?: string // X/Twitter handle (e.g. "fromesmi")
+  twitterUrl?: string    // full X/Twitter profile URL
 }
 ```
 
@@ -122,6 +131,8 @@ Think of the pull-quote author bios you see in literary magazines:
 │  "A short bio scraped from their    │   EBGaramond_400Regular_Italic
 │   Letterboxd profile page."         │   Centered, max 3 lines
 │                                     │
+│   📍 City  🔗 site.com  𝕏 handle   │   Metadata row: location, website, twitter
+│                                     │
 │      ── View on Letterboxd ──       │   Teal link, centered, subtle
 │                                     │
 │─────────────────────────────────────│   Hairline divider
@@ -137,6 +148,7 @@ Think of the pull-quote author bios you see in literary magazines:
 - **Centered layout** for the header (unlike our own `ProfileHeader` which is left-aligned with a row). This creates visual distinction — *their* profile feels like an "about the author" card, while *your* profile feels like account settings.
 - **Avatar centered above the name** instead of side-by-side. More editorial, less utilitarian.
 - **Bio in italic serif** (`bodyItalic` / `EBGaramond_400Regular_Italic`) — matches the pull-quote convention in print magazines.
+- **Metadata row** below the bio shows location (pin icon), website (link icon), and Twitter/X (X icon) — only items that exist are rendered, centered as a horizontal row with `spacing.sm` gaps.
 - **"View on Letterboxd"** link as a subtle escape hatch to the full web profile.
 
 ### Component Reuse for the Activity Feed
@@ -190,7 +202,7 @@ profileCache: Map<string, { meta: ExternalProfileMeta; fetchedAt: number }>
 
 | File | Purpose |
 |---|---|
-| `services/externalProfile.ts` | `fetchExternalProfileMeta()` — scrape bio, display name, website from profile HTML. In-memory cache with TTL. |
+| `services/externalProfile.ts` | `fetchExternalProfileMeta()` — scrape bio, display name, location, website, twitter/X from profile HTML. In-memory cache with 5-min TTL. |
 | `screens/ExternalProfileScreen.tsx` | New screen — FlatList with profile header + review/watch list |
 | `components/profile/ExternalProfileHeader.tsx` | Centered author-bio-style header (avatar, name, bio, Letterboxd link) |
 | `navigation/FeedStackNavigator.tsx` | Native stack wrapping the drawer + external profile route |
@@ -282,30 +294,21 @@ Do NOT touch any other files yet. Verify the app compiles and the Feed tab still
 
 ---
 
-### Step 2 — External Profile Scraping Service
+### Step 2 — External Profile Scraping Service (DONE)
 
 ```
-Read the blueprint at docs/phase-21-external-user-profile.md (section 2).
-Read services/feed.ts to understand the existing scraping patterns (fetchAvatarUrl, AVATAR_REGEX, etc.).
-
-Create services/externalProfile.ts with:
-
-1. An ExternalProfileMeta interface: { displayName: string; bio: string; websiteUrl?: string }
-
-2. A fetchExternalProfileMeta(username: string) function that:
-   - Checks an in-memory Map cache first (5-minute TTL).
-   - On cache miss, fetches https://letterboxd.com/{username}/ HTML.
-   - Extracts the bio from <div class="body-text -bio"> (regex). Fallback: <meta name="description" content="...">.
-   - Extracts displayName from <title> tag (strip " • Letterboxd" suffix). Fallback: empty string.
-   - Optionally extracts websiteUrl from the profile sidebar links.
-   - Stores result in the memory cache and returns it.
-   - On fetch failure, returns { displayName: '', bio: '' }.
-
-3. A clearProfileCache() function (for pull-to-refresh).
-
-Also in services/feed.ts, add the export keyword to fetchUserFeed (it's currently not exported).
-
-Do NOT create any screens or UI yet.
+COMPLETED. Created services/externalProfile.ts with:
+- ExternalProfileMeta interface with: displayName, bio, location?, websiteUrl?,
+  websiteLabel?, twitterHandle?, twitterUrl?
+- fetchExternalProfileMeta(username) with 5-min in-memory cache
+- Scrapes bio from <div class="bio js-bio">, fallback to <meta name="description">
+- Scrapes displayName from <title> tag (strips "'s profile • Letterboxd", decodes HTML entities)
+- Scrapes location, website, and twitter/X from <div class="profile-metadata">
+  using SVG viewBox dimensions to identify each metadatum type
+- clearProfileCache() for pull-to-refresh
+- Exported fetchUserFeed from services/feed.ts
+- Tested against 3 real profiles: esmichandesu (all fields), davidehrlich (all fields),
+  sean (minimal — no bio, no metadata). All 18 assertions passed.
 ```
 
 ---
@@ -319,13 +322,20 @@ Read theme/index.ts for available tokens.
 
 Create components/profile/ExternalProfileHeader.tsx:
 
-Props: { displayName: string; username: string; bio: string; avatarUrl?: string; websiteUrl?: string }
+Props: { displayName: string; username: string; bio: string; avatarUrl?: string;
+         location?: string; websiteUrl?: string; websiteLabel?: string;
+         twitterHandle?: string; twitterUrl?: string }
 
 Layout (centered, editorial "author bio" style):
 - Avatar: 72px circle, centered. Use expo-image's Image component for caching. Show initial-letter placeholder if no URL (same pattern as ProfileHeader).
 - Display name: PlayfairDisplay_700Bold, magazineTitle size, centered.
 - @USERNAME: magazineMeta style (uppercase, letter-spaced), centered, secondaryText color.
 - Bio (if non-empty): bodyItalic font, magazineBody size, centered, foreground color, marginTop spacing.lg.
+- Metadata row (if any field present): horizontal row, centered, spacing.sm gaps, marginTop spacing.md.
+  - Location: pin icon + label text (secondaryText color, not tappable).
+  - Website: link icon + websiteLabel text (teal, tappable via Linking.openURL).
+  - Twitter/X: X icon + twitterHandle text (teal, tappable via Linking.openURL).
+  Only render items that exist. Use Ionicons or simple SVG for the icons.
 - "View on Letterboxd" link: teal color, centered, uses Linking.openURL. Small text, subtle. marginTop spacing.md.
 - Bottom hairline divider: StyleSheet.hairlineWidth, colors.border, full width, marginTop spacing.xl.
 
@@ -354,6 +364,8 @@ Create screens/ExternalProfileScreen.tsx:
 
 4. Render a FlatList:
    - ListHeaderComponent: ExternalProfileHeader with the scraped meta + avatar.
+     Pass all metadata fields: displayName, bio, location, websiteUrl, websiteLabel,
+     twitterHandle, twitterUrl.
    - Items: map each Review to ReviewCard (type 'review') or WatchNotification (type 'watch'), respecting the showWatchNotifications preference from DisplayPreferencesContext.
    - ListEmptyComponent: "No activity yet" text (only when not loading).
    - Pull-to-refresh: clear the profile cache, re-fetch both.
@@ -418,6 +430,7 @@ Final polish pass:
    - User with no reviews → "No activity yet" empty state.
    - Network failure → ErrorBanner with a "View on Letterboxd" fallback link.
    - Rapid back-and-forth navigation → cached data renders instantly.
+   - User with no metadata (no location/website/twitter) → metadata row hidden entirely.
 
 3. Make sure the stack header back button works correctly and returns to the feed.
 

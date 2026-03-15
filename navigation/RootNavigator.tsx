@@ -1,26 +1,58 @@
+import { useCallback, useMemo, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { NavigationContainer } from '@react-navigation/native'
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native'
+import * as SplashScreen from 'expo-splash-screen'
 import { useUser } from '@/hooks/useUser'
 import { useGuestMode } from '@/contexts/GuestModeContext'
+import { useTheme } from '@/contexts/ThemeContext'
 import AuthStack from '@/navigation/AuthStack'
 import AppTabs from '@/navigation/AppTabs'
-import Spinner from '@/components/ui/Spinner'
 
 export default function RootNavigator() {
   const { user, isLoading: isAuthLoading } = useUser()
   const { isGuest, isLoading: isGuestLoading } = useGuestMode()
+  const { resolved, colors } = useTheme()
+  const splashHidden = useRef(false)
+
+  // Hide splash once the auth screen paints (logged-in flow is handled by FeedScreen)
+  const onAuthLayout = useCallback(() => {
+    if (!splashHidden.current) {
+      splashHidden.current = true
+      SplashScreen.hideAsync()
+    }
+  }, [])
+
+  const navTheme = useMemo(() => {
+    const base = resolved === 'dark' ? DarkTheme : DefaultTheme
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        primary: colors.teal,
+        background: colors.background,
+        card: colors.background,
+        text: colors.foreground,
+        border: colors.border,
+        notification: colors.teal,
+      },
+    }
+  }, [resolved, colors])
 
   if (isAuthLoading || isGuestLoading) {
     return (
-      <View style={styles.loading}>
-        <Spinner size={24} />
-      </View>
+      <View style={[styles.loading, { backgroundColor: colors.background }]} />
     )
   }
 
   return (
-    <NavigationContainer>
-      {user || isGuest ? <AppTabs /> : <AuthStack />}
+    <NavigationContainer theme={navTheme}>
+      {user || isGuest ? (
+        <AppTabs />
+      ) : (
+        <View style={styles.authWrapper} onLayout={onAuthLayout}>
+          <AuthStack />
+        </View>
+      )}
     </NavigationContainer>
   )
 }
@@ -28,8 +60,10 @@ export default function RootNavigator() {
 const styles = StyleSheet.create({
   loading: {
     flex: 1,
-    backgroundColor: '#fdfaf3',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  authWrapper: {
+    flex: 1,
   },
 })

@@ -1,13 +1,15 @@
+import { useMemo } from 'react'
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { useUser } from '@/hooks/useUser'
-import { useProfile } from '@/hooks/useProfile'
+import { useProfile } from '@/contexts/ProfileContext'
 import { useUserLists } from '@/hooks/useUserLists'
-import { colors, fonts, spacing, typography } from '@/theme'
-import Spinner from '@/components/ui/Spinner'
+import { useTheme } from '@/contexts/ThemeContext'
+import { fonts, spacing, typography, type ThemeColors } from '@/theme'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import ProfileHeader from '@/components/profile/ProfileHeader'
+import ProfileSkeleton from '@/components/profile/ProfileSkeleton'
 import FollowingList from '@/components/profile/FollowingList'
 
 const HORIZONTAL_PAD = 20
@@ -18,6 +20,8 @@ export default function ProfileScreen() {
   const { user } = useUser()
   const { profile, isLoading, error } = useProfile()
   const { users: followedUsers } = useUserLists()
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
 
   // Guest mode — prompt to sign in
   if (!user) {
@@ -36,18 +40,10 @@ export default function ProfileScreen() {
     )
   }
 
-  if (isLoading) {
-    return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Profile</Text>
-        </View>
-        <View style={styles.loadingContainer}>
-          <Spinner size={24} />
-        </View>
-      </View>
-    )
-  }
+  const scrollContentStyle = useMemo(
+    () => ({ paddingBottom: tabBarHeight + insets.bottom + 20 }),
+    [tabBarHeight, insets.bottom],
+  )
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -57,65 +53,66 @@ export default function ProfileScreen() {
 
       {error && <ErrorBanner message={error} />}
 
-      <ScrollView contentContainerStyle={{ paddingBottom: tabBarHeight + insets.bottom + 20 }}>
-        {profile && <ProfileHeader profile={profile} email={user.email} />}
+      {isLoading ? (
+        <ProfileSkeleton variant="self" />
+      ) : (
+        <ScrollView contentContainerStyle={scrollContentStyle}>
+          {profile && <ProfileHeader profile={profile} email={user.email} showEdit />}
 
-        {/* Hairline before following */}
-        <View style={styles.divider} />
+          {/* Hairline before following */}
+          <View style={styles.divider} />
 
-        <View style={styles.followingSection}>
-          <FollowingList users={followedUsers} />
-        </View>
-      </ScrollView>
+          <View style={styles.followingSection}>
+            <FollowingList users={followedUsers} />
+          </View>
+        </ScrollView>
+      )}
     </View>
   )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    paddingHorizontal: HORIZONTAL_PAD,
-    paddingVertical: 12,
-  },
-  headerTitle: {
-    fontFamily: fonts.heading,
-    fontSize: typography.title3.fontSize,
-    color: colors.foreground,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
-    marginHorizontal: HORIZONTAL_PAD,
-  },
-  followingSection: {
-    paddingTop: spacing.xl,
-  },
-  guestContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xxl,
-  },
-  guestTitle: {
-    fontFamily: fonts.heading,
-    fontSize: typography.magazineTitle.fontSize,
-    lineHeight: typography.magazineTitle.lineHeight,
-    color: colors.foreground,
-    marginBottom: spacing.md,
-  },
-  guestText: {
-    fontFamily: fonts.body,
-    fontSize: typography.magazineBody.fontSize,
-    lineHeight: typography.magazineBody.lineHeight,
-    color: colors.secondaryText,
-    textAlign: 'center',
-  },
-})
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      paddingHorizontal: HORIZONTAL_PAD,
+      paddingVertical: 12,
+    },
+    headerTitle: {
+      fontFamily: fonts.heading,
+      fontSize: typography.title3.fontSize,
+      color: colors.foreground,
+    },
+    divider: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.border,
+      marginHorizontal: HORIZONTAL_PAD,
+    },
+    followingSection: {
+      paddingTop: spacing.xl,
+    },
+    guestContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: spacing.xxl,
+    },
+    guestTitle: {
+      fontFamily: fonts.heading,
+      fontSize: typography.magazineTitle.fontSize,
+      lineHeight: typography.magazineTitle.lineHeight,
+      color: colors.foreground,
+      marginBottom: spacing.md,
+    },
+    guestText: {
+      fontFamily: fonts.body,
+      fontSize: typography.magazineBody.fontSize,
+      lineHeight: typography.magazineBody.lineHeight,
+      color: colors.secondaryText,
+      textAlign: 'center',
+    },
+  })
+}
