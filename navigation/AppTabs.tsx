@@ -19,7 +19,7 @@ import FeedStackNavigator from '@/navigation/FeedStackNavigator'
 import ProfileStackNavigator from '@/navigation/ProfileStackNavigator'
 import SettingsScreen from '@/screens/SettingsScreen'
 import FeedTabIcon from '@/components/ui/FeedTabIcon'
-import { useProfile } from '@/hooks/useProfile'
+import { useProfile } from '@/contexts/ProfileContext'
 import { TabBarProvider, useTabBar } from '@/contexts/TabBarContext'
 import { useTheme } from '@/contexts/ThemeContext'
 

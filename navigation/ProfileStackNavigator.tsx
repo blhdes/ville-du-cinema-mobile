@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { useNavigation } from '@react-navigation/native'
 import { useTheme } from '@/contexts/ThemeContext'
 import ProfileScreen from '@/screens/ProfileScreen'
+import EditProfileScreen from '@/screens/EditProfileScreen'
 import ExternalProfileScreen from '@/screens/ExternalProfileScreen'
 import UserSearchScreen from '@/screens/UserSearchScreen'
 import type { ProfileStackParamList } from '@/navigation/types'
@@ -42,6 +43,15 @@ export default function ProfileStackNavigator() {
         name="ProfileMain"
         component={ProfileScreen}
         options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="EditProfile"
+        component={EditProfileScreen}
+        options={{
+          headerTitle: 'Edit Profile',
+          presentation: 'modal',
+          headerLeft: () => null,
+        }}
       />
       <Stack.Screen
         name="ExternalProfile"

@@ -8,6 +8,7 @@ import { EBGaramond_400Regular, EBGaramond_400Regular_Italic, EBGaramond_700Bold
 import { GuestModeProvider } from '@/contexts/GuestModeContext'
 import { UserProvider } from '@/contexts/UserProvider'
 import { UserListsProvider } from '@/contexts/UserListsProvider'
+import { ProfileProvider } from '@/contexts/ProfileContext'
 import { DisplayPreferencesProvider } from '@/contexts/DisplayPreferencesContext'
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext'
 import RootNavigator from '@/navigation/RootNavigator'
@@ -30,11 +31,13 @@ function AppShell() {
       <StatusBar style={resolved === 'dark' ? 'light' : 'dark'} />
       <UserProvider>
         <UserListsProvider>
-          <GuestModeProvider>
-            <DisplayPreferencesProvider>
-              <RootNavigator />
-            </DisplayPreferencesProvider>
-          </GuestModeProvider>
+          <ProfileProvider>
+            <GuestModeProvider>
+              <DisplayPreferencesProvider>
+                <RootNavigator />
+              </DisplayPreferencesProvider>
+            </GuestModeProvider>
+          </ProfileProvider>
         </UserListsProvider>
       </UserProvider>
     </>

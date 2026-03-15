@@ -18,6 +18,7 @@ export type FeedStackParamList = {
 
 export type ProfileStackParamList = {
   ProfileMain: undefined
+  EditProfile: undefined
   ExternalProfile: { username: string }
   UserSearch: undefined
 }

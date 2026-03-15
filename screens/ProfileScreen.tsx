@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { useUser } from '@/hooks/useUser'
-import { useProfile } from '@/hooks/useProfile'
+import { useProfile } from '@/contexts/ProfileContext'
 import { useUserLists } from '@/hooks/useUserLists'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, typography, type ThemeColors } from '@/theme'
@@ -57,7 +57,7 @@ export default function ProfileScreen() {
         <ProfileSkeleton variant="self" />
       ) : (
         <ScrollView contentContainerStyle={scrollContentStyle}>
-          {profile && <ProfileHeader profile={profile} email={user.email} />}
+          {profile && <ProfileHeader profile={profile} email={user.email} showEdit />}
 
           {/* Hairline before following */}
           <View style={styles.divider} />

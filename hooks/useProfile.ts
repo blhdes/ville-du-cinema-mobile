@@ -3,10 +3,11 @@ import { useUser } from './useUser'
 import { supabase } from '@/lib/supabase/client'
 import type { UserProfile, DisplayPreferences } from '@/types/database'
 
-interface UseProfileReturn {
+export interface UseProfileReturn {
   profile: UserProfile | null
   isLoading: boolean
   error: string | null
+  refetch: () => Promise<void>
   updateProfile: (data: { bio?: string; display_name?: string; username?: string }) => Promise<void>
   updateDisplayPreferences: (data: Partial<DisplayPreferences>) => Promise<void>
   uploadAvatar: (uri: string) => Promise<string>
@@ -26,7 +27,7 @@ const DEFAULT_PROFILE: Omit<UserProfile, 'user_id' | 'updated_at'> = {
   username: null,
 }
 
-export function useProfile(): UseProfileReturn {
+export function useProfileInternal(): UseProfileReturn {
   const { user, isLoading: isUserLoading } = useUser()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -131,32 +132,49 @@ export function useProfile(): UseProfileReturn {
     [user]
   )
 
-  // Upload avatar from a local file URI (React Native)
+  // Upload avatar from a local file URI (expo-image-picker).
+  // Reads the file JIT as an ArrayBuffer so no base64 string sits in JS memory.
   const uploadAvatar = useCallback(async (uri: string): Promise<string> => {
     if (!user) throw new Error('Not authenticated')
     setError(null)
 
     try {
-      const ext = uri.split('.').pop() || 'jpg'
-      const fileName = `${user.id}/avatar.${ext}`
-
-      // Read file as blob for upload
+      // 1. Read file into an ArrayBuffer — temporary, GC'd after upload
       const response = await fetch(uri)
-      const blob = await response.blob()
+      const arrayBuffer = await response.arrayBuffer()
+
+      // 2. Delete the previous avatar file if one exists in our bucket
+      const oldUrl = profile?.avatar_url
+      if (oldUrl) {
+        const marker = '/object/public/avatars/'
+        const markerIndex = oldUrl.indexOf(marker)
+        if (markerIndex !== -1) {
+          const oldPath = oldUrl.substring(markerIndex + marker.length)
+          // Best-effort cleanup — don't block on failure
+          await supabase.storage.from('avatars').remove([oldPath]).catch(() => {})
+        }
+      }
+
+      // 3. Upload new file with a unique timestamp path
+      const filePath = `${user.id}/${Date.now()}.jpg`
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(fileName, blob, { upsert: true, contentType: `image/${ext}` })
+        .upload(filePath, arrayBuffer, {
+          contentType: 'image/jpeg',
+          upsert: true,
+        })
 
       if (uploadError) throw new Error(uploadError.message)
 
+      // 4. Get public URL and persist to profile row
       const { data: urlData } = supabase.storage
         .from('avatars')
-        .getPublicUrl(fileName)
+        .getPublicUrl(filePath)
 
-      const avatarUrl = urlData.publicUrl
+      // Append cache-buster so RN's <Image> doesn't serve a stale cached version
+      const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`
 
-      // Update profile with new avatar URL
       const { error: dbError } = await supabase
         .from('user_data')
         .upsert({ user_id: user.id, avatar_url: avatarUrl }, { onConflict: 'user_id' })
@@ -170,7 +188,7 @@ export function useProfile(): UseProfileReturn {
       setError(message)
       throw err
     }
-  }, [user])
+  }, [user, profile?.avatar_url])
 
   const setAvatarUrl = useCallback(async (url: string) => {
     if (!user) return
@@ -197,10 +215,19 @@ export function useProfile(): UseProfileReturn {
     setError(null)
 
     try {
-      // Remove file from storage
+      // Remove file(s) from storage
+      const oldUrl = profile?.avatar_url
+      const filesToRemove: string[] = []
+      if (oldUrl) {
+        const marker = '/object/public/avatars/'
+        const markerIndex = oldUrl.indexOf(marker)
+        if (markerIndex !== -1) {
+          filesToRemove.push(oldUrl.substring(markerIndex + marker.length))
+        }
+      }
       const { error: removeError } = await supabase.storage
         .from('avatars')
-        .remove([`${user.id}/avatar.jpg`, `${user.id}/avatar.png`])
+        .remove(filesToRemove)
 
       if (removeError) throw new Error(removeError.message)
 
@@ -218,12 +245,13 @@ export function useProfile(): UseProfileReturn {
       setError(message)
       throw err
     }
-  }, [user])
+  }, [user, profile?.avatar_url])
 
   return {
     profile,
     isLoading: isLoading || isUserLoading,
     error,
+    refetch: fetchProfile,
     updateProfile,
     updateDisplayPreferences,
     uploadAvatar,
