@@ -299,6 +299,13 @@ export default function FeedScreen() {
     [preferences.fontMultiplier, preferences.showRatings, preferences.useDropCap],
   )
 
+  // Reset tab bar + header after a FlatList remount from settings changes.
+  // Without this, the bars stay stuck offscreen because no scroll event fires after remount.
+  useEffect(() => {
+    translateY.value = withTiming(0, { duration: 200 })
+    headerTranslateY.value = withTiming(0, { duration: 200 })
+  }, [layoutKey, translateY, headerTranslateY])
+
   // Filter watch notifications if preference is set
   const filteredReviews = useMemo(
     () => preferences.showWatchNotifications

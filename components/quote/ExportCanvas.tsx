@@ -38,13 +38,14 @@ const ExportCanvas = forwardRef<ViewShot, ExportCanvasProps>(
     const { width: screenWidth } = useWindowDimensions()
 
     // Preview fits on screen; the 9:16 ratio ensures a tall story frame
-    const storyWidth = Math.round(screenWidth * 0.75)
+    const storyWidth = Math.round(screenWidth * 0.92)
     const quoteFontStyle = useMemo(() => getQuoteFontSize(quote.length), [quote.length])
 
     return (
       <ViewShot
         ref={ref}
         options={{ format: 'png', quality: 1 }}
+        collapsable={false}
         style={[
           styles.storyFrame,
           {
@@ -109,11 +110,9 @@ const styles = StyleSheet.create({
   // ── 9:16 story frame ──
   storyFrame: {
     aspectRatio: 9 / 16,
-    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 40,
-    overflow: 'hidden',
   },
 
   // ── Inner card ──

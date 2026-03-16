@@ -26,6 +26,7 @@ type RouteProps = RouteProp<FeedStackParamList, 'ReviewReader'>
 interface WordToken {
   text: string
   paragraphEnd: boolean
+  isNewline?: boolean
 }
 
 /** Decode common HTML entities into their real characters. */
@@ -63,15 +64,26 @@ function parseWords(html: string): WordToken[] {
   ).trim()
 
   const tokens: WordToken[] = []
+  // Split into paragraph-level blocks (double newline)
   const paragraphs = plain.split(/\n\n+/)
 
   for (const para of paragraphs) {
-    const words = para.trim().split(/\s+/).filter(Boolean)
-    for (let i = 0; i < words.length; i++) {
-      tokens.push({
-        text: words[i],
-        paragraphEnd: i === words.length - 1,
-      })
+    // Split each paragraph on single newlines to preserve line breaks
+    const lines = para.split('\n')
+    for (let li = 0; li < lines.length; li++) {
+      const words = lines[li].trim().split(/\s+/).filter(Boolean)
+      for (let wi = 0; wi < words.length; wi++) {
+        const isLastWordInLine = wi === words.length - 1
+        const isLastLine = li === lines.length - 1
+        tokens.push({
+          text: words[wi],
+          paragraphEnd: isLastWordInLine && isLastLine,
+        })
+      }
+      // Insert a newline token between lines within the same paragraph
+      if (li < lines.length - 1 && lines[li].trim().length > 0) {
+        tokens.push({ text: '\n', paragraphEnd: false, isNewline: true })
+      }
     }
   }
 
@@ -163,10 +175,17 @@ export default function ReviewReaderScreen() {
 
   const selectedText = useMemo(() => {
     if (!selectedRange) return ''
-    return words
-      .slice(selectedRange.start, selectedRange.end + 1)
-      .map((w) => w.text)
-      .join(' ')
+    const selected = words.slice(selectedRange.start, selectedRange.end + 1)
+    let result = ''
+    for (const token of selected) {
+      if (token.isNewline) {
+        result += '\n'
+      } else {
+        if (result.length > 0 && !result.endsWith('\n')) result += ' '
+        result += token.text
+      }
+    }
+    return result
   }, [words, selectedRange])
 
   const handleCreateCard = useCallback(() => {
@@ -299,6 +318,9 @@ export default function ReviewReaderScreen() {
         <GestureDetector gesture={composed}>
           <Animated.View style={styles.wordContainer}>
             {words.map((token, i) => {
+              if (token.isNewline) {
+                return <View key={i} style={styles.lineBreak} />
+              }
               const isSelected =
                 selectedRange !== null &&
                 i >= selectedRange.start &&
@@ -388,6 +410,10 @@ function createStyles(colors: ThemeColors) {
     },
     wordDimmed: {
       opacity: 0.35,
+    },
+    lineBreak: {
+      width: '100%',
+      height: 10,
     },
     paragraphBreak: {
       width: '100%',

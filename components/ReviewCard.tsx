@@ -228,7 +228,8 @@ export default function ReviewCard({ review, hideAuthor = false }: ReviewCardPro
                     minWidth: dropCapSize * 0.75,
                   },
                 ]}
-                selectable
+                selectable={false}
+                suppressHighlighting
               >
                 {dropCapData.firstLetter}
               </Text>
@@ -239,7 +240,7 @@ export default function ReviewCard({ review, hideAuthor = false }: ReviewCardPro
                   tagsStyles={tagsStyles}
                   systemFonts={SYSTEM_FONTS}
                   renderersProps={renderersProps}
-                  defaultTextProps={{ selectable: true }}
+                  defaultTextProps={{ selectable: false, suppressHighlighting: true }}
                 />
               </View>
             </View>
@@ -250,7 +251,7 @@ export default function ReviewCard({ review, hideAuthor = false }: ReviewCardPro
               tagsStyles={tagsStyles}
               systemFonts={SYSTEM_FONTS}
               renderersProps={renderersProps}
-              defaultTextProps={{ selectable: true }}
+              defaultTextProps={{ selectable: false, suppressHighlighting: true }}
             />
           )}
           {isLong && !expanded && (

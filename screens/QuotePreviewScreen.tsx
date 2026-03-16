@@ -10,7 +10,7 @@ import { withTiming } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useFocusEffect, useRoute, type RouteProp } from '@react-navigation/native'
 import type ViewShot from 'react-native-view-shot'
-import { File, Paths } from 'expo-file-system'
+import { File, Paths } from 'expo-file-system/next'
 import * as Sharing from 'expo-sharing'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -47,11 +47,13 @@ export default function QuotePreviewScreen() {
     try {
       const tmpUri = await viewShotRef.current.capture()
 
-      // Copy to a clean file name
+      // Copy to cache with a clean file name.
+      // Using expo-file-system/next (File + Paths) — the SDK 54 API.
       const fileName = `Village_${sanitize(params.movieTitle)}.png`
-      const tmpFile = new File(tmpUri)
+      const src = new File(tmpUri)
       const dest = new File(Paths.cache, fileName)
-      tmpFile.copy(dest)
+      if (dest.exists) dest.delete()
+      await src.copy(dest)
 
       const available = await Sharing.isAvailableAsync()
       if (!available) {
@@ -106,7 +108,6 @@ function createStyles(colors: ThemeColors) {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
-      paddingHorizontal: spacing.lg,
     },
     pillWrapper: {
       alignItems: 'center',
