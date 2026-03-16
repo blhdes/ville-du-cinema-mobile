@@ -1,20 +1,25 @@
 import { Fragment, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
-import Animated, { runOnJS, withTiming } from 'react-native-reanimated'
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated'
 import {
-  useFocusEffect,
   useNavigation,
   useRoute,
   type NavigationProp,
   type RouteProp,
 } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { useTheme } from '@/contexts/ThemeContext'
-import { useTabBar } from '@/contexts/TabBarContext'
 import { fonts, spacing, typography, type ThemeColors } from '@/theme'
+import { saveClipping } from '@/services/clippings'
 import type { FeedStackParamList } from '@/navigation/types'
 
 type RouteProps = RouteProp<FeedStackParamList, 'ReviewReader'>
@@ -134,7 +139,7 @@ export default function ReviewReaderScreen() {
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const { colors } = useTheme()
   const insets = useSafeAreaInsets()
-  const { translateY } = useTabBar()
+  const tabBarHeight = useBottomTabBarHeight()
   const styles = useMemo(() => createStyles(colors), [colors])
 
   const words = useMemo(() => parseWords(params.reviewText), [params.reviewText])
@@ -159,16 +164,6 @@ export default function ReviewReaderScreen() {
     [],
   )
 
-  // Hide the bottom tab bar
-  useFocusEffect(
-    useCallback(() => {
-      translateY.value = withTiming(100, { duration: 250 })
-      return () => {
-        translateY.value = withTiming(0, { duration: 250 })
-      }
-    }, [translateY]),
-  )
-
   // ── Derived state ──
 
   const hasSelection = selectedRange !== null
@@ -188,7 +183,9 @@ export default function ReviewReaderScreen() {
     return result
   }, [words, selectedRange])
 
-  const handleCreateCard = useCallback(() => {
+  // ── Actions ──
+
+  const handleExport = useCallback(() => {
     if (!selectedText) return
     navigation.navigate('QuotePreview', {
       quote: selectedText,
@@ -200,22 +197,52 @@ export default function ReviewReaderScreen() {
     })
   }, [navigation, selectedText, params])
 
-  // ── Header action — show checkmark icon when text is selected ──
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
+
+  const handleSaveClipping = useCallback(async () => {
+    if (!selectedText || saveState === 'saving') return
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    setSaveState('saving')
+
+    try {
+      await saveClipping({
+        quote_text: selectedText,
+        movie_title: params.movieTitle,
+        author_name: params.author,
+        original_url: params.original_url,
+      })
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      setSaveState('saved')
+    } catch (error) {
+      console.error('Failed to save clipping:', error)
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+      setSaveState('idle')
+    }
+  }, [selectedText, saveState, params])
+
+  // Reset save state when selection changes
+  const prevSelectionRef = useRef(selectedText)
+  if (prevSelectionRef.current !== selectedText) {
+    prevSelectionRef.current = selectedText
+    if (saveState === 'saved') setSaveState('idle')
+  }
+
+  // ── Floating bar animation ──
+
+  const barScale = useSharedValue(0)
 
   useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () =>
-        hasSelection ? (
-          <Pressable onPress={handleCreateCard} hitSlop={12}>
-            <Ionicons
-              name="checkmark-circle"
-              size={28}
-              color={colors.teal}
-            />
-          </Pressable>
-        ) : null,
+    barScale.value = withSpring(hasSelection ? 1 : 0, {
+      damping: 18,
+      stiffness: 280,
     })
-  }, [navigation, hasSelection, handleCreateCard, colors.teal])
+  }, [hasSelection, barScale])
+
+  const floatingBarStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: barScale.value }],
+    opacity: barScale.value,
+  }))
 
   // ── Gesture callbacks ──
 
@@ -302,7 +329,7 @@ export default function ReviewReaderScreen() {
         scrollEnabled={scrollEnabled}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + 60 },
+          { paddingBottom: tabBarHeight + 80 },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -349,6 +376,46 @@ export default function ReviewReaderScreen() {
           </Animated.View>
         </GestureDetector>
       </ScrollView>
+
+      {/* Floating action pill */}
+      <Animated.View
+        style={[
+          styles.floatingBar,
+          { bottom: tabBarHeight + 12 },
+          floatingBarStyle,
+        ]}
+        pointerEvents={hasSelection ? 'auto' : 'none'}
+      >
+        {/* Export / Share */}
+        <Pressable
+          onPress={handleExport}
+          style={styles.floatingAction}
+          hitSlop={8}
+        >
+          <Ionicons name="arrow-up-circle-outline" size={22} color={colors.foreground} />
+        </Pressable>
+
+        {/* Divider */}
+        <View style={styles.floatingDivider} />
+
+        {/* Bookmark / Save clipping */}
+        <Pressable
+          onPress={handleSaveClipping}
+          style={styles.floatingAction}
+          hitSlop={8}
+          disabled={saveState === 'saving'}
+        >
+          {saveState === 'saving' ? (
+            <ActivityIndicator size="small" color={colors.teal} />
+          ) : (
+            <Ionicons
+              name={saveState === 'saved' ? 'bookmark' : 'bookmark-outline'}
+              size={22}
+              color={saveState === 'saved' ? colors.teal : colors.foreground}
+            />
+          )}
+        </Pressable>
+      </Animated.View>
     </View>
   )
 }
@@ -418,6 +485,32 @@ function createStyles(colors: ThemeColors) {
     paragraphBreak: {
       width: '100%',
       height: spacing.md,
+    },
+    floatingBar: {
+      position: 'absolute',
+      alignSelf: 'center',
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.backgroundSecondary,
+      borderRadius: 24,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 10,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      elevation: 8,
+    },
+    floatingAction: {
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    floatingDivider: {
+      width: StyleSheet.hairlineWidth,
+      height: 20,
+      backgroundColor: colors.border,
     },
   })
 }

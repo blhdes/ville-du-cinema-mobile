@@ -77,6 +77,39 @@ export interface Database {
         }
         Relationships: []
       }
+      user_clippings: {
+        /** Full row returned by SELECT queries. */
+        Row: {
+          id: string
+          user_id: string
+          quote_text: string
+          movie_title: string
+          author_name: string
+          original_url: string
+          created_at: string
+        }
+        /** Shape accepted by INSERT statements. */
+        Insert: {
+          id?: string
+          user_id: string
+          quote_text: string
+          movie_title: string
+          author_name: string
+          original_url: string
+          created_at?: string
+        }
+        /** Shape accepted by UPDATE statements (all fields optional). */
+        Update: {
+          id?: string
+          user_id?: string
+          quote_text?: string
+          movie_title?: string
+          author_name?: string
+          original_url?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -135,6 +168,21 @@ export interface PublicProfile {
   avatar_url: string | null
   bio: string
   followed_users: FollowedUser[]
+}
+
+// ---------------------------------------------------------------------------
+// Clippings types
+// ---------------------------------------------------------------------------
+
+/** A saved review quote from the user's Clippings archive. */
+export interface Clipping {
+  id: string // uuid
+  user_id: string // uuid — FK to Supabase auth
+  quote_text: string
+  movie_title: string
+  author_name: string
+  original_url: string
+  created_at: string // ISO 8601 timestamp
 }
 
 // ---------------------------------------------------------------------------

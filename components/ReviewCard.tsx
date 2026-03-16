@@ -85,6 +85,7 @@ export default function ReviewCard({ review, hideAuthor = false }: ReviewCardPro
         avatarUrl: cachedAvatarUrl,
         movieTitle: review.movieTitle,
         rating: review.rating,
+        original_url: review.link,
       })
     }
   }, [navigation, review, cachedAvatarUrl])

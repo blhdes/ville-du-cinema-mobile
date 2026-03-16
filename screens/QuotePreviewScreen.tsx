@@ -6,15 +6,14 @@ import {
   Text,
   View,
 } from 'react-native'
-import { withTiming } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useFocusEffect, useRoute, type RouteProp } from '@react-navigation/native'
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
+import { useRoute, type RouteProp } from '@react-navigation/native'
 import type ViewShot from 'react-native-view-shot'
 import { File, Paths } from 'expo-file-system/next'
 import * as Sharing from 'expo-sharing'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '@/contexts/ThemeContext'
-import { useTabBar } from '@/contexts/TabBarContext'
 import { fonts, spacing, typography, type ThemeColors } from '@/theme'
 import ExportCanvas from '@/components/quote/ExportCanvas'
 import type { FeedStackParamList } from '@/navigation/types'
@@ -30,17 +29,9 @@ export default function QuotePreviewScreen() {
   const { params } = useRoute<RouteProps>()
   const { colors } = useTheme()
   const insets = useSafeAreaInsets()
-  const { translateY } = useTabBar()
+  const tabBarHeight = useBottomTabBarHeight()
   const styles = useMemo(() => createStyles(colors), [colors])
   const viewShotRef = useRef<ViewShot>(null)
-
-  // Hide tab bar while this screen is visible
-  useFocusEffect(
-    useCallback(() => {
-      translateY.value = withTiming(100, { duration: 250 })
-      return () => { translateY.value = withTiming(0, { duration: 250 }) }
-    }, [translateY]),
-  )
 
   const handleShare = useCallback(async () => {
     if (!viewShotRef.current?.capture) return
@@ -82,7 +73,7 @@ export default function QuotePreviewScreen() {
       </View>
 
       {/* Floating share pill */}
-      <View style={[styles.pillWrapper, { paddingBottom: insets.bottom + 54 + spacing.lg }]}>
+      <View style={[styles.pillWrapper, { paddingBottom: tabBarHeight + spacing.md }]}>
         <Pressable
           onPress={handleShare}
           style={({ pressed }) => [

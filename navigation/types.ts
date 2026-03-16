@@ -17,6 +17,7 @@ export type ReviewReaderParams = {
   avatarUrl?: string
   movieTitle: string
   rating: string
+  original_url: string
 }
 
 export type QuotePreviewParams = {
