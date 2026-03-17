@@ -6,7 +6,8 @@ import * as Haptics from 'expo-haptics'
 import type { Clipping } from '@/types/database'
 import { deleteClipping } from '@/services/clippings'
 import { useTheme } from '@/contexts/ThemeContext'
-import { fonts, spacing, typography, type ThemeColors } from '@/theme'
+import { fonts, spacing, typography, getScaledTypography, type ThemeColors } from '@/theme'
+import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 
 interface ClippingCardProps {
   clipping: Clipping
@@ -17,6 +18,8 @@ interface ClippingCardProps {
 
 export default function ClippingCard({ clipping, onDeleted, user }: ClippingCardProps) {
   const { colors } = useTheme()
+  const { preferences } = useDisplayPreferences()
+  const scaled = useMemo(() => getScaledTypography(preferences.fontMultiplier), [preferences.fontMultiplier])
   const styles = useMemo(() => createStyles(colors), [colors])
   const [isExpanded, setIsExpanded] = useState(false)
   const swipeableRef = useRef<Swipeable>(null)
@@ -32,7 +35,6 @@ export default function ClippingCard({ clipping, onDeleted, user }: ClippingCard
     try {
       await deleteClipping(clipping.id)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-      // Let the swipe spring settle before unmounting the row
       InteractionManager.runAfterInteractions(() => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
         onDeleted(clipping.id)
@@ -46,21 +48,21 @@ export default function ClippingCard({ clipping, onDeleted, user }: ClippingCard
 
   const renderRightActions = useCallback(
     (_progress: Animated.AnimatedInterpolation<number>, dragX: Animated.AnimatedInterpolation<number>) => {
-      const scale = dragX.interpolate({
-        inputRange: [-110, -50],
-        outputRange: [1, 0.5],
+      const opacity = dragX.interpolate({
+        inputRange: [-100, -40],
+        outputRange: [1, 0],
         extrapolate: 'clamp',
       })
 
       return (
         <Pressable onPress={handleDelete} style={styles.deleteAction}>
-          <Animated.View style={{ transform: [{ scale }] }}>
-            <Ionicons name="trash-outline" size={22} color="#fff" />
+          <Animated.View style={{ opacity }}>
+            <Ionicons name="trash-outline" size={22} color={colors.red} />
           </Animated.View>
         </Pressable>
       )
     },
-    [handleDelete, styles.deleteAction],
+    [handleDelete, styles.deleteAction, colors.red],
   )
 
   return (
@@ -72,47 +74,58 @@ export default function ClippingCard({ clipping, onDeleted, user }: ClippingCard
       friction={2}
       overshootFriction={8}
     >
-      <View style={styles.card}>
+      <View style={styles.surface}>
         <Pressable
           onPress={handleExpand}
           disabled={isExpanded}
           style={({ pressed }) => [styles.container, pressed && styles.pressed]}
         >
-          {/* ---- Social header (optional) ---- */}
-          {user && (
-            <View style={styles.header}>
-              {user.avatarUrl ? (
-                <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
-              ) : (
-                <View style={[styles.avatar, styles.avatarFallback]}>
-                  <Text style={styles.avatarInitial}>
-                    {user.displayName.charAt(0).toUpperCase()}
-                  </Text>
-                </View>
-              )}
-              <Text style={styles.headerName}>{user.displayName}</Text>
-              <Text style={styles.headerAction}>saved a quote</Text>
-            </View>
-          )}
-
-          {/* ---- Blockquote-style quote ---- */}
-          <View style={styles.quoteBlock}>
-            <Text style={styles.quote} numberOfLines={isExpanded ? undefined : 6}>
-              {'\u201C'}{clipping.quote_text}{'\u201D'}
-            </Text>
+          {/* ── Header row: avatar + name on left, decorative " on right ── */}
+          <View style={styles.headerRow}>
+            {user && (
+              <View style={styles.identity}>
+                {user.avatarUrl ? (
+                  <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
+                ) : (
+                  <View style={[styles.avatar, styles.avatarFallback]}>
+                    <Text style={styles.avatarInitial}>
+                      {user.displayName.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+                <Text style={styles.displayName} numberOfLines={1}>
+                  {user.displayName}
+                </Text>
+              </View>
+            )}
+            <Text style={styles.openQuoteMark}>{'\u201C'}</Text>
           </View>
 
-          {/* ---- Compact source footer ---- */}
+          {/* ── Quote text ── */}
+          <Text
+            style={[styles.quote, { fontSize: scaled.body.fontSize, lineHeight: scaled.body.lineHeight }]}
+            numberOfLines={isExpanded ? undefined : 6}
+          >
+            {clipping.quote_text}
+          </Text>
+
+          {/* ── Source attribution ── */}
           <Pressable
             onPress={() => Linking.openURL(clipping.original_url)}
             hitSlop={8}
             style={({ pressed }) => [styles.attribution, pressed && styles.pressed]}
           >
-            <Text style={styles.movieTitle}>{clipping.movie_title.toUpperCase()}</Text>
-            <Text style={styles.separator}>{'\u00B7'}</Text>
-            <Text style={styles.author}>{clipping.author_name.toUpperCase()}</Text>
+            <Text style={styles.movieTitle} numberOfLines={1}>
+              {clipping.movie_title}
+            </Text>
+            <Text style={styles.authorMeta}>
+              BY {clipping.author_name.toUpperCase()}
+            </Text>
           </Pressable>
         </Pressable>
+
+        {/* ── Hairline divider ── */}
+        <View style={styles.divider} />
       </View>
     </Swipeable>
   )
@@ -120,24 +133,30 @@ export default function ClippingCard({ clipping, onDeleted, user }: ClippingCard
 
 function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
-    card: {
-      backgroundColor: colors.backgroundSecondary,
-      marginHorizontal: spacing.md,
-      marginVertical: spacing.sm,
-      borderRadius: 12,
+    surface: {
+      backgroundColor: colors.background,
     },
     container: {
-      padding: spacing.md,
+      paddingHorizontal: 20,
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.lg,
     },
     pressed: {
       opacity: 0.6,
     },
 
-    // ---- Social header ----
-    header: {
+    // ── Header row (avatar + name | quote mark) ──
+    headerRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: spacing.sm,
+      justifyContent: 'space-between',
+      marginBottom: spacing.xs,
+    },
+    identity: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+      marginRight: spacing.sm,
     },
     avatar: {
       width: 24,
@@ -151,30 +170,21 @@ function createStyles(colors: ThemeColors) {
     },
     avatarInitial: {
       fontFamily: fonts.body,
-      fontSize: 12,
+      fontSize: 10,
       color: colors.secondaryText,
     },
-    headerName: {
+    displayName: {
       fontFamily: fonts.bodyBold,
-      fontSize: typography.caption.fontSize,
-      lineHeight: typography.caption.lineHeight,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
       color: colors.foreground,
       marginLeft: spacing.sm,
     },
-    headerAction: {
-      fontFamily: fonts.body,
-      fontSize: typography.caption.fontSize,
-      lineHeight: typography.caption.lineHeight,
-      color: colors.secondaryText,
-      marginLeft: spacing.xs,
-    },
-
-    // ---- Blockquote ----
-    quoteBlock: {
-      borderLeftWidth: 2,
-      borderLeftColor: colors.border,
-      paddingLeft: 12,
-      marginBottom: spacing.md,
+    openQuoteMark: {
+      fontFamily: fonts.heading,
+      fontSize: 44,
+      lineHeight: 44,
+      color: colors.border,
     },
     quote: {
       fontFamily: fonts.body,
@@ -183,36 +193,37 @@ function createStyles(colors: ThemeColors) {
       color: colors.foreground,
     },
 
-    // ---- Source footer ----
+    // ── Attribution ──
     attribution: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
+      marginTop: spacing.md,
+      gap: 2,
     },
     movieTitle: {
+      fontFamily: fonts.heading,
+      fontSize: typography.callout.fontSize,
+      lineHeight: typography.callout.lineHeight,
+      color: colors.foreground,
+    },
+    authorMeta: {
       fontFamily: fonts.body,
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,
       color: colors.secondaryText,
     },
-    separator: {
-      fontFamily: fonts.body,
-      fontSize: typography.magazineMeta.fontSize,
-      color: colors.secondaryText,
+
+    // ── Divider ──
+    divider: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.border,
+      marginHorizontal: 20,
     },
-    author: {
-      fontFamily: fonts.body,
-      fontSize: typography.magazineMeta.fontSize,
-      lineHeight: typography.magazineMeta.lineHeight,
-      letterSpacing: typography.magazineMeta.letterSpacing,
-      color: colors.secondaryText,
-    },
+
+    // ── Swipe delete ──
     deleteAction: {
-      backgroundColor: '#D7263D',
       justifyContent: 'center',
       alignItems: 'center',
-      width: 110,
+      width: 100,
     },
   })
 }

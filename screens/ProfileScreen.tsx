@@ -163,7 +163,16 @@ export default function ProfileScreen() {
         <FlatList
           data={clippingsLoading ? [] : clippings}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <ClippingCard clipping={item} onDeleted={handleClippingDeleted} />}
+          renderItem={({ item }) => (
+            <ClippingCard
+              clipping={item}
+              onDeleted={handleClippingDeleted}
+              user={profile ? {
+                avatarUrl: profile.avatar_url ?? undefined,
+                displayName: profile.display_name ?? profile.username ?? 'You',
+              } : undefined}
+            />
+          )}
           ListHeaderComponent={listHeader}
           contentContainerStyle={{ paddingBottom: tabBarHeight + insets.bottom + 20 }}
           showsVerticalScrollIndicator={false}
