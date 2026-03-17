@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { Animated, LayoutAnimation, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Animated, Image, InteractionManager, LayoutAnimation, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import { Swipeable } from 'react-native-gesture-handler'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
@@ -11,9 +11,11 @@ import { fonts, spacing, typography, type ThemeColors } from '@/theme'
 interface ClippingCardProps {
   clipping: Clipping
   onDeleted: (id: string) => void
+  /** Optional social header — avatar URL + display name shown above the quote */
+  user?: { avatarUrl?: string; displayName: string }
 }
 
-export default function ClippingCard({ clipping, onDeleted }: ClippingCardProps) {
+export default function ClippingCard({ clipping, onDeleted, user }: ClippingCardProps) {
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
   const [isExpanded, setIsExpanded] = useState(false)
@@ -30,8 +32,11 @@ export default function ClippingCard({ clipping, onDeleted }: ClippingCardProps)
     try {
       await deleteClipping(clipping.id)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
-      onDeleted(clipping.id)
+      // Let the swipe spring settle before unmounting the row
+      InteractionManager.runAfterInteractions(() => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+        onDeleted(clipping.id)
+      })
     } catch (error) {
       console.error('Failed to delete clipping:', error)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
@@ -42,8 +47,8 @@ export default function ClippingCard({ clipping, onDeleted }: ClippingCardProps)
   const renderRightActions = useCallback(
     (_progress: Animated.AnimatedInterpolation<number>, dragX: Animated.AnimatedInterpolation<number>) => {
       const scale = dragX.interpolate({
-        inputRange: [-80, -40],
-        outputRange: [1, 0.6],
+        inputRange: [-110, -50],
+        outputRange: [1, 0.5],
         extrapolate: 'clamp',
       })
 
@@ -62,26 +67,50 @@ export default function ClippingCard({ clipping, onDeleted }: ClippingCardProps)
     <Swipeable
       ref={swipeableRef}
       renderRightActions={renderRightActions}
-      rightThreshold={80}
+      rightThreshold={60}
       overshootRight={false}
       friction={2}
+      overshootFriction={8}
     >
-      <View style={styles.cardBackground}>
+      <View style={styles.card}>
         <Pressable
           onPress={handleExpand}
           disabled={isExpanded}
           style={({ pressed }) => [styles.container, pressed && styles.pressed]}
         >
-          <Text style={styles.quote} numberOfLines={isExpanded ? undefined : 6}>
-            {'\u201C'}{clipping.quote_text}{'\u201D'}
-          </Text>
+          {/* ---- Social header (optional) ---- */}
+          {user && (
+            <View style={styles.header}>
+              {user.avatarUrl ? (
+                <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
+              ) : (
+                <View style={[styles.avatar, styles.avatarFallback]}>
+                  <Text style={styles.avatarInitial}>
+                    {user.displayName.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              <Text style={styles.headerName}>{user.displayName}</Text>
+              <Text style={styles.headerAction}>saved a quote</Text>
+            </View>
+          )}
+
+          {/* ---- Blockquote-style quote ---- */}
+          <View style={styles.quoteBlock}>
+            <Text style={styles.quote} numberOfLines={isExpanded ? undefined : 6}>
+              {'\u201C'}{clipping.quote_text}{'\u201D'}
+            </Text>
+          </View>
+
+          {/* ---- Compact source footer ---- */}
           <Pressable
             onPress={() => Linking.openURL(clipping.original_url)}
             hitSlop={8}
             style={({ pressed }) => [styles.attribution, pressed && styles.pressed]}
           >
             <Text style={styles.movieTitle}>{clipping.movie_title.toUpperCase()}</Text>
-            <Text style={styles.author}>BY {clipping.author_name.toUpperCase()}</Text>
+            <Text style={styles.separator}>{'\u00B7'}</Text>
+            <Text style={styles.author}>{clipping.author_name.toUpperCase()}</Text>
           </Pressable>
         </Pressable>
       </View>
@@ -91,34 +120,86 @@ export default function ClippingCard({ clipping, onDeleted }: ClippingCardProps)
 
 function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
-    cardBackground: {
-      backgroundColor: colors.background,
+    card: {
+      backgroundColor: colors.backgroundSecondary,
+      marginHorizontal: spacing.md,
+      marginVertical: spacing.sm,
+      borderRadius: 12,
     },
     container: {
-      paddingHorizontal: 20,
-      paddingVertical: spacing.xl,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.border,
+      padding: spacing.md,
     },
     pressed: {
       opacity: 0.6,
     },
-    quote: {
+
+    // ---- Social header ----
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
+    avatar: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+    },
+    avatarFallback: {
+      backgroundColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    avatarInitial: {
       fontFamily: fonts.body,
-      fontSize: typography.title2.fontSize,
-      lineHeight: typography.title2.lineHeight,
+      fontSize: 12,
+      color: colors.secondaryText,
+    },
+    headerName: {
+      fontFamily: fonts.bodyBold,
+      fontSize: typography.caption.fontSize,
+      lineHeight: typography.caption.lineHeight,
       color: colors.foreground,
+      marginLeft: spacing.sm,
+    },
+    headerAction: {
+      fontFamily: fonts.body,
+      fontSize: typography.caption.fontSize,
+      lineHeight: typography.caption.lineHeight,
+      color: colors.secondaryText,
+      marginLeft: spacing.xs,
+    },
+
+    // ---- Blockquote ----
+    quoteBlock: {
+      borderLeftWidth: 2,
+      borderLeftColor: colors.border,
+      paddingLeft: 12,
       marginBottom: spacing.md,
     },
+    quote: {
+      fontFamily: fonts.body,
+      fontSize: typography.title3.fontSize,
+      lineHeight: typography.title3.lineHeight,
+      color: colors.foreground,
+    },
+
+    // ---- Source footer ----
     attribution: {
-      gap: 4,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
     },
     movieTitle: {
       fontFamily: fonts.body,
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,
-      color: colors.foreground,
+      color: colors.secondaryText,
+    },
+    separator: {
+      fontFamily: fonts.body,
+      fontSize: typography.magazineMeta.fontSize,
+      color: colors.secondaryText,
     },
     author: {
       fontFamily: fonts.body,
@@ -131,7 +212,7 @@ function createStyles(colors: ThemeColors) {
       backgroundColor: '#D7263D',
       justifyContent: 'center',
       alignItems: 'center',
-      width: 80,
+      width: 110,
     },
   })
 }

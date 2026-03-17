@@ -8,16 +8,17 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated'
 import {
+  useFocusEffect,
   useNavigation,
   useRoute,
   type NavigationProp,
   type RouteProp,
 } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useTabBar } from '@/contexts/TabBarContext'
 import { fonts, spacing, typography, type ThemeColors } from '@/theme'
 import { saveClipping } from '@/services/clippings'
 import type { FeedStackParamList } from '@/navigation/types'
@@ -139,8 +140,16 @@ export default function ReviewReaderScreen() {
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const { colors } = useTheme()
   const insets = useSafeAreaInsets()
-  const tabBarHeight = useBottomTabBarHeight()
+  const { setTabBarVisible } = useTabBar()
   const styles = useMemo(() => createStyles(colors), [colors])
+
+  // Hide tab bar for immersive reading, restore on leave
+  useFocusEffect(
+    useCallback(() => {
+      setTabBarVisible(false)
+      return () => setTabBarVisible(true)
+    }, [setTabBarVisible]),
+  )
 
   const words = useMemo(() => parseWords(params.reviewText), [params.reviewText])
 
@@ -329,7 +338,7 @@ export default function ReviewReaderScreen() {
         scrollEnabled={scrollEnabled}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: tabBarHeight + 80 },
+          { paddingBottom: insets.bottom + 80 },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -381,7 +390,7 @@ export default function ReviewReaderScreen() {
       <Animated.View
         style={[
           styles.floatingBar,
-          { bottom: tabBarHeight + 12 },
+          { bottom: insets.bottom + 20 },
           floatingBarStyle,
         ]}
         pointerEvents={hasSelection ? 'auto' : 'none'}

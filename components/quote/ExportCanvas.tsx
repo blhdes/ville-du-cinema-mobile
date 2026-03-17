@@ -45,6 +45,7 @@ const ExportCanvas = forwardRef<ViewShot, ExportCanvasProps>(
       <ViewShot
         ref={ref}
         options={{ format: 'png', quality: 1 }}
+        // @ts-expect-error collapsable is a valid RN View prop but missing from ViewShot types
         collapsable={false}
         style={[
           styles.storyFrame,

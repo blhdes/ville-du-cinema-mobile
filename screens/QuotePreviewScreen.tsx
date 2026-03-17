@@ -7,13 +7,13 @@ import {
   View,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
-import { useRoute, type RouteProp } from '@react-navigation/native'
+import { useFocusEffect, useRoute, type RouteProp } from '@react-navigation/native'
 import type ViewShot from 'react-native-view-shot'
-import { File, Paths } from 'expo-file-system/next'
+import { File, Paths } from 'expo-file-system'
 import * as Sharing from 'expo-sharing'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useTabBar } from '@/contexts/TabBarContext'
 import { fonts, spacing, typography, type ThemeColors } from '@/theme'
 import ExportCanvas from '@/components/quote/ExportCanvas'
 import type { FeedStackParamList } from '@/navigation/types'
@@ -29,8 +29,16 @@ export default function QuotePreviewScreen() {
   const { params } = useRoute<RouteProps>()
   const { colors } = useTheme()
   const insets = useSafeAreaInsets()
-  const tabBarHeight = useBottomTabBarHeight()
+  const { setTabBarVisible } = useTabBar()
   const styles = useMemo(() => createStyles(colors), [colors])
+
+  // Hide tab bar for immersive export view, restore on leave
+  useFocusEffect(
+    useCallback(() => {
+      setTabBarVisible(false)
+      return () => setTabBarVisible(true)
+    }, [setTabBarVisible]),
+  )
   const viewShotRef = useRef<ViewShot>(null)
 
   const handleShare = useCallback(async () => {
@@ -39,7 +47,6 @@ export default function QuotePreviewScreen() {
       const tmpUri = await viewShotRef.current.capture()
 
       // Copy to cache with a clean file name.
-      // Using expo-file-system/next (File + Paths) — the SDK 54 API.
       const fileName = `Village_${sanitize(params.movieTitle)}.png`
       const src = new File(tmpUri)
       const dest = new File(Paths.cache, fileName)
@@ -73,7 +80,7 @@ export default function QuotePreviewScreen() {
       </View>
 
       {/* Floating share pill */}
-      <View style={[styles.pillWrapper, { paddingBottom: tabBarHeight + spacing.md }]}>
+      <View style={[styles.pillWrapper, { paddingBottom: insets.bottom + spacing.md }]}>
         <Pressable
           onPress={handleShare}
           style={({ pressed }) => [
