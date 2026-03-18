@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native'
 import * as SplashScreen from 'expo-splash-screen'
@@ -13,6 +13,18 @@ export default function RootNavigator() {
   const { isGuest, isLoading: isGuestLoading } = useGuestMode()
   const { resolved, colors } = useTheme()
   const splashHidden = useRef(false)
+
+  // Safety net: if neither the auth screen nor FeedScreen calls hideAsync within
+  // 3 seconds (e.g. FeedScreen errors and never mounts), force the splash away.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!splashHidden.current) {
+        splashHidden.current = true
+        SplashScreen.hideAsync()
+      }
+    }, 3000)
+    return () => clearTimeout(timer)
+  }, [])
 
   // Hide splash once the auth screen paints (logged-in flow is handled by FeedScreen)
   const onAuthLayout = useCallback(() => {
