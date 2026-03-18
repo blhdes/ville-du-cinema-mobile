@@ -14,38 +14,85 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
+import { supabase } from '@/lib/supabase/client'
 import { useProfile } from '@/contexts/ProfileContext'
 import { useTheme } from '@/contexts/ThemeContext'
-import { fonts, spacing, typography, type ThemeColors } from '@/theme'
+import { fonts, spacing, type ThemeColors } from '@/theme'
+import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import Spinner from '@/components/ui/Spinner'
 
 const AVATAR_SIZE = 96
+const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/
+
+type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
 
 export default function EditProfileScreen() {
   const insets = useSafeAreaInsets()
   const navigation = useNavigation()
   const { colors } = useTheme()
+  const typography = useTypography()
   const { profile, updateProfile, uploadAvatar, refetch } = useProfile()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '')
+  const [username, setUsername] = useState(profile?.username ?? '')
   const [bio, setBio] = useState(profile?.bio ?? '')
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>('idle')
 
-  // If profile was still loading at mount, fill the fields once it arrives
+  // Fill fields once profile arrives if it wasn't ready at mount
   const initialized = useRef(!!profile)
   useEffect(() => {
     if (profile && !initialized.current) {
       setDisplayName(profile.display_name ?? '')
+      setUsername(profile.username ?? '')
       setBio(profile.bio ?? '')
       initialized.current = true
     }
   }, [profile])
 
-  // The avatar to display — prefer the locally-picked image, then the existing one
+  // Debounced username uniqueness check
+  useEffect(() => {
+    const trimmed = username.trim().toLowerCase()
+
+    // Unchanged from saved value — skip
+    if (trimmed === (profile?.username ?? '')) {
+      setUsernameStatus('idle')
+      return
+    }
+
+    // Cleared — allow
+    if (!trimmed) {
+      setUsernameStatus('idle')
+      return
+    }
+
+    // Invalid characters — instant feedback, no network call
+    if (!USERNAME_REGEX.test(trimmed)) {
+      setUsernameStatus('invalid')
+      return
+    }
+
+    setUsernameStatus('checking')
+    let cancelled = false
+
+    const timer = setTimeout(async () => {
+      const { data } = await supabase
+        .from('user_data')
+        .select('user_id')
+        .eq('username', trimmed)
+        .neq('user_id', profile?.user_id ?? '')
+        .maybeSingle()
+
+      if (!cancelled) setUsernameStatus(data ? 'taken' : 'available')
+    }, 400)
+
+    return () => { clearTimeout(timer); cancelled = true }
+  }, [username, profile?.username, profile?.user_id])
+
   const avatarUri = selectedImageUri ?? profile?.avatar_url ?? null
 
   const handlePickImage = useCallback(async () => {
@@ -55,29 +102,29 @@ export default function EditProfileScreen() {
       aspect: [1, 1],
       quality: 0.5,
     })
-
     if (result.canceled) return
-
     setSelectedImageUri(result.assets[0].uri)
   }, [])
 
+  const isSaveDisabled = isSaving
+    || usernameStatus === 'taken'
+    || usernameStatus === 'invalid'
+    || usernameStatus === 'checking'
+
   const handleSave = useCallback(async () => {
+    if (isSaveDisabled) return
     setIsSaving(true)
     setError(null)
 
     try {
-      // Upload avatar if a new image was picked (hook reads file JIT)
-      if (selectedImageUri) {
-        await uploadAvatar(selectedImageUri)
-      }
+      if (selectedImageUri) await uploadAvatar(selectedImageUri)
 
-      // Update text fields in user_data
       await updateProfile({
         display_name: displayName.trim() || undefined,
+        username: username.trim().toLowerCase() || null,
         bio: bio.trim(),
       })
 
-      // Refetch so the profile context is fresh everywhere
       await refetch()
       navigation.goBack()
     } catch (err) {
@@ -87,30 +134,29 @@ export default function EditProfileScreen() {
     } finally {
       setIsSaving(false)
     }
-  }, [selectedImageUri, displayName, bio, uploadAvatar, updateProfile, refetch, navigation])
+  }, [isSaveDisabled, selectedImageUri, displayName, username, bio, uploadAvatar, updateProfile, refetch, navigation])
 
-  // Push Cancel / Save into the native header so there's no custom title bar
   useLayoutEffect(() => {
     navigation.setOptions({
       headerLeft: () => (
         <Pressable onPress={() => navigation.goBack()} disabled={isSaving} hitSlop={8}>
-          <Ionicons
-            name="close"
-            size={32}
-            style={isSaving ? { opacity: 0.3 } : undefined}
-          />
+          <Ionicons name="close" size={32} style={isSaving ? { opacity: 0.3 } : undefined} />
         </Pressable>
       ),
       headerRight: () =>
         isSaving ? (
           <Spinner size={16} />
         ) : (
-          <Pressable onPress={handleSave} hitSlop={8}>
-            <Ionicons name="checkmark" size={32} />
+          <Pressable onPress={handleSave} hitSlop={8} disabled={isSaveDisabled}>
+            <Ionicons
+              name="checkmark"
+              size={32}
+              style={isSaveDisabled ? { opacity: 0.3 } : undefined}
+            />
           </Pressable>
         ),
     })
-  }, [navigation, isSaving, handleSave])
+  }, [navigation, isSaving, isSaveDisabled, handleSave])
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
@@ -124,7 +170,7 @@ export default function EditProfileScreen() {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Avatar section */}
+          {/* Avatar */}
           <View style={[styles.avatarSection, isSaving && styles.disabledSection]}>
             <Pressable onPress={handlePickImage} disabled={isSaving}>
               {avatarUri ? (
@@ -142,16 +188,16 @@ export default function EditProfileScreen() {
             </Pressable>
           </View>
 
-          {/* Form fields */}
+          {/* Display Name — free text, spaces allowed */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>DISPLAY NAME</Text>
+            <Text style={styles.label}>Display name</Text>
             <TextInput
               style={styles.input}
               value={displayName}
               onChangeText={setDisplayName}
               placeholder="Your name"
               placeholderTextColor={colors.secondaryText}
-              autoCapitalize="words"
+              autoCapitalize="none"
               autoCorrect={false}
               returnKeyType="next"
               maxLength={50}
@@ -159,8 +205,38 @@ export default function EditProfileScreen() {
             />
           </View>
 
+          {/* Username — letters, numbers, _ only, must be unique */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>BIO</Text>
+            <Text style={styles.label}>Username</Text>
+            <TextInput
+              style={styles.input}
+              value={username}
+              onChangeText={(text) => setUsername(text.replace(/[^a-zA-Z0-9_]/g, ''))}
+              placeholder="your_handle"
+              placeholderTextColor={colors.secondaryText}
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="next"
+              maxLength={20}
+              editable={!isSaving}
+            />
+            {usernameStatus !== 'idle' && (
+              <Text style={[
+                styles.usernameHint,
+                usernameStatus === 'available' && { color: colors.teal },
+                (usernameStatus === 'taken' || usernameStatus === 'invalid') && { color: colors.red },
+              ]}>
+                {usernameStatus === 'checking' && 'Checking…'}
+                {usernameStatus === 'available' && 'Available'}
+                {usernameStatus === 'taken' && 'Already taken'}
+                {usernameStatus === 'invalid' && 'Letters, numbers and _ only'}
+              </Text>
+            )}
+          </View>
+
+          {/* Bio */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Bio</Text>
             <TextInput
               style={[styles.input, styles.bioInput]}
               value={bio}
@@ -180,11 +256,9 @@ export default function EditProfileScreen() {
   )
 }
 
-function createStyles(colors: ThemeColors) {
+function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({
-    flex: {
-      flex: 1,
-    },
+    flex: { flex: 1 },
     container: {
       flex: 1,
       backgroundColor: colors.background,
@@ -243,6 +317,12 @@ function createStyles(colors: ThemeColors) {
       lineHeight: typography.body.lineHeight,
       color: colors.foreground,
       backgroundColor: 'transparent',
+    },
+    usernameHint: {
+      fontFamily: fonts.body,
+      fontSize: typography.caption.fontSize,
+      color: colors.secondaryText,
+      marginTop: spacing.xs,
     },
     bioInput: {
       minHeight: 80,

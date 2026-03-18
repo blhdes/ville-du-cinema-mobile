@@ -125,7 +125,7 @@ export const typography = {
 
   // ---- Editorial / magazine presets ----
   magazineTitle: { fontSize: 28, lineHeight: 34 },
-  magazineMeta: { fontSize: 11, lineHeight: 16, letterSpacing: 1.5, textTransform: 'uppercase' as const },
+  magazineMeta: { fontSize: 13, lineHeight: 18, letterSpacing: 0.4 },
   magazineBody: { fontSize: 16, lineHeight: 24 },
 } as const
 
@@ -178,9 +178,8 @@ export const common = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  /** Section header style */
+  /** @deprecated no longer used — uppercase removed from design system */
   uppercase: {
-    textTransform: 'uppercase',
     letterSpacing: 1,
   },
 

@@ -7,7 +7,8 @@ import * as Haptics from 'expo-haptics'
 import type { Clipping } from '@/types/database'
 import { deleteClipping } from '@/services/clippings'
 import { useTheme } from '@/contexts/ThemeContext'
-import { fonts, spacing, typography, getScaledTypography, type ThemeColors } from '@/theme'
+import { fonts, spacing, getScaledTypography, type ThemeColors } from '@/theme'
+import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 
 interface ClippingCardProps {
@@ -21,9 +22,10 @@ interface ClippingCardProps {
 
 function ClippingCard({ clipping, onDeleted, user, readOnly = false }: ClippingCardProps) {
   const { colors } = useTheme()
+  const typography = useTypography()
   const { preferences } = useDisplayPreferences()
   const scaled = useMemo(() => getScaledTypography(preferences.fontMultiplier), [preferences.fontMultiplier])
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
   const [isExpanded, setIsExpanded] = useState(false)
   const swipeableRef = useRef<Swipeable>(null)
 
@@ -114,7 +116,7 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false }: ClippingC
               {clipping.movie_title}
             </Text>
             <Text style={styles.authorMeta}>
-              BY {clipping.author_name.toUpperCase()}
+              {clipping.author_name}
             </Text>
           </Pressable>
         </Pressable>
@@ -142,7 +144,7 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false }: ClippingC
 
 export default memo(ClippingCard)
 
-function createStyles(colors: ThemeColors) {
+function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({
     surface: {
       backgroundColor: colors.background,
@@ -170,9 +172,9 @@ function createStyles(colors: ThemeColors) {
       marginRight: spacing.sm,
     },
     avatar: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
+      width: 26,
+      height: 26,
+      borderRadius: 13,
     },
     avatarFallback: {
       backgroundColor: colors.border,

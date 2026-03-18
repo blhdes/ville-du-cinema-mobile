@@ -27,7 +27,6 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: fonts.heading,
     fontSize: 14,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
+    letterSpacing: 0.4,
   },
 })

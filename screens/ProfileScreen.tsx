@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
 import {
-  ActivityIndicator,
   FlatList,
   LayoutAnimation,
   Pressable,
@@ -18,7 +17,8 @@ import { useUser } from '@/hooks/useUser'
 import { useProfile } from '@/contexts/ProfileContext'
 import { useUserLists } from '@/hooks/useUserLists'
 import { useTheme } from '@/contexts/ThemeContext'
-import { fonts, spacing, typography, type ThemeColors } from '@/theme'
+import { fonts, spacing, type ThemeColors } from '@/theme'
+import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import { getUserClippings } from '@/services/clippings'
 import type { Clipping } from '@/types/database'
 import ErrorBanner from '@/components/ui/ErrorBanner'
@@ -41,7 +41,8 @@ export default function ProfileScreen() {
   const { profile, isLoading, error } = useProfile()
   const { users: followedUsers, villageUsers } = useUserLists()
   const { colors } = useTheme()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const typography = useTypography()
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
   // Following accordion state
   const [followingExpanded, setFollowingExpanded] = useState(false)
@@ -97,9 +98,11 @@ export default function ProfileScreen() {
         {/* Following accordion */}
         <View style={styles.divider} />
         <Pressable onPress={toggleFollowing} style={styles.accordionToggle}>
-          <Text style={styles.accordionLabel}>
-            VILLAGE ({followedUsers.length + villageUsers.length})
-          </Text>
+          <Text style={styles.accordionLabel}>Following</Text>
+          <View style={styles.countPill}>
+            <Text style={styles.countPillText}>{followedUsers.length + villageUsers.length}</Text>
+          </View>
+          <View style={{ flex: 1 }} />
           <Ionicons
             name={followingExpanded ? 'chevron-up' : 'chevron-down'}
             size={16}
@@ -114,21 +117,15 @@ export default function ProfileScreen() {
         <View style={styles.divider} />
 
         {/* Clippings section label */}
-        <Text style={styles.sectionLabel}>CLIPPINGS</Text>
+        <Text style={styles.sectionLabel}>Clippings</Text>
 
-        {/* Loading / error / empty states */}
-        {clippingsLoading && (
-          <ActivityIndicator
-            color={colors.secondaryText}
-            style={styles.clippingsLoading}
-          />
-        )}
-        {clippingsError && !clippingsLoading && (
+        {/* Error / empty states */}
+        {clippingsError && (
           <Text style={styles.emptyText}>
             Something went wrong loading your clippings.
           </Text>
         )}
-        {!clippingsLoading && !clippingsError && clippings.length === 0 && (
+        {!clippingsError && clippings.length === 0 && (
           <View style={styles.emptyContainer}>
             <Ionicons name="bookmark-outline" size={32} color={colors.border} />
             <Text style={styles.emptyText}>
@@ -173,11 +170,11 @@ export default function ProfileScreen() {
 
       {error && <ErrorBanner message={error} />}
 
-      {isLoading ? (
+      {isLoading || clippingsLoading ? (
         <ProfileSkeleton variant="self" />
       ) : (
         <FlatList
-          data={clippingsLoading ? [] : clippings}
+          data={clippings}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           ListHeaderComponent={listHeader}
@@ -192,7 +189,7 @@ export default function ProfileScreen() {
   )
 }
 
-function createStyles(colors: ThemeColors) {
+function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -215,7 +212,7 @@ function createStyles(colors: ThemeColors) {
     accordionToggle: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
+      gap: 6,
       paddingHorizontal: HORIZONTAL_PAD,
       paddingVertical: spacing.md,
     },
@@ -224,6 +221,17 @@ function createStyles(colors: ThemeColors) {
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,
+      color: colors.secondaryText,
+    },
+    countPill: {
+      backgroundColor: colors.backgroundSecondary,
+      borderRadius: 10,
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+    },
+    countPillText: {
+      fontFamily: fonts.bodyBold,
+      fontSize: typography.caption.fontSize,
       color: colors.secondaryText,
     },
     followingSection: {
@@ -238,9 +246,6 @@ function createStyles(colors: ThemeColors) {
       paddingHorizontal: HORIZONTAL_PAD,
       paddingTop: spacing.lg,
       paddingBottom: spacing.sm,
-    },
-    clippingsLoading: {
-      paddingVertical: spacing.xxl,
     },
     emptyContainer: {
       alignItems: 'center',

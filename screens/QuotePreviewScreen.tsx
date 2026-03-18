@@ -13,7 +13,8 @@ import { File, Paths } from 'expo-file-system'
 import * as Sharing from 'expo-sharing'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '@/contexts/ThemeContext'
-import { fonts, spacing, typography, type ThemeColors } from '@/theme'
+import { fonts, spacing, type ThemeColors } from '@/theme'
+import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import ExportCanvas from '@/components/quote/ExportCanvas'
 import type { FeedStackParamList } from '@/navigation/types'
 
@@ -27,8 +28,9 @@ function sanitize(text: string): string {
 export default function QuotePreviewScreen() {
   const { params } = useRoute<RouteProps>()
   const { colors } = useTheme()
+  const typography = useTypography()
   const insets = useSafeAreaInsets()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
   const viewShotRef = useRef<ViewShot>(null)
 
   const handleShare = useCallback(async () => {
@@ -87,7 +89,7 @@ export default function QuotePreviewScreen() {
   )
 }
 
-function createStyles(colors: ThemeColors) {
+function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({
     container: {
       flex: 1,

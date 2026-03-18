@@ -6,7 +6,8 @@ import type { FeedStackParamList } from '@/navigation/types'
 import type { Review } from '@/types/database'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { useTheme } from '@/contexts/ThemeContext'
-import { fonts, spacing, typography, type ThemeColors } from '@/theme'
+import { fonts, spacing, type ThemeColors } from '@/theme'
+import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import EyeIcon from '@/components/ui/EyeIcon'
 
 interface WatchNotificationProps {
@@ -19,7 +20,8 @@ function WatchNotification({ review, hideAuthor = false }: WatchNotificationProp
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const [titlePressed, setTitlePressed] = useState(false)
   const { colors } = useTheme()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const typography = useTypography()
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
   return (
     <Pressable
@@ -62,7 +64,7 @@ function WatchNotification({ review, hideAuthor = false }: WatchNotificationProp
 
 export default memo(WatchNotification)
 
-function createStyles(colors: ThemeColors) {
+function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({
     container: {
       flexDirection: 'row',
@@ -91,7 +93,6 @@ function createStyles(colors: ThemeColors) {
     },
     watchedLabel: {
       fontFamily: fonts.body,
-      textTransform: 'uppercase',
       fontSize: typography.magazineMeta.fontSize,
       letterSpacing: typography.magazineMeta.letterSpacing,
       color: colors.secondaryText,

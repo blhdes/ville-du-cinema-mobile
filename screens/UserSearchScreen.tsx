@@ -18,10 +18,11 @@ import { useUserLists } from '@/hooks/useUserLists'
 import type { FeedStackParamList } from '@/navigation/types'
 import type { FollowedVillageUser } from '@/types/database'
 import { useTheme } from '@/contexts/ThemeContext'
-import { fonts, spacing, typography, type ThemeColors } from '@/theme'
+import { fonts, spacing, type ThemeColors } from '@/theme'
+import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import Spinner from '@/components/ui/Spinner'
-import LogoIcon from '@/components/ui/LogoIcon'
 import LetterboxdDots from '@/components/ui/LetterboxdDots'
+import LogoIcon from '@/components/ui/LogoIcon'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -56,7 +57,8 @@ function VillageResultRow({
 }) {
   const navigation = useNavigation<SearchNav>()
   const { colors } = useTheme()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const typography = useTypography()
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
   const [pending, setPending] = useState(false)
   const initial = (result.display_name || result.username || '?')[0].toUpperCase()
 
@@ -93,10 +95,7 @@ function VillageResultRow({
           <Text style={styles.resultDisplayName} numberOfLines={1}>
             {result.display_name || result.username}
           </Text>
-          <View style={styles.handleRow}>
-            <LogoIcon size={11} fill={colors.secondaryText} />
-            <Text style={styles.handle}>@{result.username?.toUpperCase()}</Text>
-          </View>
+          <Text style={styles.handle}>@{result.username}</Text>
         </View>
       </Pressable>
 
@@ -107,7 +106,7 @@ function VillageResultRow({
         style={({ pressed }) => pressed && { opacity: 0.6 }}
       >
         <Text style={isFollowing ? styles.followingText : styles.followText}>
-          {isFollowing ? 'FOLLOWING' : 'FOLLOW'}
+          {isFollowing ? 'Following' : 'Follow'}
         </Text>
       </Pressable>
     </View>
@@ -124,7 +123,8 @@ export default function UserSearchScreen() {
   const { villageUserIds, addVillageUser, removeVillageUser } = useUserLists()
   const inputRef = useRef<TextInput>(null)
   const { colors } = useTheme()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const typography = useTypography()
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
   const [platform, setPlatform] = useState<Platform>('village')
   const [query, setQuery] = useState('')
@@ -169,10 +169,11 @@ export default function UserSearchScreen() {
 
     const timer = setTimeout(async () => {
       try {
+        const term = query.trim()
         const baseQuery = supabase
           .from('user_data')
           .select('user_id, username, display_name, avatar_url')
-          .ilike('username', `%${query.trim()}%`)
+          .or(`username.ilike.%${term}%,display_name.ilike.%${term}%`)
           .not('username', 'is', null)
           .limit(15)
 
@@ -339,7 +340,7 @@ export default function UserSearchScreen() {
 // Styles
 // ---------------------------------------------------------------------------
 
-function createStyles(colors: ThemeColors) {
+function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -410,7 +411,6 @@ function createStyles(colors: ThemeColors) {
       fontFamily: fonts.body,
       fontSize: typography.magazineMeta.fontSize,
       letterSpacing: typography.magazineMeta.letterSpacing,
-      textTransform: 'uppercase',
       color: colors.red,
       marginTop: spacing.xs,
     },
@@ -465,13 +465,8 @@ function createStyles(colors: ThemeColors) {
       lineHeight: typography.body.lineHeight,
       color: colors.foreground,
     },
-    handleRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      marginTop: 2,
-    },
     handle: {
+      marginTop: 2,
       fontFamily: fonts.body,
       fontSize: typography.magazineMeta.fontSize,
       letterSpacing: typography.magazineMeta.letterSpacing,

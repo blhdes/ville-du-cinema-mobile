@@ -11,7 +11,8 @@ import UserSearchScreen from '@/screens/UserSearchScreen'
 import ReviewReaderScreen from '@/screens/ReviewReaderScreen'
 import QuotePreviewScreen from '@/screens/QuotePreviewScreen'
 import type { ProfileStackParamList } from '@/navigation/types'
-import { fonts, typography } from '@/theme'
+import { fonts } from '@/theme'
+import { useTypography } from '@/hooks/useTypography'
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>()
 
@@ -27,6 +28,7 @@ function BackButton() {
 
 export default function ProfileStackNavigator() {
   const { colors } = useTheme()
+  const typography = useTypography()
 
   return (
     <Stack.Navigator

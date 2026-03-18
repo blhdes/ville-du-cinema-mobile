@@ -3,7 +3,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import Slider from '@react-native-community/slider'
 import Toggle from '@/components/ui/Toggle'
 import { useTheme, type ThemePreference } from '@/contexts/ThemeContext'
-import { fonts, spacing, typography, type ThemeColors } from '@/theme'
+import { fonts, spacing, type ThemeColors } from '@/theme'
+import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 
 interface DisplaySettingsProps {
   showWatchNotifications: boolean
@@ -35,8 +36,9 @@ export default function DisplaySettings({
   disableRemote,
 }: DisplaySettingsProps) {
   const { preference, setPreference, colors } = useTheme()
+  const typography = useTypography()
   const [localFontSize, setLocalFontSize] = useState(fontMultiplier)
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
   return (
     <View style={styles.card}>
@@ -130,7 +132,7 @@ export default function DisplaySettings({
   )
 }
 
-function createStyles(colors: ThemeColors) {
+function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({
     card: {
       overflow: 'hidden',
@@ -164,7 +166,6 @@ function createStyles(colors: ThemeColors) {
       fontFamily: fonts.body,
       fontSize: typography.magazineMeta.fontSize,
       color: colors.secondaryText,
-      textTransform: 'uppercase',
       letterSpacing: typography.magazineMeta.letterSpacing,
       marginTop: 2,
     },

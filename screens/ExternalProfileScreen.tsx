@@ -22,7 +22,8 @@ import { useAvatarUrl } from '@/services/avatarCache'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { useUserLists } from '@/hooks/useUserLists'
 import { useTheme } from '@/contexts/ThemeContext'
-import { fonts, spacing, typography, type ThemeColors } from '@/theme'
+import { fonts, spacing, type ThemeColors } from '@/theme'
+import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import Spinner from '@/components/ui/Spinner'
 import ExternalProfileHeader from '@/components/profile/ExternalProfileHeader'
@@ -43,7 +44,8 @@ export default function ExternalProfileScreen() {
   const { usernames, addUser, removeUser } = useUserLists()
   const isFollowing = usernames.includes(username)
   const { colors } = useTheme()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const typography = useTypography()
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
   const [reviews, setReviews] = useState<Review[]>([])
   const [meta, setMeta] = useState<ExternalProfileMeta | null>(null)
@@ -203,7 +205,7 @@ export default function ExternalProfileScreen() {
   )
 }
 
-function createStyles(colors: ThemeColors) {
+function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({
     container: {
       flex: 1,

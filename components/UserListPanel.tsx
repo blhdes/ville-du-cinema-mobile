@@ -8,16 +8,18 @@ import {
   View,
 } from 'react-native'
 import * as Haptics from 'expo-haptics'
+import { Image } from 'expo-image'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { DISCOVERY_USERS } from '@/constants/discoveryUsers'
 import { useTheme } from '@/contexts/ThemeContext'
-import { fonts, spacing, typography, type ThemeColors } from '@/theme'
+import { fonts, spacing, type ThemeColors } from '@/theme'
+import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import type { FeedStackParamList } from '@/navigation/types'
 import type { FollowedUser, FollowedVillageUser } from '@/types/database'
+import { useAvatarUrl } from '@/services/avatarCache'
 import LetterboxdDots from '@/components/ui/LetterboxdDots'
-import LogoIcon from '@/components/ui/LogoIcon'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -42,6 +44,97 @@ interface UserListPanelProps {
   onRemoveVillageUser: (userId: string) => Promise<void>
 }
 
+const AVATAR_SIZE = 26
+
+// ---------------------------------------------------------------------------
+// Row sub-components (hooks require components, not callbacks)
+// ---------------------------------------------------------------------------
+
+function VillageUserRow({
+  user,
+  onUnfollow,
+}: {
+  user: FollowedVillageUser
+  onUnfollow: () => void
+}) {
+  const { colors } = useTheme()
+  const typography = useTypography()
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
+  const initial = (user.display_name || user.username || '?')[0].toUpperCase()
+  const name = user.display_name || user.username || 'Village User'
+
+  return (
+    <View style={styles.userRow}>
+      <View style={styles.userInfo}>
+        {user.avatar_url ? (
+          <Image source={user.avatar_url} style={styles.avatar} cachePolicy="memory-disk" />
+        ) : (
+          <View style={[styles.avatar, styles.avatarPlaceholder]}>
+            <Text style={[styles.avatarInitial, { color: colors.secondaryText }]}>{initial}</Text>
+          </View>
+        )}
+        <Text style={styles.username} numberOfLines={1}>
+          {name}
+          {user.username ? (
+            <Text style={styles.handle}>{' '}@{user.username}</Text>
+          ) : null}
+        </Text>
+      </View>
+      <Pressable
+        onPress={onUnfollow}
+        hitSlop={8}
+        style={({ pressed }) => [styles.removeButton, pressed && { opacity: 0.6 }]}
+      >
+        <Text style={styles.removeText}>Unfollow</Text>
+      </Pressable>
+    </View>
+  )
+}
+
+function LetterboxdUserRow({
+  user,
+  onUnfollow,
+  onPress,
+}: {
+  user: FollowedUser
+  onUnfollow: () => void
+  onPress: () => void
+}) {
+  const { colors } = useTheme()
+  const typography = useTypography()
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
+  const avatarUrl = useAvatarUrl(user.username)
+  const initial = (user.display_name || user.username || '?')[0].toUpperCase()
+
+  return (
+    <View style={styles.userRow}>
+      <Pressable
+        style={({ pressed }) => [styles.userInfo, pressed && { opacity: 0.6 }]}
+        onPress={onPress}
+      >
+        {avatarUrl ? (
+          <Image source={avatarUrl} style={styles.avatar} cachePolicy="memory-disk" />
+        ) : (
+          <View style={[styles.avatar, styles.avatarPlaceholder]}>
+            <Text style={[styles.avatarInitial, { color: colors.secondaryText }]}>{initial}</Text>
+          </View>
+        )}
+        <Text style={styles.username} numberOfLines={1}>
+          {user.display_name || user.username}
+          <Text style={styles.handle}>{' '}@{user.username}</Text>
+        </Text>
+      </Pressable>
+      <Pressable
+        onPress={onUnfollow}
+        hitSlop={8}
+        style={({ pressed }) => [styles.removeButton, pressed && { opacity: 0.6 }]}
+      >
+        <Text style={styles.removeText}>Unfollow</Text>
+      </Pressable>
+    </View>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -58,7 +151,8 @@ export default function UserListPanel({
   const insets = useSafeAreaInsets()
   const bottomPadding = insets.bottom + 49 + 20
   const { colors } = useTheme()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const typography = useTypography()
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
   const [input, setInput] = useState('')
   const [addError, setAddError] = useState<string | null>(null)
@@ -108,20 +202,17 @@ export default function UserListPanel({
   // ---------------------------------------------------------------------------
 
   const renderSectionHeader = useCallback(({ section }: { section: DrawerSection }) => {
-    const isVillage = section.platform === 'village'
-    const count = isVillage ? villageUsers.length : users.length
+    if (section.platform === 'village') return null
     return (
       <View style={styles.sectionHeader}>
-        {isVillage
-          ? <LogoIcon size={32} fill={colors.secondaryText} />
-          : <LetterboxdDots size={22} />
-        }
-        <Text style={styles.sectionLabel}>
-          {isVillage ? 'VILLAGE' : 'LETTERBOXD'} ({count})
-        </Text>
+        <LetterboxdDots size={22} />
+        <Text style={styles.sectionLabel}>Letterboxd</Text>
+        <View style={styles.countPill}>
+          <Text style={styles.countPillText}>{users.length}</Text>
+        </View>
       </View>
     )
-  }, [villageUsers.length, users.length, styles, colors])
+  }, [users.length, styles])
 
   const renderItem = useCallback(({ item }: { item: DrawerItem }) => {
     if (item.kind === 'empty') {
@@ -129,49 +220,28 @@ export default function UserListPanel({
     }
 
     if (item.kind === 'village') {
-      const { user } = item
       return (
-        <View style={styles.userRow}>
-          <Text style={styles.username}>
-            {user.display_name || user.username || 'Village User'}
-          </Text>
-          <Pressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-              onRemoveVillageUser(user.user_id)
-            }}
-            hitSlop={8}
-            style={({ pressed }) => [styles.removeButton, pressed && { opacity: 0.6 }]}
-          >
-            <Text style={styles.removeText}>UNFOLLOW</Text>
-          </Pressable>
-        </View>
+        <VillageUserRow
+          user={item.user}
+          onUnfollow={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+            onRemoveVillageUser(item.user.user_id)
+          }}
+        />
       )
     }
 
-    // kind === 'letterboxd'
-    const { user } = item
     return (
-      <View style={styles.userRow}>
-        <Pressable
-          onPress={() => navigation.navigate('ExternalProfile', { username: user.username })}
-          style={({ pressed }) => pressed && { opacity: 0.6 }}
-        >
-          <Text style={styles.username}>@{user.username}</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-            onRemove(user.username)
-          }}
-          hitSlop={8}
-          style={({ pressed }) => [styles.removeButton, pressed && { opacity: 0.6 }]}
-        >
-          <Text style={styles.removeText}>UNFOLLOW</Text>
-        </Pressable>
-      </View>
+      <LetterboxdUserRow
+        user={item.user}
+        onPress={() => navigation.navigate('ExternalProfile', { username: item.user.username })}
+        onUnfollow={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+          onRemove(item.user.username)
+        }}
+      />
     )
-  }, [styles, colors, navigation, onRemove, onRemoveVillageUser])
+  }, [styles, navigation, onRemove, onRemoveVillageUser])
 
   // ---------------------------------------------------------------------------
   // Header / Footer
@@ -201,7 +271,7 @@ export default function UserListPanel({
           onPress={handleAdd}
           disabled={isAdding}
         >
-          <Text style={styles.addButtonText}>ADD</Text>
+          <Text style={styles.addButtonText}>Add</Text>
         </Pressable>
       </View>
 
@@ -215,7 +285,7 @@ export default function UserListPanel({
 
   const listFooter = suggestions.length > 0 ? (
     <View style={styles.discovery}>
-      <Text style={styles.discoverLabel}>Discover Letterboxd</Text>
+      <Text style={styles.discoverLabel}>Discover Critics</Text>
       <View>
         {suggestions.map((username) => (
           <Pressable
@@ -227,7 +297,7 @@ export default function UserListPanel({
             }}
           >
             <Text style={styles.suggestionText}>@{username}</Text>
-            <Text style={styles.suggestionAction}>ADD</Text>
+            <Text style={styles.suggestionAction}>Add</Text>
           </Pressable>
         ))}
       </View>
@@ -259,7 +329,7 @@ export default function UserListPanel({
 // Styles
 // ---------------------------------------------------------------------------
 
-function createStyles(colors: ThemeColors) {
+function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({
     content: {
       paddingHorizontal: 20,
@@ -300,7 +370,6 @@ function createStyles(colors: ThemeColors) {
       fontFamily: fonts.body,
       fontSize: typography.magazineMeta.fontSize,
       letterSpacing: typography.magazineMeta.letterSpacing,
-      textTransform: 'uppercase',
       color: colors.red,
       marginTop: spacing.xs,
     },
@@ -309,7 +378,6 @@ function createStyles(colors: ThemeColors) {
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,
-      textTransform: 'uppercase',
       color: colors.secondaryText,
       marginTop: spacing.sm,
       marginBottom: spacing.sm,
@@ -326,23 +394,61 @@ function createStyles(colors: ThemeColors) {
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       color: colors.secondaryText,
-      textTransform: 'uppercase',
-      letterSpacing: 1.5,
+      letterSpacing: typography.magazineMeta.letterSpacing,
+    },
+    countPill: {
+      backgroundColor: colors.backgroundSecondary,
+      borderRadius: 10,
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+      marginLeft: 2,
+    },
+    countPillText: {
+      fontFamily: fonts.bodyBold,
+      fontSize: typography.caption.fontSize,
+      color: colors.secondaryText,
     },
     userRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingVertical: spacing.md,
-      paddingHorizontal: 20,
+      paddingVertical: spacing.sm,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
+    },
+    userInfo: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      marginRight: spacing.sm,
+    },
+    avatar: {
+      width: AVATAR_SIZE,
+      height: AVATAR_SIZE,
+      borderRadius: AVATAR_SIZE / 2,
+    },
+    avatarPlaceholder: {
+      backgroundColor: colors.backgroundSecondary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarInitial: {
+      fontFamily: fonts.heading,
+      fontSize: 13,
     },
     username: {
       fontFamily: fonts.bodyBold,
       fontSize: typography.magazineBody.fontSize,
       lineHeight: typography.magazineBody.lineHeight,
       color: colors.foreground,
+      flex: 1,
+    },
+    handle: {
+      fontFamily: fonts.body,
+      fontSize: typography.magazineMeta.fontSize,
+      color: colors.foreground,
+      opacity: 0.8,
     },
     removeButton: {
       paddingVertical: 4,
@@ -352,7 +458,6 @@ function createStyles(colors: ThemeColors) {
       fontFamily: fonts.bodyBold,
       fontSize: typography.magazineMeta.fontSize,
       letterSpacing: typography.magazineMeta.letterSpacing,
-      textTransform: 'uppercase',
       color: colors.red,
     },
     emptyText: {
@@ -361,7 +466,6 @@ function createStyles(colors: ThemeColors) {
       lineHeight: typography.magazineBody.lineHeight,
       color: colors.secondaryText,
       paddingVertical: spacing.md,
-      paddingHorizontal: 20,
     },
     discovery: {
       marginTop: spacing.xl,
@@ -371,8 +475,7 @@ function createStyles(colors: ThemeColors) {
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       color: colors.secondaryText,
-      textTransform: 'uppercase',
-      letterSpacing: 1.5,
+      letterSpacing: typography.magazineMeta.letterSpacing,
       marginBottom: spacing.sm,
     },
     suggestionRow: {
@@ -380,7 +483,6 @@ function createStyles(colors: ThemeColors) {
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingVertical: spacing.md,
-      paddingHorizontal: 20,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
     },
@@ -394,7 +496,6 @@ function createStyles(colors: ThemeColors) {
       fontFamily: fonts.bodyBold,
       fontSize: typography.magazineMeta.fontSize,
       letterSpacing: typography.magazineMeta.letterSpacing,
-      textTransform: 'uppercase',
       color: colors.teal,
     },
   })

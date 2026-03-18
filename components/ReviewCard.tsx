@@ -10,7 +10,8 @@ import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { useAvatarUrl } from '@/services/avatarCache'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useTabBar } from '@/contexts/TabBarContext'
-import { fonts, spacing, typography, getScaledTypography, type ThemeColors } from '@/theme'
+import { fonts, spacing, getScaledTypography, type ThemeColors } from '@/theme'
+import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 
 interface ReviewCardProps {
   review: Review
@@ -74,8 +75,9 @@ function ReviewCard({ review, hideAuthor = false }: ReviewCardProps) {
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const cachedAvatarUrl = useAvatarUrl(review.username)
   const { colors } = useTheme()
+  const typography = useTypography()
   const { setTabBarVisible } = useTabBar()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
   const contentWidth = width - HORIZONTAL_PAD * 2
   const scaled = useMemo(() => getScaledTypography(preferences.fontMultiplier), [preferences.fontMultiplier])
   const handleLongPress = useCallback(() => {
@@ -106,7 +108,7 @@ function ReviewCard({ review, hideAuthor = false }: ReviewCardProps) {
         month: 'short',
         day: 'numeric',
         year: 'numeric',
-      }).toUpperCase()
+      })
     : ''
 
   const tagsStyles = useMemo(() => ({
@@ -200,7 +202,7 @@ function ReviewCard({ review, hideAuthor = false }: ReviewCardProps) {
             />
           ) : null}
           <Text style={styles.meta}>
-            BY {review.creator.toUpperCase()}
+            {review.creator}
             {dateStr ? ` \u00B7 ${dateStr}` : ''}
             {review.rating && preferences.showRatings ? (
               <Text style={styles.rating}>{` \u00B7 ${review.rating}`}</Text>
@@ -273,7 +275,7 @@ function ReviewCard({ review, hideAuthor = false }: ReviewCardProps) {
       >
         {({ pressed }) => (
           <Text style={[styles.linkText, pressed && styles.linkPressed]}>
-            VIEW ON LETTERBOXD
+            View on Letterboxd
           </Text>
         )}
       </Pressable>
@@ -287,7 +289,7 @@ function ReviewCard({ review, hideAuthor = false }: ReviewCardProps) {
 
 export default memo(ReviewCard)
 
-function createStyles(colors: ThemeColors) {
+function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({
     article: {
       paddingHorizontal: HORIZONTAL_PAD,
@@ -313,9 +315,9 @@ function createStyles(colors: ThemeColors) {
       opacity: 0.6,
     },
     avatar: {
-      width: 20,
-      height: 20,
-      borderRadius: 10,
+      width: 26,
+      height: 26,
+      borderRadius: 13,
       marginRight: 8,
     },
     meta: {

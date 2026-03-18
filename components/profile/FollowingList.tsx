@@ -7,7 +7,8 @@ import type { FollowedUser, FollowedVillageUser } from '@/types/database'
 import type { ProfileStackParamList } from '@/navigation/types'
 import { useAvatarUrl } from '@/services/avatarCache'
 import { useTheme } from '@/contexts/ThemeContext'
-import { fonts, spacing, typography, type ThemeColors } from '@/theme'
+import { fonts, spacing, type ThemeColors } from '@/theme'
+import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import LetterboxdDots from '@/components/ui/LetterboxdDots'
 import LogoIcon from '@/components/ui/LogoIcon'
 
@@ -29,7 +30,8 @@ type RowItem =
 function LetterboxdRow({ user, isLast }: { user: FollowedUser; isLast: boolean }) {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>()
   const { colors } = useTheme()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const typography = useTypography()
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
   const avatarUrl = useAvatarUrl(user.username)
 
   return (
@@ -49,14 +51,14 @@ function LetterboxdRow({ user, isLast }: { user: FollowedUser; isLast: boolean }
         )}
         <View style={styles.textColumn}>
           <Text style={styles.displayName}>{user.display_name || user.username}</Text>
-          <Text style={styles.handle}>@{user.username.toUpperCase()}</Text>
+          <Text style={styles.handle}>@{user.username}</Text>
         </View>
       </Pressable>
       {/* Letterboxd dots — tappable link, also serves as the platform indicator */}
       <Pressable
         onPress={() => Linking.openURL(`https://letterboxd.com/${user.username}/`)}
         hitSlop={8}
-        style={({ pressed }) => pressed && styles.rowPressed}
+        style={({ pressed }) => [styles.platformIcon, pressed && styles.rowPressed]}
       >
         <LetterboxdDots size={20} />
       </Pressable>
@@ -71,7 +73,8 @@ function LetterboxdRow({ user, isLast }: { user: FollowedUser; isLast: boolean }
 function VillageRow({ user, isLast }: { user: FollowedVillageUser; isLast: boolean }) {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>()
   const { colors } = useTheme()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const typography = useTypography()
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
   const initial = (user.display_name || user.username || '?')[0].toUpperCase()
 
   return (
@@ -95,12 +98,14 @@ function VillageRow({ user, isLast }: { user: FollowedVillageUser; isLast: boole
             {user.display_name || user.username || 'Village User'}
           </Text>
           {user.username && (
-            <Text style={styles.handle}>@{user.username.toUpperCase()}</Text>
+            <Text style={styles.handle}>@{user.username}</Text>
           )}
         </View>
       </Pressable>
       {/* Village logo — platform indicator */}
-      <LogoIcon size={18} fill={colors.secondaryText} />
+      <View style={styles.platformIcon}>
+        <LogoIcon size={34} fill={colors.secondaryText} />
+      </View>
     </View>
   )
 }
@@ -116,7 +121,8 @@ interface FollowingListProps {
 
 export default function FollowingList({ letterboxdUsers, villageUsers }: FollowingListProps) {
   const { colors } = useTheme()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const typography = useTypography()
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
   // Village first, then Letterboxd
   const rows: RowItem[] = useMemo(() => [
@@ -145,7 +151,7 @@ export default function FollowingList({ letterboxdUsers, villageUsers }: Followi
 // Styles
 // ---------------------------------------------------------------------------
 
-function createStyles(colors: ThemeColors) {
+function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({
     row: {
       flexDirection: 'row',
@@ -183,22 +189,26 @@ function createStyles(colors: ThemeColors) {
       fontSize: 13,
       color: colors.secondaryText,
     },
+    platformIcon: {
+      width: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     textColumn: {
       flex: 1,
     },
     displayName: {
       fontFamily: fonts.bodyBold,
       fontSize: typography.body.fontSize,
-      lineHeight: typography.body.lineHeight,
+      lineHeight: typography.body.fontSize + 2,
       color: colors.foreground,
     },
     handle: {
       fontFamily: fonts.body,
       fontSize: typography.magazineMeta.fontSize,
-      lineHeight: typography.magazineMeta.lineHeight,
+      lineHeight: typography.magazineMeta.fontSize + 2,
       letterSpacing: typography.magazineMeta.letterSpacing,
       color: colors.secondaryText,
-      marginTop: 2,
     },
     emptyText: {
       fontFamily: fonts.bodyItalic,

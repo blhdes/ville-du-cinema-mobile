@@ -13,7 +13,8 @@ import UserSearchScreen from '@/screens/UserSearchScreen'
 import ReviewReaderScreen from '@/screens/ReviewReaderScreen'
 import QuotePreviewScreen from '@/screens/QuotePreviewScreen'
 import type { FeedStackParamList } from '@/navigation/types'
-import { fonts, typography } from '@/theme'
+import { fonts } from '@/theme'
+import { useTypography } from '@/hooks/useTypography'
 
 const Stack = createNativeStackNavigator<FeedStackParamList>()
 
@@ -31,6 +32,7 @@ const HIDE_TAB_SCREENS = new Set<string>(['ReviewReader', 'QuotePreview'])
 
 export default function FeedStackNavigator() {
   const { colors } = useTheme()
+  const typography = useTypography()
   const { setTabBarVisible } = useTabBar()
 
   const handleStateChange = useCallback(

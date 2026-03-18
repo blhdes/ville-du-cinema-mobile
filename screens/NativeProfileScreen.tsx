@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  ActivityIndicator,
   FlatList,
   InteractionManager,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -18,11 +16,14 @@ import { supabase } from '@/lib/supabase/client'
 import { getUserClippings } from '@/services/clippings'
 import { useUserLists } from '@/hooks/useUserLists'
 import { useTheme } from '@/contexts/ThemeContext'
-import { fonts, spacing, typography, type ThemeColors } from '@/theme'
+import { fonts, spacing, type ThemeColors } from '@/theme'
+import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import type { FeedStackParamList } from '@/navigation/types'
 import type { Clipping, FollowedVillageUser, VillagePublicProfile } from '@/types/database'
 import ProfileSkeleton from '@/components/profile/ProfileSkeleton'
 import ClippingCard from '@/components/profile/ClippingCard'
+import ExpandableAvatar from '@/components/ui/ExpandableAvatar'
+import FollowButton from '@/components/ui/FollowButton'
 
 const AVATAR_SIZE = 72
 const HORIZONTAL_PAD = 20
@@ -36,7 +37,8 @@ export default function NativeProfileScreen() {
   const insets = useSafeAreaInsets()
   const tabBarHeight = useBottomTabBarHeight()
   const { colors } = useTheme()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const typography = useTypography()
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
   const { villageUserIds, addVillageUser, removeVillageUser } = useUserLists()
 
   const isFollowing = villageUserIds.includes(userId)
@@ -105,22 +107,19 @@ export default function NativeProfileScreen() {
     return (
       <>
         <View style={styles.profileHeader}>
-          {profile.avatar_url ? (
-            <Image source={profile.avatar_url} style={styles.avatar} cachePolicy="memory-disk" />
-          ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]}>
-              <Text style={styles.avatarInitial}>
-                {(profile.display_name || profile.username || '?')[0].toUpperCase()}
-              </Text>
-            </View>
-          )}
+          <ExpandableAvatar
+            avatarUrl={profile.avatar_url}
+            displayName={profile.display_name}
+            username={profile.username}
+            size={AVATAR_SIZE}
+          />
 
           {profile.display_name ? (
             <Text style={styles.displayName}>{profile.display_name}</Text>
           ) : null}
 
           {profile.username ? (
-            <Text style={styles.handle}>@{profile.username.toUpperCase()}</Text>
+            <Text style={styles.handle}>@{profile.username}</Text>
           ) : null}
 
           {profile.bio ? (
@@ -130,29 +129,17 @@ export default function NativeProfileScreen() {
           {/* Metadata row — mirrors the 2-bone skeleton placeholder */}
           <View style={styles.metaRow}>
             <Text style={styles.metaCount}>
-              {clippingsLoading ? '—' : `${clippings.length} CLIPPINGS`}
+              {clippingsLoading ? '—' : `${clippings.length} clippings`}
             </Text>
-            <Pressable
-              onPress={handleFollowToggle}
-              hitSlop={8}
-              style={({ pressed }) => [styles.followButton, pressed && { opacity: 0.6 }]}
-            >
-              <Text style={isFollowing ? styles.followingText : styles.followText}>
-                {isFollowing ? 'FOLLOWING' : 'FOLLOW'}
-              </Text>
-            </Pressable>
+            <FollowButton isFollowing={isFollowing} onPress={handleFollowToggle} />
           </View>
         </View>
 
         <View style={styles.divider} />
 
-        <Text style={styles.sectionLabel}>CLIPPINGS</Text>
+        <Text style={styles.sectionLabel}>Clippings</Text>
 
-        {clippingsLoading && (
-          <ActivityIndicator color={colors.secondaryText} style={styles.clippingsLoading} />
-        )}
-
-        {!clippingsLoading && clippings.length === 0 && (
+        {clippings.length === 0 && (
           <View style={styles.emptyContainer}>
             <Ionicons name="bookmark-outline" size={32} color={colors.border} />
             <Text style={styles.emptyText}>No clippings saved yet.</Text>
@@ -177,11 +164,11 @@ export default function NativeProfileScreen() {
 
   return (
     <View style={styles.container}>
-      {profileLoading ? (
-        <ProfileSkeleton variant="external" />
+      {profileLoading || clippingsLoading ? (
+        <ProfileSkeleton variant="native" />
       ) : (
         <FlatList
-          data={clippingsLoading ? [] : clippings}
+          data={clippings}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           ListHeaderComponent={listHeader}
@@ -200,7 +187,7 @@ export default function NativeProfileScreen() {
 // Styles
 // ---------------------------------------------------------------------------
 
-function createStyles(colors: ThemeColors) {
+function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -212,21 +199,6 @@ function createStyles(colors: ThemeColors) {
       alignItems: 'center',
       paddingHorizontal: HORIZONTAL_PAD,
       paddingTop: spacing.xl,
-    },
-    avatar: {
-      width: AVATAR_SIZE,
-      height: AVATAR_SIZE,
-      borderRadius: AVATAR_SIZE / 2,
-    },
-    avatarPlaceholder: {
-      backgroundColor: colors.backgroundSecondary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    avatarInitial: {
-      fontFamily: fonts.heading,
-      fontSize: 28,
-      color: colors.secondaryText,
     },
     displayName: {
       fontFamily: fonts.heading,
@@ -267,26 +239,6 @@ function createStyles(colors: ThemeColors) {
       letterSpacing: typography.magazineMeta.letterSpacing,
       color: colors.secondaryText,
     },
-    followButton: {
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.border,
-      borderRadius: 4,
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.xs,
-    },
-    followText: {
-      fontFamily: fonts.bodyBold,
-      fontSize: typography.magazineMeta.fontSize,
-      letterSpacing: typography.magazineMeta.letterSpacing,
-      color: colors.teal,
-    },
-    followingText: {
-      fontFamily: fonts.body,
-      fontSize: typography.magazineMeta.fontSize,
-      letterSpacing: typography.magazineMeta.letterSpacing,
-      color: colors.secondaryText,
-    },
-
     divider: {
       height: StyleSheet.hairlineWidth,
       backgroundColor: colors.border,
@@ -301,9 +253,6 @@ function createStyles(colors: ThemeColors) {
       paddingHorizontal: HORIZONTAL_PAD,
       paddingTop: spacing.lg,
       paddingBottom: spacing.sm,
-    },
-    clippingsLoading: {
-      paddingVertical: spacing.xxl,
     },
     emptyContainer: {
       alignItems: 'center',

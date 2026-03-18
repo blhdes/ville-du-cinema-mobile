@@ -18,7 +18,8 @@ import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useTabBar } from '@/contexts/TabBarContext'
-import { fonts, spacing, typography, type ThemeColors } from '@/theme'
+import { fonts, spacing, type ThemeColors } from '@/theme'
+import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import { saveClipping } from '@/services/clippings'
 import type { FeedStackParamList } from '@/navigation/types'
 
@@ -138,9 +139,10 @@ export default function ReviewReaderScreen() {
   const { params } = useRoute<RouteProps>()
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const { colors } = useTheme()
+  const typography = useTypography()
   const insets = useSafeAreaInsets()
   const { setTabBarVisible } = useTabBar()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
   // Tab bar is hidden before navigation (in ReviewCard);
   // no cleanup here — FeedStackNavigator handles restoration via navigation state.
@@ -340,7 +342,7 @@ export default function ReviewReaderScreen() {
         {/* Header */}
         <Text style={styles.movieTitle}>{params.movieTitle}</Text>
         <Text style={styles.meta}>
-          BY {params.author.toUpperCase()}
+          {params.author}
           {params.rating ? ` \u00B7 ${params.rating}` : ''}
         </Text>
         <Text style={styles.hint}>Hold & drag to highlight text</Text>
@@ -428,7 +430,7 @@ export default function ReviewReaderScreen() {
 // Styles
 // ---------------------------------------------------------------------------
 
-function createStyles(colors: ThemeColors) {
+function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({
     container: {
       flex: 1,

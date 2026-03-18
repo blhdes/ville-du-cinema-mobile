@@ -65,6 +65,27 @@ export async function getUserClippings(userId: string): Promise<Clipping[]> {
 }
 
 /**
+ * Fetches clippings for a list of Village user IDs, newest first.
+ * Used to populate followed users' clippings in the feed.
+ */
+export async function getVillageClippings(userIds: string[]): Promise<Clipping[]> {
+  if (userIds.length === 0) return []
+
+  const { data, error } = await supabase
+    .from('user_clippings')
+    .select('*')
+    .in('user_id', userIds)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('getVillageClippings error:', error.message)
+    return []
+  }
+
+  return data ?? []
+}
+
+/**
  * Deletes a clipping by its ID.
  * Throws if the delete fails.
  */

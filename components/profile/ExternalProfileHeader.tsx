@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Linking, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import { Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import Animated, {
   cancelAnimation,
-  interpolateColor,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -15,9 +14,12 @@ import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
 import RenderHtml, { defaultSystemFonts } from 'react-native-render-html'
 import LetterboxdDots from '@/components/ui/LetterboxdDots'
+import ExpandableAvatar from '@/components/ui/ExpandableAvatar'
+import FollowButton from '@/components/ui/FollowButton'
 import type { FavoriteFilm } from '@/services/externalProfile'
 import { useTheme } from '@/contexts/ThemeContext'
-import { fonts, spacing, typography, type ThemeColors } from '@/theme'
+import { fonts, spacing, type ThemeColors } from '@/theme'
+import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 
 interface ExternalProfileHeaderProps {
   displayName: string
@@ -47,8 +49,6 @@ const SYSTEM_FONTS = [
 ]
 
 const SKELETON_DURATION = 800
-const FOLLOW_DURATION = 250
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
 function FavouritesSkeleton({
   count,
@@ -60,7 +60,8 @@ function FavouritesSkeleton({
   posterHeight: number
 }) {
   const { colors } = useTheme()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const typography = useTypography()
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
   const shimmer = useSharedValue(0.06)
 
   useEffect(() => {
@@ -98,53 +99,6 @@ function FavouritesSkeleton({
   )
 }
 
-function FollowButton({ isFollowing, onPress }: { isFollowing: boolean; onPress: () => void }) {
-  const { colors } = useTheme()
-  const styles = useMemo(() => createStyles(colors), [colors])
-  const progress = useSharedValue(isFollowing ? 1 : 0)
-
-  useEffect(() => {
-    progress.value = withTiming(isFollowing ? 1 : 0, { duration: FOLLOW_DURATION })
-  }, [isFollowing, progress])
-
-  const buttonStyle = useAnimatedStyle(() => ({
-    borderColor: interpolateColor(
-      progress.value,
-      [0, 1],
-      [colors.border, 'transparent'],
-    ),
-  }))
-
-  // Crossfade: FOLLOW fades out while FOLLOWING fades in
-  const followOpacity = useAnimatedStyle(() => ({ opacity: 1 - progress.value }))
-  const followingOpacity = useAnimatedStyle(() => ({ opacity: progress.value }))
-
-  const followColor = useAnimatedStyle(() => ({
-    color: colors.foreground,
-  }))
-  const followingColor = useAnimatedStyle(() => ({
-    color: colors.secondaryText,
-  }))
-
-  return (
-    <AnimatedPressable
-      style={[styles.followButton, buttonStyle]}
-      onPress={onPress}
-    >
-      <View style={styles.followTextContainer}>
-        {/* FOLLOWING sits in normal flow to size the container (it's the longer label) */}
-        <Animated.Text style={[styles.followText, followingColor, followingOpacity]}>
-          FOLLOWING
-        </Animated.Text>
-        {/* FOLLOW overlays on top, centered */}
-        <Animated.Text style={[styles.followText, styles.followTextOverlay, followColor, followOpacity]}>
-          FOLLOW
-        </Animated.Text>
-      </View>
-    </AnimatedPressable>
-  )
-}
-
 export default function ExternalProfileHeader({
   displayName,
   username,
@@ -161,10 +115,10 @@ export default function ExternalProfileHeader({
 }: ExternalProfileHeaderProps) {
   const [bioExpanded, setBioExpanded] = useState(false)
   const [bioOverflows, setBioOverflows] = useState(false)
-  const [avatarOpen, setAvatarOpen] = useState(false)
   const { width } = useWindowDimensions()
   const { colors } = useTheme()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const typography = useTypography()
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
   const contentWidth = width - HORIZONTAL_PAD * 2
   const hasMetadata = !!location || !!websiteUrl || !!twitterUrl
   const posterWidth = (contentWidth - spacing.sm * 3) / 4
@@ -229,43 +183,19 @@ export default function ExternalProfileHeader({
     <View style={styles.container}>
       {/* Avatar */}
       <View style={styles.avatarWrapper}>
-        {avatarUrl ? (
-          <Pressable onPress={() => setAvatarOpen(true)}>
-            <Image source={{ uri: avatarUrl }} style={styles.avatar} cachePolicy="memory-disk" />
-          </Pressable>
-        ) : (
-          <View style={[styles.avatar, styles.avatarPlaceholder]}>
-            <Text style={styles.avatarInitial}>
-              {(displayName || username || '?')[0].toUpperCase()}
-            </Text>
-          </View>
-        )}
+        <ExpandableAvatar
+          avatarUrl={avatarUrl}
+          displayName={displayName}
+          username={username}
+          size={AVATAR_SIZE}
+        />
       </View>
-
-      {/* Enlarged avatar modal — overlay stays dark (photo context, not themed) */}
-      {avatarUrl ? (
-        <Modal
-          visible={avatarOpen}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setAvatarOpen(false)}
-        >
-          <Pressable style={styles.avatarOverlay} onPress={() => setAvatarOpen(false)}>
-            <Image
-              source={{ uri: avatarUrl }}
-              style={[styles.avatarEnlarged, { width: width * 0.6, height: width * 0.6 }]}
-              cachePolicy="memory-disk"
-            />
-            <Text style={styles.avatarOverlayName}>{displayName}</Text>
-          </Pressable>
-        </Modal>
-      ) : null}
 
       {/* Display name */}
       <Text style={styles.displayName}>{displayName}</Text>
 
-      {/* @USERNAME */}
-      <Text style={styles.username}>@{username.toUpperCase()}</Text>
+      {/* @username */}
+      <Text style={styles.username}>@{username}</Text>
 
       {/* Bio */}
       {bio ? (
@@ -346,8 +276,6 @@ export default function ExternalProfileHeader({
       {/* Favourites */}
       {favoriteFilms && favoriteFilms.length > 0 ? (
         <View style={styles.favoritesSection}>
-          <Text style={styles.favoritesLabel}>FAVOURITES</Text>
-
           {/* Skeleton — overlays posters until all have loaded */}
           {!allPostersLoaded ? (
             <View style={styles.skeletonOverlay}>
@@ -388,10 +316,14 @@ export default function ExternalProfileHeader({
       ) : null}
 
       {/* Follow / Following */}
-      <FollowButton isFollowing={isFollowing} onPress={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-        onFollowToggle()
-      }} />
+      <FollowButton
+        isFollowing={isFollowing}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+          onFollowToggle()
+        }}
+        style={styles.followButtonMargin}
+      />
 
       {/* Letterboxd link */}
       <Pressable
@@ -407,7 +339,7 @@ export default function ExternalProfileHeader({
   )
 }
 
-function createStyles(colors: ThemeColors) {
+function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({
     container: {
       alignItems: 'center',
@@ -416,39 +348,6 @@ function createStyles(colors: ThemeColors) {
     },
     avatarWrapper: {
       marginBottom: spacing.md,
-    },
-    avatar: {
-      width: AVATAR_SIZE,
-      height: AVATAR_SIZE,
-      borderRadius: AVATAR_SIZE / 2,
-    },
-    avatarOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.85)',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    avatarEnlarged: {
-      borderRadius: 9999,
-    },
-    avatarOverlayName: {
-      fontFamily: fonts.heading,
-      fontSize: typography.title1.fontSize,
-      color: colors.white,
-      marginTop: spacing.lg,
-      textAlign: 'center',
-    },
-    avatarPlaceholder: {
-      backgroundColor: colors.background,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    avatarInitial: {
-      fontFamily: fonts.heading,
-      fontSize: 28,
-      color: colors.secondaryText,
     },
     displayName: {
       fontFamily: fonts.heading,
@@ -530,15 +429,6 @@ function createStyles(colors: ThemeColors) {
       marginTop: spacing.lg,
       alignItems: 'center',
     },
-    favoritesLabel: {
-      fontFamily: fonts.body,
-      fontSize: typography.magazineMeta.fontSize,
-      lineHeight: typography.magazineMeta.lineHeight,
-      letterSpacing: typography.magazineMeta.letterSpacing,
-      color: colors.secondaryText,
-      textTransform: 'uppercase',
-      marginBottom: spacing.sm,
-    },
     favoritesRow: {
       flexDirection: 'row',
       justifyContent: 'center',
@@ -553,26 +443,8 @@ function createStyles(colors: ThemeColors) {
     posterPressed: {
       opacity: 0.6,
     },
-    followButton: {
+    followButtonMargin: {
       marginTop: spacing.md,
-      paddingVertical: 8,
-      paddingHorizontal: spacing.md,
-      alignItems: 'center',
-      borderWidth: 1,
-      borderRadius: 4,
-      backgroundColor: 'transparent',
-    },
-    followTextContainer: {
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    followText: {
-      fontFamily: fonts.body,
-      fontSize: typography.magazineMeta.fontSize,
-      letterSpacing: typography.magazineMeta.letterSpacing,
-    },
-    followTextOverlay: {
-      position: 'absolute',
     },
     letterboxdButton: {
       marginTop: spacing.md,

@@ -29,9 +29,11 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { useProfile } from '@/contexts/ProfileContext'
 import { useClippings } from '@/hooks/useClippings'
 import { fetchFeed, clearFeedCache, refreshAvatarUrls, type FeedResult } from '@/services/feed'
+import { getVillageClippings } from '@/services/clippings'
 import { hydrateAvatarCache } from '@/services/avatarCache'
-import type { Review, FeedItem } from '@/types/database'
-import { fonts, spacing, typography, type ThemeColors } from '@/theme'
+import type { Review, FeedItem, Clipping } from '@/types/database'
+import { fonts, spacing, type ThemeColors } from '@/theme'
+import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import ReviewCard from '@/components/ReviewCard'
 import ClippingCard from '@/components/profile/ClippingCard'
@@ -41,6 +43,7 @@ import QuoteOfTheDay from '@/components/QuoteOfTheDay'
 import Spinner from '@/components/ui/Spinner'
 import LogoIcon from '@/components/ui/LogoIcon'
 import DrawerTrigger from '@/components/feed/DrawerTrigger'
+import FeedEmptyState from '@/components/feed/FeedEmptyState'
 
 // Deadzone: header only starts hiding after this many px of continuous downward scroll.
 // Scrolling up has 0px threshold — the header reveals immediately.
@@ -61,11 +64,12 @@ export default function FeedScreen() {
   const tabBarHeight = useBottomTabBarHeight()
   const tabBarMax = tabBarHeight + insets.bottom
   const navigation = useNavigation<NativeStackNavigationProp<FeedStackParamList>>()
-  const { usernames, isLoading: isListLoading, error: listError, clearError } = useUserLists()
+  const { usernames, villageUsers, villageUserIds, isLoading: isListLoading, error: listError, clearError } = useUserLists()
   const { preferences } = useDisplayPreferences()
   const { translateY, feedRefreshRequested, setIsFeedRefreshing } = useTabBar()
   const { colors } = useTheme()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const typography = useTypography()
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
   const { profile } = useProfile()
   const { clippings, refetch: refetchClippings, removeClipping } = useClippings()
 
@@ -205,16 +209,39 @@ export default function FeedScreen() {
 
   const flatListRef = useRef<Animated.FlatList<FeedItem>>(null)
   const [cacheReady, setCacheReady] = useState(false)
+  const [villageClippings, setVillageClippings] = useState<Clipping[]>([])
 
   // Hydrate the avatar cache from AsyncStorage before loading the feed
   useEffect(() => {
     hydrateAvatarCache().then(() => setCacheReady(true))
   }, [])
 
+  // Fetch clippings from followed Village users whenever the follow list changes
+  useEffect(() => {
+    if (villageUserIds.length === 0) {
+      setVillageClippings([])
+      return
+    }
+    getVillageClippings(villageUserIds)
+      .then(setVillageClippings)
+      .catch(() => {})
+  }, [villageUserIds])
+
+  const refetchVillageClippings = useCallback(() => {
+    if (villageUserIds.length === 0) {
+      setVillageClippings([])
+      return
+    }
+    getVillageClippings(villageUserIds)
+      .then(setVillageClippings)
+      .catch(() => {})
+  }, [villageUserIds])
+
   const loadFeed = useCallback(async (pageNum: number, append = false, keepContent = false) => {
     if (usernames.length === 0) {
       setReviews([])
       setHasMore(false)
+      setIsLoading(false)
       return
     }
 
@@ -259,6 +286,7 @@ export default function FeedScreen() {
     setIsRefreshing(true)
     clearFeedCache()
     refetchClippings()
+    refetchVillageClippings()
     loadFeed(1)
     // Background-refresh avatar URLs on pull-to-refresh
     if (usernames.length > 0) {
@@ -282,6 +310,7 @@ export default function FeedScreen() {
         setIsRefreshing(true)
         clearFeedCache()
         refetchClippings()
+        refetchVillageClippings()
         loadFeed(1, false, true)
         if (usernames.length > 0) {
           refreshAvatarUrls(usernames).catch(() => {})
@@ -314,7 +343,19 @@ export default function FeedScreen() {
     headerTranslateY.value = withTiming(0, { duration: 200 })
   }, [layoutKey, translateY, headerTranslateY])
 
-  // Merge RSS reviews + saved clippings into a single chronological feed
+  // Lookup map: Village user_id → display info (built from the followed-users list)
+  const villageUserMap = useMemo(() => {
+    const map = new Map<string, { displayName: string; avatarUrl: string | undefined }>()
+    for (const u of villageUsers) {
+      map.set(u.user_id, {
+        displayName: u.display_name ?? u.username ?? 'Village User',
+        avatarUrl: u.avatar_url ?? undefined,
+      })
+    }
+    return map
+  }, [villageUsers])
+
+  // Merge RSS reviews + own clippings + followed Village clippings into one chronological feed
   const feedItems = useMemo((): FeedItem[] => {
     const reviewItems = reviews.map((r): FeedItem => ({
       kind: 'review',
@@ -333,8 +374,19 @@ export default function FeedScreen() {
       ownerDisplayName,
     }))
 
-    return [...reviewItems, ...clippingItems].sort((a, b) => b.sortKey - a.sortKey)
-  }, [reviews, clippings, profile?.avatar_url, profile?.display_name, profile?.username])
+    const villageClippingItems = villageClippings.map((c): FeedItem => {
+      const owner = villageUserMap.get(c.user_id)
+      return {
+        kind: 'clipping',
+        sortKey: new Date(c.created_at).getTime(),
+        data: c,
+        ownerAvatarUrl: owner?.avatarUrl,
+        ownerDisplayName: owner?.displayName ?? 'Village User',
+      }
+    })
+
+    return [...reviewItems, ...clippingItems, ...villageClippingItems].sort((a, b) => b.sortKey - a.sortKey)
+  }, [reviews, clippings, villageClippings, villageUserMap, profile?.avatar_url, profile?.display_name, profile?.username])
 
   // Filter watch notifications — clippings are always shown regardless
   const filteredItems = useMemo(
@@ -380,15 +432,7 @@ export default function FeedScreen() {
     if (isLoading || isListLoading) return null
 
     if (usernames.length === 0) {
-      return (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>Village du Cin{'\u00E9'}ma</Text>
-          <Text style={styles.emptySubtitle}>
-            Tap the Users button to add Letterboxd accounts and see their recent activity.
-          </Text>
-          <QuoteOfTheDay />
-        </View>
-      )
+      return <FeedEmptyState />
     }
 
     return (
@@ -446,9 +490,10 @@ export default function FeedScreen() {
   const error = listError || feedError
 
   const listContentStyle = useMemo(
-    () => !hasItems && !isInitialLoad
-      ? styles.emptyList
-      : [styles.list, { paddingTop: headerHeight + spacing.md, paddingBottom: tabBarHeight + 20 }],
+    () => [
+      !hasItems && !isInitialLoad ? styles.emptyList : styles.list,
+      { paddingTop: headerHeight + spacing.md, paddingBottom: tabBarHeight + 20 },
+    ],
     [hasItems, isInitialLoad, styles, headerHeight, tabBarHeight],
   )
 
@@ -515,7 +560,7 @@ export default function FeedScreen() {
   )
 }
 
-function createStyles(colors: ThemeColors) {
+function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({
     container: {
       flex: 1,
