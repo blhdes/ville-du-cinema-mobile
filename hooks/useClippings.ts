@@ -33,10 +33,24 @@ export function useClippings(): UseClippingsReturn {
   }, [user])
 
   useEffect(() => {
-    if (!isUserLoading) {
-      fetchClippings()
+    if (isUserLoading) return
+
+    let cancelled = false
+
+    if (!user) {
+      setClippings([])
+      setIsLoading(false)
+      return
     }
-  }, [user, isUserLoading, fetchClippings])
+
+    setIsLoading(true)
+    getUserClippings(user.id)
+      .then((data) => { if (!cancelled) setClippings(data) })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setIsLoading(false) })
+
+    return () => { cancelled = true }
+  }, [user, isUserLoading])
 
   const removeClipping = useCallback((id: string) => {
     setClippings((prev) => prev.filter((c) => c.id !== id))

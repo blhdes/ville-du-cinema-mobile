@@ -47,6 +47,8 @@ export default function NativeProfileScreen() {
   const [clippingsLoading, setClippingsLoading] = useState(true)
 
   useEffect(() => {
+    let cancelled = false
+
     const task = InteractionManager.runAfterInteractions(async () => {
       const [profileResult, clippingsResult] = await Promise.allSettled([
         supabase
@@ -59,17 +61,17 @@ export default function NativeProfileScreen() {
 
       if (profileResult.status === 'fulfilled') {
         const { data, error } = profileResult.value
-        if (data && !error) setProfile(data as VillagePublicProfile)
+        if (data && !error && !cancelled) setProfile(data as VillagePublicProfile)
       }
-      setProfileLoading(false)
+      if (!cancelled) setProfileLoading(false)
 
-      if (clippingsResult.status === 'fulfilled') {
+      if (clippingsResult.status === 'fulfilled' && !cancelled) {
         setClippings(clippingsResult.value)
       }
-      setClippingsLoading(false)
+      if (!cancelled) setClippingsLoading(false)
     })
 
-    return () => task.cancel()
+    return () => { cancelled = true; task.cancel() }
   }, [userId])
 
   const handleFollowToggle = useCallback(async () => {
@@ -90,67 +92,84 @@ export default function NativeProfileScreen() {
   }, [profile, isFollowing, userId, addVillageUser, removeVillageUser])
 
   // ---------------------------------------------------------------------------
-  // List header — rendered only once profile is loaded
+  // List header + renderItem — memoized to prevent unnecessary FlatList remounts
   // ---------------------------------------------------------------------------
 
-  const listHeader = profile ? (
-    <>
-      <View style={styles.profileHeader}>
-        {profile.avatar_url ? (
-          <Image source={profile.avatar_url} style={styles.avatar} cachePolicy="memory-disk" />
-        ) : (
-          <View style={[styles.avatar, styles.avatarPlaceholder]}>
-            <Text style={styles.avatarInitial}>
-              {(profile.display_name || profile.username || '?')[0].toUpperCase()}
+  const clippingUser = useMemo(() => profile ? {
+    avatarUrl: profile.avatar_url ?? undefined,
+    displayName: profile.display_name ?? profile.username ?? 'Village User',
+  } : undefined, [profile])
+
+  const listHeader = useMemo(() => {
+    if (!profile) return null
+    return (
+      <>
+        <View style={styles.profileHeader}>
+          {profile.avatar_url ? (
+            <Image source={profile.avatar_url} style={styles.avatar} cachePolicy="memory-disk" />
+          ) : (
+            <View style={[styles.avatar, styles.avatarPlaceholder]}>
+              <Text style={styles.avatarInitial}>
+                {(profile.display_name || profile.username || '?')[0].toUpperCase()}
+              </Text>
+            </View>
+          )}
+
+          {profile.display_name ? (
+            <Text style={styles.displayName}>{profile.display_name}</Text>
+          ) : null}
+
+          {profile.username ? (
+            <Text style={styles.handle}>@{profile.username.toUpperCase()}</Text>
+          ) : null}
+
+          {profile.bio ? (
+            <Text style={styles.bio}>{profile.bio}</Text>
+          ) : null}
+
+          {/* Metadata row — mirrors the 2-bone skeleton placeholder */}
+          <View style={styles.metaRow}>
+            <Text style={styles.metaCount}>
+              {clippingsLoading ? '—' : `${clippings.length} CLIPPINGS`}
             </Text>
+            <Pressable
+              onPress={handleFollowToggle}
+              hitSlop={8}
+              style={({ pressed }) => [styles.followButton, pressed && { opacity: 0.6 }]}
+            >
+              <Text style={isFollowing ? styles.followingText : styles.followText}>
+                {isFollowing ? 'FOLLOWING' : 'FOLLOW'}
+              </Text>
+            </Pressable>
           </View>
+        </View>
+
+        <View style={styles.divider} />
+
+        <Text style={styles.sectionLabel}>CLIPPINGS</Text>
+
+        {clippingsLoading && (
+          <ActivityIndicator color={colors.secondaryText} style={styles.clippingsLoading} />
         )}
 
-        {profile.display_name ? (
-          <Text style={styles.displayName}>{profile.display_name}</Text>
-        ) : null}
+        {!clippingsLoading && clippings.length === 0 && (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="bookmark-outline" size={32} color={colors.border} />
+            <Text style={styles.emptyText}>No clippings saved yet.</Text>
+          </View>
+        )}
+      </>
+    )
+  }, [profile, clippingsLoading, clippings, isFollowing, handleFollowToggle, styles, colors])
 
-        {profile.username ? (
-          <Text style={styles.handle}>@{profile.username.toUpperCase()}</Text>
-        ) : null}
-
-        {profile.bio ? (
-          <Text style={styles.bio}>{profile.bio}</Text>
-        ) : null}
-
-        {/* Metadata row — mirrors the 2-bone skeleton placeholder */}
-        <View style={styles.metaRow}>
-          <Text style={styles.metaCount}>
-            {clippingsLoading ? '—' : `${clippings.length} CLIPPINGS`}
-          </Text>
-          <Pressable
-            onPress={handleFollowToggle}
-            hitSlop={8}
-            style={({ pressed }) => [styles.followButton, pressed && { opacity: 0.6 }]}
-          >
-            <Text style={isFollowing ? styles.followingText : styles.followText}>
-              {isFollowing ? 'FOLLOWING' : 'FOLLOW'}
-            </Text>
-          </Pressable>
-        </View>
-      </View>
-
-      <View style={styles.divider} />
-
-      <Text style={styles.sectionLabel}>CLIPPINGS</Text>
-
-      {clippingsLoading && (
-        <ActivityIndicator color={colors.secondaryText} style={styles.clippingsLoading} />
-      )}
-
-      {!clippingsLoading && clippings.length === 0 && (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="bookmark-outline" size={32} color={colors.border} />
-          <Text style={styles.emptyText}>No clippings saved yet.</Text>
-        </View>
-      )}
-    </>
-  ) : null
+  const renderItem = useCallback(({ item }: { item: Clipping }) => (
+    <ClippingCard
+      clipping={item}
+      onDeleted={NOOP}
+      readOnly
+      user={clippingUser}
+    />
+  ), [clippingUser])
 
   // ---------------------------------------------------------------------------
   // Render
@@ -164,18 +183,11 @@ export default function NativeProfileScreen() {
         <FlatList
           data={clippingsLoading ? [] : clippings}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <ClippingCard
-              clipping={item}
-              onDeleted={NOOP}
-              readOnly
-              user={profile ? {
-                avatarUrl: profile.avatar_url ?? undefined,
-                displayName: profile.display_name ?? profile.username ?? 'Village User',
-              } : undefined}
-            />
-          )}
+          renderItem={renderItem}
           ListHeaderComponent={listHeader}
+          initialNumToRender={6}
+          maxToRenderPerBatch={4}
+          windowSize={9}
           contentContainerStyle={{ paddingBottom: tabBarHeight + insets.bottom + 20 }}
           showsVerticalScrollIndicator={false}
         />

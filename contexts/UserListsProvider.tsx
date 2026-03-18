@@ -111,11 +111,14 @@ export function UserListsProvider({ children }: { children: ReactNode }) {
     if (needsBackfill.length === 0) return
 
     backfillRan.current = true
+    let cancelled = false
 
     const run = async () => {
       const names = await Promise.all(
         needsBackfill.map((u) => fetchDisplayName(u.username))
       )
+
+      if (cancelled) return
 
       const nameMap = new Map<string, string>()
       needsBackfill.forEach((u, i) => {
@@ -128,7 +131,7 @@ export function UserListsProvider({ children }: { children: ReactNode }) {
         nameMap.has(u.username) ? { ...u, display_name: nameMap.get(u.username) } : u
       )
 
-      setUsers(updated)
+      if (!cancelled) setUsers(updated)
 
       if (isAuthenticated && user) {
         const { error: dbError } = await supabase
@@ -142,6 +145,7 @@ export function UserListsProvider({ children }: { children: ReactNode }) {
     }
 
     run()
+    return () => { cancelled = true }
   }, [isLoading, users, isAuthenticated, user])
 
   // Optimistic add (Letterboxd) — validate on Letterboxd first, then persist

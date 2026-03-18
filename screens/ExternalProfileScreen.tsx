@@ -185,6 +185,9 @@ export default function ExternalProfileScreen() {
         keyExtractor={keyExtractor}
         ListHeaderComponent={headerComponent}
         ListEmptyComponent={renderEmpty}
+        initialNumToRender={6}
+        maxToRenderPerBatch={4}
+        windowSize={9}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

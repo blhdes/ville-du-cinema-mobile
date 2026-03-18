@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Image } from 'expo-image'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import type { UserProfile } from '@/types/database'
@@ -27,7 +28,7 @@ export default function ProfileHeader({ profile, email, showEdit }: ProfileHeade
       <View style={styles.row}>
         <View style={styles.avatarContainer}>
           {profile.avatar_url ? (
-            <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
+            <Image source={{ uri: profile.avatar_url }} style={styles.avatar} cachePolicy="memory-disk" />
           ) : (
             <View style={[styles.avatar, styles.avatarPlaceholder]}>
               <Text style={styles.avatarInitial}>

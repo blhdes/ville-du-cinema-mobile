@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
-import { Animated, Image, InteractionManager, LayoutAnimation, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
+import { memo, useCallback, useMemo, useRef, useState } from 'react'
+import { Animated, InteractionManager, LayoutAnimation, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Image } from 'expo-image'
 import { Swipeable } from 'react-native-gesture-handler'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
@@ -18,7 +19,7 @@ interface ClippingCardProps {
   readOnly?: boolean
 }
 
-export default function ClippingCard({ clipping, onDeleted, user, readOnly = false }: ClippingCardProps) {
+function ClippingCard({ clipping, onDeleted, user, readOnly = false }: ClippingCardProps) {
   const { colors } = useTheme()
   const { preferences } = useDisplayPreferences()
   const scaled = useMemo(() => getScaledTypography(preferences.fontMultiplier), [preferences.fontMultiplier])
@@ -79,7 +80,7 @@ export default function ClippingCard({ clipping, onDeleted, user, readOnly = fal
             {user && (
               <View style={styles.identity}>
                 {user.avatarUrl ? (
-                  <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
+                  <Image source={{ uri: user.avatarUrl }} style={styles.avatar} cachePolicy="memory-disk" />
                 ) : (
                   <View style={[styles.avatar, styles.avatarFallback]}>
                     <Text style={styles.avatarInitial}>
@@ -138,6 +139,8 @@ export default function ClippingCard({ clipping, onDeleted, user, readOnly = fal
     </Swipeable>
   )
 }
+
+export default memo(ClippingCard)
 
 function createStyles(colors: ThemeColors) {
   return StyleSheet.create({

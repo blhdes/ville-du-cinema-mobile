@@ -165,6 +165,7 @@ export default function UserSearchScreen() {
     }
 
     setIsSearching(true)
+    let cancelled = false
 
     const timer = setTimeout(async () => {
       try {
@@ -179,15 +180,15 @@ export default function UserSearchScreen() {
           ? await baseQuery.neq('user_id', user.id)
           : await baseQuery
 
-        setVillageResults(data ?? [])
+        if (!cancelled) setVillageResults(data ?? [])
       } catch (err) {
         console.error('Village search error:', err)
       } finally {
-        setIsSearching(false)
+        if (!cancelled) setIsSearching(false)
       }
     }, 300)
 
-    return () => clearTimeout(timer)
+    return () => { clearTimeout(timer); cancelled = true }
   }, [query, platform, user?.id])
 
   // ---------------------------------------------------------------------------

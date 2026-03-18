@@ -1,8 +1,10 @@
-import { Image, StyleSheet } from 'react-native'
+import { StyleSheet } from 'react-native'
+import { Image } from 'expo-image'
 import { createBottomTabNavigator, type BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { BottomTabBar } from '@react-navigation/bottom-tabs'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, {
+  cancelAnimation,
   Easing,
   makeMutable,
   useAnimatedStyle,
@@ -77,7 +79,10 @@ function ProfileIcon({ color }: { color: string }) {
         -1,
         true,
       )
+    } else {
+      cancelAnimation(pulse)
     }
+    return () => { cancelAnimation(pulse) }
   }, [isLoading, pulse])
 
   if (isLoading) {
@@ -93,7 +98,7 @@ function ProfileIcon({ color }: { color: string }) {
   if (profile?.avatar_url) {
     return (
       <Animated.View style={[styles.avatarWrapper, style]}>
-        <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
+        <Image source={{ uri: profile.avatar_url }} style={styles.avatar} cachePolicy="memory-disk" />
       </Animated.View>
     )
   }

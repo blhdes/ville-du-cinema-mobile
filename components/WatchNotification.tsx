@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import * as WebBrowser from 'expo-web-browser'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
@@ -14,7 +14,7 @@ interface WatchNotificationProps {
   hideAuthor?: boolean
 }
 
-export default function WatchNotification({ review, hideAuthor = false }: WatchNotificationProps) {
+function WatchNotification({ review, hideAuthor = false }: WatchNotificationProps) {
   const { preferences } = useDisplayPreferences()
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const [titlePressed, setTitlePressed] = useState(false)
@@ -59,6 +59,8 @@ export default function WatchNotification({ review, hideAuthor = false }: WatchN
     </Pressable>
   )
 }
+
+export default memo(WatchNotification)
 
 function createStyles(colors: ThemeColors) {
   return StyleSheet.create({

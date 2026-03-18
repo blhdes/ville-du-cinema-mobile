@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Linking, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import Animated, {
+  cancelAnimation,
   interpolateColor,
   useAnimatedStyle,
   useSharedValue,
@@ -70,6 +71,7 @@ function FavouritesSkeleton({
       ),
       -1,
     )
+    return () => { cancelAnimation(shimmer) }
   }, [shimmer])
 
   const skeletonStyle = useAnimatedStyle(() => ({
@@ -229,7 +231,7 @@ export default function ExternalProfileHeader({
       <View style={styles.avatarWrapper}>
         {avatarUrl ? (
           <Pressable onPress={() => setAvatarOpen(true)}>
-            <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+            <Image source={{ uri: avatarUrl }} style={styles.avatar} cachePolicy="memory-disk" />
           </Pressable>
         ) : (
           <View style={[styles.avatar, styles.avatarPlaceholder]}>
@@ -252,6 +254,7 @@ export default function ExternalProfileHeader({
             <Image
               source={{ uri: avatarUrl }}
               style={[styles.avatarEnlarged, { width: width * 0.6, height: width * 0.6 }]}
+              cachePolicy="memory-disk"
             />
             <Text style={styles.avatarOverlayName}>{displayName}</Text>
           </Pressable>

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { memo, useState, useMemo, useCallback } from 'react'
 import { Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import { Image } from 'expo-image'
 import * as WebBrowser from 'expo-web-browser'
@@ -67,7 +67,7 @@ function truncateHtml(html: string, max: number): string {
   return html.slice(0, i) + suffix
 }
 
-export default function ReviewCard({ review, hideAuthor = false }: ReviewCardProps) {
+function ReviewCard({ review, hideAuthor = false }: ReviewCardProps) {
   const [expanded, setExpanded] = useState(false)
   const { preferences } = useDisplayPreferences()
   const { width } = useWindowDimensions()
@@ -284,6 +284,8 @@ export default function ReviewCard({ review, hideAuthor = false }: ReviewCardPro
     </Pressable>
   )
 }
+
+export default memo(ReviewCard)
 
 function createStyles(colors: ThemeColors) {
   return StyleSheet.create({

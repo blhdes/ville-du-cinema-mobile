@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import {
   Pressable,
   SectionList,
@@ -107,7 +107,7 @@ export default function UserListPanel({
   // Render helpers
   // ---------------------------------------------------------------------------
 
-  const renderSectionHeader = ({ section }: { section: DrawerSection }) => {
+  const renderSectionHeader = useCallback(({ section }: { section: DrawerSection }) => {
     const isVillage = section.platform === 'village'
     const count = isVillage ? villageUsers.length : users.length
     return (
@@ -121,9 +121,9 @@ export default function UserListPanel({
         </Text>
       </View>
     )
-  }
+  }, [villageUsers.length, users.length, styles, colors])
 
-  const renderItem = ({ item }: { item: DrawerItem }) => {
+  const renderItem = useCallback(({ item }: { item: DrawerItem }) => {
     if (item.kind === 'empty') {
       return <Text style={styles.emptyText}>{item.label}</Text>
     }
@@ -171,7 +171,7 @@ export default function UserListPanel({
         </Pressable>
       </View>
     )
-  }
+  }, [styles, colors, navigation, onRemove, onRemoveVillageUser])
 
   // ---------------------------------------------------------------------------
   // Header / Footer
@@ -246,6 +246,9 @@ export default function UserListPanel({
       renderSectionHeader={renderSectionHeader}
       ListHeaderComponent={listHeader}
       ListFooterComponent={listFooter}
+      initialNumToRender={6}
+      maxToRenderPerBatch={4}
+      windowSize={9}
       contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}
       stickySectionHeadersEnabled={false}
     />

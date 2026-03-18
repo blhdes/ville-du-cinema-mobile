@@ -83,6 +83,71 @@ export default function ProfileScreen() {
     }, [user]),
   )
 
+  const clippingUser = useMemo(() => profile ? {
+    avatarUrl: profile.avatar_url ?? undefined,
+    displayName: profile.display_name ?? profile.username ?? 'You',
+  } : undefined, [profile])
+
+  const listHeader = useMemo(() => {
+    if (!user) return null
+    return (
+      <>
+        {profile && <ProfileHeader profile={profile} email={user.email} showEdit />}
+
+        {/* Following accordion */}
+        <View style={styles.divider} />
+        <Pressable onPress={toggleFollowing} style={styles.accordionToggle}>
+          <Text style={styles.accordionLabel}>
+            VILLAGE ({followedUsers.length + villageUsers.length})
+          </Text>
+          <Ionicons
+            name={followingExpanded ? 'chevron-up' : 'chevron-down'}
+            size={16}
+            color={colors.secondaryText}
+          />
+        </Pressable>
+        {followingExpanded && (
+          <View style={styles.followingSection}>
+            <FollowingList letterboxdUsers={followedUsers} villageUsers={villageUsers} />
+          </View>
+        )}
+        <View style={styles.divider} />
+
+        {/* Clippings section label */}
+        <Text style={styles.sectionLabel}>CLIPPINGS</Text>
+
+        {/* Loading / error / empty states */}
+        {clippingsLoading && (
+          <ActivityIndicator
+            color={colors.secondaryText}
+            style={styles.clippingsLoading}
+          />
+        )}
+        {clippingsError && !clippingsLoading && (
+          <Text style={styles.emptyText}>
+            Something went wrong loading your clippings.
+          </Text>
+        )}
+        {!clippingsLoading && !clippingsError && clippings.length === 0 && (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="bookmark-outline" size={32} color={colors.border} />
+            <Text style={styles.emptyText}>
+              Your archive is empty.{'\n'}Highlight text in reviews to save them here.
+            </Text>
+          </View>
+        )}
+      </>
+    )
+  }, [user, profile, followedUsers, villageUsers, colors, followingExpanded, toggleFollowing, clippingsLoading, clippingsError, clippings, styles])
+
+  const renderItem = useCallback(({ item }: { item: Clipping }) => (
+    <ClippingCard
+      clipping={item}
+      onDeleted={handleClippingDeleted}
+      user={clippingUser}
+    />
+  ), [handleClippingDeleted, clippingUser])
+
   // Guest mode
   if (!user) {
     return (
@@ -100,55 +165,6 @@ export default function ProfileScreen() {
     )
   }
 
-  const listHeader = (
-    <>
-      {profile && <ProfileHeader profile={profile} email={user.email} showEdit />}
-
-      {/* Following accordion */}
-      <View style={styles.divider} />
-      <Pressable onPress={toggleFollowing} style={styles.accordionToggle}>
-        <Text style={styles.accordionLabel}>
-          VILLAGE ({followedUsers.length + villageUsers.length})
-        </Text>
-        <Ionicons
-          name={followingExpanded ? 'chevron-up' : 'chevron-down'}
-          size={16}
-          color={colors.secondaryText}
-        />
-      </Pressable>
-      {followingExpanded && (
-        <View style={styles.followingSection}>
-          <FollowingList letterboxdUsers={followedUsers} villageUsers={villageUsers} />
-        </View>
-      )}
-      <View style={styles.divider} />
-
-      {/* Clippings section label */}
-      <Text style={styles.sectionLabel}>CLIPPINGS</Text>
-
-      {/* Loading / error / empty states */}
-      {clippingsLoading && (
-        <ActivityIndicator
-          color={colors.secondaryText}
-          style={styles.clippingsLoading}
-        />
-      )}
-      {clippingsError && !clippingsLoading && (
-        <Text style={styles.emptyText}>
-          Something went wrong loading your clippings.
-        </Text>
-      )}
-      {!clippingsLoading && !clippingsError && clippings.length === 0 && (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="bookmark-outline" size={32} color={colors.border} />
-          <Text style={styles.emptyText}>
-            Your archive is empty.{'\n'}Highlight text in reviews to save them here.
-          </Text>
-        </View>
-      )}
-    </>
-  )
-
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
@@ -163,17 +179,11 @@ export default function ProfileScreen() {
         <FlatList
           data={clippingsLoading ? [] : clippings}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <ClippingCard
-              clipping={item}
-              onDeleted={handleClippingDeleted}
-              user={profile ? {
-                avatarUrl: profile.avatar_url ?? undefined,
-                displayName: profile.display_name ?? profile.username ?? 'You',
-              } : undefined}
-            />
-          )}
+          renderItem={renderItem}
           ListHeaderComponent={listHeader}
+          initialNumToRender={6}
+          maxToRenderPerBatch={4}
+          windowSize={9}
           contentContainerStyle={{ paddingBottom: tabBarHeight + insets.bottom + 20 }}
           showsVerticalScrollIndicator={false}
         />
