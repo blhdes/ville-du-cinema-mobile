@@ -39,7 +39,7 @@ export default function ProfileScreen() {
   const tabBarHeight = useBottomTabBarHeight()
   const { user } = useUser()
   const { profile, isLoading, error } = useProfile()
-  const { users: followedUsers } = useUserLists()
+  const { users: followedUsers, villageUsers } = useUserLists()
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
 
@@ -108,7 +108,7 @@ export default function ProfileScreen() {
       <View style={styles.divider} />
       <Pressable onPress={toggleFollowing} style={styles.accordionToggle}>
         <Text style={styles.accordionLabel}>
-          VILLAGE ({followedUsers.length})
+          VILLAGE ({followedUsers.length + villageUsers.length})
         </Text>
         <Ionicons
           name={followingExpanded ? 'chevron-up' : 'chevron-down'}
@@ -118,7 +118,7 @@ export default function ProfileScreen() {
       </Pressable>
       {followingExpanded && (
         <View style={styles.followingSection}>
-          <FollowingList users={followedUsers} />
+          <FollowingList letterboxdUsers={followedUsers} villageUsers={villageUsers} />
         </View>
       )}
       <View style={styles.divider} />

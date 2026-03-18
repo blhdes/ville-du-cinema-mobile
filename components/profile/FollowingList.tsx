@@ -3,23 +3,30 @@ import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import { Image } from 'expo-image'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import type { FollowedUser } from '@/types/database'
+import type { FollowedUser, FollowedVillageUser } from '@/types/database'
 import type { ProfileStackParamList } from '@/navigation/types'
 import { useAvatarUrl } from '@/services/avatarCache'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, typography, type ThemeColors } from '@/theme'
 import LetterboxdDots from '@/components/ui/LetterboxdDots'
+import LogoIcon from '@/components/ui/LogoIcon'
 
 const AVATAR_SIZE = 32
-
-interface FollowingListProps {
-  users: FollowedUser[]
-}
-
 const HORIZONTAL_PAD = 20
 
-/** Per-row component so we can call the useAvatarUrl hook per user. */
-function FollowingRow({ user, isLast }: { user: FollowedUser; isLast: boolean }) {
+// ---------------------------------------------------------------------------
+// Unified row item type
+// ---------------------------------------------------------------------------
+
+type RowItem =
+  | { kind: 'letterboxd'; user: FollowedUser }
+  | { kind: 'village'; user: FollowedVillageUser }
+
+// ---------------------------------------------------------------------------
+// Letterboxd row (uses avatar cache + opens Letterboxd URL on right)
+// ---------------------------------------------------------------------------
+
+function LetterboxdRow({ user, isLast }: { user: FollowedUser; isLast: boolean }) {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>()
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
@@ -41,12 +48,11 @@ function FollowingRow({ user, isLast }: { user: FollowedUser; isLast: boolean })
           </View>
         )}
         <View style={styles.textColumn}>
-          <Text style={styles.displayName}>
-            {user.display_name || user.username}
-          </Text>
+          <Text style={styles.displayName}>{user.display_name || user.username}</Text>
           <Text style={styles.handle}>@{user.username.toUpperCase()}</Text>
         </View>
       </Pressable>
+      {/* Letterboxd dots — tappable link, also serves as the platform indicator */}
       <Pressable
         onPress={() => Linking.openURL(`https://letterboxd.com/${user.username}/`)}
         hitSlop={8}
@@ -58,26 +64,86 @@ function FollowingRow({ user, isLast }: { user: FollowedUser; isLast: boolean })
   )
 }
 
-export default function FollowingList({ users }: FollowingListProps) {
+// ---------------------------------------------------------------------------
+// Village row (direct avatar_url, Village logo as platform indicator)
+// ---------------------------------------------------------------------------
+
+function VillageRow({ user, isLast }: { user: FollowedVillageUser; isLast: boolean }) {
+  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>()
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
+  const initial = (user.display_name || user.username || '?')[0].toUpperCase()
+
+  return (
+    <View style={[styles.row, !isLast && styles.rowBorder]}>
+      <Pressable
+        style={({ pressed }) => [styles.rowContent, pressed && styles.rowPressed]}
+        onPress={() => navigation.navigate('NativeProfile', {
+          userId: user.user_id,
+          username: user.username ?? undefined,
+        })}
+      >
+        {user.avatar_url ? (
+          <Image source={user.avatar_url} style={styles.avatar} cachePolicy="memory-disk" />
+        ) : (
+          <View style={[styles.avatar, styles.avatarPlaceholder]}>
+            <Text style={styles.avatarInitial}>{initial}</Text>
+          </View>
+        )}
+        <View style={styles.textColumn}>
+          <Text style={styles.displayName}>
+            {user.display_name || user.username || 'Village User'}
+          </Text>
+          {user.username && (
+            <Text style={styles.handle}>@{user.username.toUpperCase()}</Text>
+          )}
+        </View>
+      </Pressable>
+      {/* Village logo — platform indicator */}
+      <LogoIcon size={18} fill={colors.secondaryText} />
+    </View>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+
+interface FollowingListProps {
+  letterboxdUsers: FollowedUser[]
+  villageUsers: FollowedVillageUser[]
+}
+
+export default function FollowingList({ letterboxdUsers, villageUsers }: FollowingListProps) {
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
 
-  if (users.length === 0) {
+  // Village first, then Letterboxd
+  const rows: RowItem[] = useMemo(() => [
+    ...villageUsers.map((u): RowItem => ({ kind: 'village', user: u })),
+    ...letterboxdUsers.map((u): RowItem => ({ kind: 'letterboxd', user: u })),
+  ], [villageUsers, letterboxdUsers])
+
+  if (rows.length === 0) {
     return <Text style={styles.emptyText}>No users followed yet</Text>
   }
 
   return (
     <View>
-      {users.map((user, index) => (
-        <FollowingRow
-          key={user.username}
-          user={user}
-          isLast={index === users.length - 1}
-        />
-      ))}
+      {rows.map((item, index) => {
+        const isLast = index === rows.length - 1
+        if (item.kind === 'village') {
+          return <VillageRow key={item.user.user_id} user={item.user} isLast={isLast} />
+        }
+        return <LetterboxdRow key={item.user.username} user={item.user} isLast={isLast} />
+      })}
     </View>
   )
 }
+
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
 
 function createStyles(colors: ThemeColors) {
   return StyleSheet.create({

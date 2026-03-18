@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
   Pressable,
-  ScrollView,
+  SectionList,
   StyleSheet,
   Text,
   TextInput,
@@ -15,20 +15,44 @@ import { DISCOVERY_USERS } from '@/constants/discoveryUsers'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, typography, type ThemeColors } from '@/theme'
 import type { FeedStackParamList } from '@/navigation/types'
-import type { FollowedUser } from '@/types/database'
+import type { FollowedUser, FollowedVillageUser } from '@/types/database'
+import LetterboxdDots from '@/components/ui/LetterboxdDots'
+import LogoIcon from '@/components/ui/LogoIcon'
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+type DrawerItem =
+  | { kind: 'village'; user: FollowedVillageUser }
+  | { kind: 'letterboxd'; user: FollowedUser }
+  | { kind: 'empty'; label: string }
+
+type DrawerSection = {
+  platform: 'village' | 'letterboxd'
+  data: DrawerItem[]
+}
 
 interface UserListPanelProps {
   users: FollowedUser[]
+  villageUsers: FollowedVillageUser[]
   isAuthenticated: boolean
   onAdd: (username: string) => Promise<{ success: boolean; error?: string }>
   onRemove: (username: string) => Promise<void>
+  onRemoveVillageUser: (userId: string) => Promise<void>
 }
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 export default function UserListPanel({
   users,
+  villageUsers,
   isAuthenticated,
   onAdd,
   onRemove,
+  onRemoveVillageUser,
 }: UserListPanelProps) {
   const navigation = useNavigation<NativeStackNavigationProp<FeedStackParamList>>()
   const insets = useSafeAreaInsets()
@@ -54,15 +78,107 @@ export default function UserListPanel({
     setIsAdding(false)
   }
 
-  // Pick 3 random discovery suggestions not already in list
+  // 3 random discovery suggestions not already in list
   const suggestions = DISCOVERY_USERS
     .filter((u) => !users.some((fu) => fu.username === u))
     .sort(() => Math.random() - 0.5)
     .slice(0, 3)
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}>
-      {/* Add input */}
+  // ---------------------------------------------------------------------------
+  // SectionList data
+  // ---------------------------------------------------------------------------
+
+  const sections: DrawerSection[] = useMemo(() => [
+    {
+      platform: 'village',
+      data: villageUsers.length > 0
+        ? villageUsers.map((u): DrawerItem => ({ kind: 'village', user: u }))
+        : [{ kind: 'empty', label: 'Follow Village members from their profile pages.' }],
+    },
+    {
+      platform: 'letterboxd',
+      data: users.length > 0
+        ? users.map((u): DrawerItem => ({ kind: 'letterboxd', user: u }))
+        : [{ kind: 'empty', label: 'Add a Letterboxd username above.' }],
+    },
+  ], [villageUsers, users])
+
+  // ---------------------------------------------------------------------------
+  // Render helpers
+  // ---------------------------------------------------------------------------
+
+  const renderSectionHeader = ({ section }: { section: DrawerSection }) => {
+    const isVillage = section.platform === 'village'
+    const count = isVillage ? villageUsers.length : users.length
+    return (
+      <View style={styles.sectionHeader}>
+        {isVillage
+          ? <LogoIcon size={32} fill={colors.secondaryText} />
+          : <LetterboxdDots size={22} />
+        }
+        <Text style={styles.sectionLabel}>
+          {isVillage ? 'VILLAGE' : 'LETTERBOXD'} ({count})
+        </Text>
+      </View>
+    )
+  }
+
+  const renderItem = ({ item }: { item: DrawerItem }) => {
+    if (item.kind === 'empty') {
+      return <Text style={styles.emptyText}>{item.label}</Text>
+    }
+
+    if (item.kind === 'village') {
+      const { user } = item
+      return (
+        <View style={styles.userRow}>
+          <Text style={styles.username}>
+            {user.display_name || user.username || 'Village User'}
+          </Text>
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+              onRemoveVillageUser(user.user_id)
+            }}
+            hitSlop={8}
+            style={({ pressed }) => [styles.removeButton, pressed && { opacity: 0.6 }]}
+          >
+            <Text style={styles.removeText}>UNFOLLOW</Text>
+          </Pressable>
+        </View>
+      )
+    }
+
+    // kind === 'letterboxd'
+    const { user } = item
+    return (
+      <View style={styles.userRow}>
+        <Pressable
+          onPress={() => navigation.navigate('ExternalProfile', { username: user.username })}
+          style={({ pressed }) => pressed && { opacity: 0.6 }}
+        >
+          <Text style={styles.username}>@{user.username}</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+            onRemove(user.username)
+          }}
+          hitSlop={8}
+          style={({ pressed }) => [styles.removeButton, pressed && { opacity: 0.6 }]}
+        >
+          <Text style={styles.removeText}>UNFOLLOW</Text>
+        </Pressable>
+      </View>
+    )
+  }
+
+  // ---------------------------------------------------------------------------
+  // Header / Footer
+  // ---------------------------------------------------------------------------
+
+  const listHeader = (
+    <>
       <View style={styles.inputRow}>
         <TextInput
           style={styles.input}
@@ -89,85 +205,59 @@ export default function UserListPanel({
         </Pressable>
       </View>
 
-      {addError && (
-        <Text style={styles.errorText}>{addError}</Text>
-      )}
+      {addError && <Text style={styles.errorText}>{addError}</Text>}
 
-      {/* Mode indicator */}
       <Text style={styles.modeText}>
         {isAuthenticated ? 'Synced with your account' : 'Guest mode — saved locally'}
       </Text>
+    </>
+  )
 
-      {/* Following section */}
-      <Text style={styles.sectionLabel}>
-        Following ({users.length})
-      </Text>
+  const listFooter = suggestions.length > 0 ? (
+    <View style={styles.discovery}>
+      <Text style={styles.discoverLabel}>Discover Letterboxd</Text>
+      <View>
+        {suggestions.map((username) => (
+          <Pressable
+            key={username}
+            style={({ pressed }) => [styles.suggestionRow, pressed && { opacity: 0.6 }]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+              onAdd(username)
+            }}
+          >
+            <Text style={styles.suggestionText}>@{username}</Text>
+            <Text style={styles.suggestionAction}>ADD</Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  ) : null
 
-      {users.length > 0 ? (
-        <View style={styles.userList}>
-          {users.map((u) => (
-            <View key={u.username} style={styles.userRow}>
-              <Pressable
-                onPress={() => navigation.navigate('ExternalProfile', { username: u.username })}
-                style={({ pressed }) => pressed && { opacity: 0.6 }}
-              >
-                <Text style={styles.username}>@{u.username}</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                  onRemove(u.username)
-                }}
-                hitSlop={8}
-                style={({ pressed }) => [
-                  styles.removeButton,
-                  pressed && { opacity: 0.6 },
-                ]}
-              >
-                <Text style={styles.removeText}>UNFOLLOW</Text>
-              </Pressable>
-            </View>
-          ))}
-        </View>
-      ) : (
-        <Text style={styles.emptyText}>
-          Add Letterboxd users to see their activity in your feed.
-        </Text>
-      )}
-
-      {/* Discovery suggestions */}
-      {suggestions.length > 0 && (
-        <View style={styles.discovery}>
-          <Text style={styles.sectionLabel}>Discover</Text>
-          <View style={styles.suggestionList}>
-            {suggestions.map((username) => (
-              <Pressable
-                key={username}
-                style={({ pressed }) => [
-                  styles.suggestionRow,
-                  pressed && { opacity: 0.6 },
-                ]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                  onAdd(username)
-                }}
-              >
-                <Text style={styles.suggestionText}>@{username}</Text>
-                <Text style={styles.suggestionAction}>ADD</Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-      )}
-    </ScrollView>
+  return (
+    <SectionList<DrawerItem, DrawerSection>
+      sections={sections}
+      keyExtractor={(item, index) => {
+        if (item.kind === 'village') return `village-${item.user.user_id}`
+        if (item.kind === 'letterboxd') return `letterboxd-${item.user.username}`
+        return `empty-${index}`
+      }}
+      renderItem={renderItem}
+      renderSectionHeader={renderSectionHeader}
+      ListHeaderComponent={listHeader}
+      ListFooterComponent={listFooter}
+      contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}
+      stickySectionHeadersEnabled={false}
+    />
   )
 }
 
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
+
 function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
-    container: {
-      flex: 1,
-    },
     content: {
       paddingHorizontal: 20,
       paddingTop: spacing.lg,
@@ -219,7 +309,14 @@ function createStyles(colors: ThemeColors) {
       textTransform: 'uppercase',
       color: colors.secondaryText,
       marginTop: spacing.sm,
-      marginBottom: spacing.lg,
+      marginBottom: spacing.sm,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: spacing.lg,
+      marginBottom: spacing.sm,
     },
     sectionLabel: {
       fontFamily: fonts.bodyBold,
@@ -228,11 +325,6 @@ function createStyles(colors: ThemeColors) {
       color: colors.secondaryText,
       textTransform: 'uppercase',
       letterSpacing: 1.5,
-      marginTop: spacing.lg,
-      marginBottom: spacing.sm,
-    },
-    userList: {
-      overflow: 'hidden',
     },
     userRow: {
       flexDirection: 'row',
@@ -265,14 +357,20 @@ function createStyles(colors: ThemeColors) {
       fontSize: typography.magazineBody.fontSize,
       lineHeight: typography.magazineBody.lineHeight,
       color: colors.secondaryText,
-      textAlign: 'center',
-      paddingVertical: spacing.lg,
+      paddingVertical: spacing.md,
+      paddingHorizontal: 20,
     },
     discovery: {
-      marginTop: spacing.lg,
+      marginTop: spacing.xl,
     },
-    suggestionList: {
-      overflow: 'hidden',
+    discoverLabel: {
+      fontFamily: fonts.bodyBold,
+      fontSize: typography.magazineMeta.fontSize,
+      lineHeight: typography.magazineMeta.lineHeight,
+      color: colors.secondaryText,
+      textTransform: 'uppercase',
+      letterSpacing: 1.5,
+      marginBottom: spacing.sm,
     },
     suggestionRow: {
       flexDirection: 'row',

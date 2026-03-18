@@ -13,7 +13,7 @@ const Drawer = createDrawerNavigator<FeedDrawerParamList>()
 
 function DrawerContent({ navigation }: { navigation: any }) {
   const insets = useSafeAreaInsets()
-  const { users, isAuthenticated, addUser, removeUser } = useUserLists()
+  const { users, villageUsers, isAuthenticated, addUser, removeUser, removeVillageUser } = useUserLists()
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
 
@@ -27,9 +27,11 @@ function DrawerContent({ navigation }: { navigation: any }) {
       </View>
       <UserListPanel
         users={users}
+        villageUsers={villageUsers}
         isAuthenticated={isAuthenticated}
         onAdd={addUser}
         onRemove={removeUser}
+        onRemoveVillageUser={removeVillageUser}
       />
     </View>
   )

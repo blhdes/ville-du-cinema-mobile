@@ -14,9 +14,11 @@ interface ClippingCardProps {
   onDeleted: (id: string) => void
   /** Optional social header — avatar URL + display name shown above the quote */
   user?: { avatarUrl?: string; displayName: string }
+  /** Disables swipe-to-delete. Use on read-only views (e.g. another user's profile). */
+  readOnly?: boolean
 }
 
-export default function ClippingCard({ clipping, onDeleted, user }: ClippingCardProps) {
+export default function ClippingCard({ clipping, onDeleted, user, readOnly = false }: ClippingCardProps) {
   const { colors } = useTheme()
   const { preferences } = useDisplayPreferences()
   const scaled = useMemo(() => getScaledTypography(preferences.fontMultiplier), [preferences.fontMultiplier])
@@ -65,15 +67,7 @@ export default function ClippingCard({ clipping, onDeleted, user }: ClippingCard
     [handleDelete, styles.deleteAction, colors.red],
   )
 
-  return (
-    <Swipeable
-      ref={swipeableRef}
-      renderRightActions={renderRightActions}
-      rightThreshold={60}
-      overshootRight={false}
-      friction={2}
-      overshootFriction={8}
-    >
+  const cardContent = (
       <View style={styles.surface}>
         <Pressable
           onPress={handleExpand}
@@ -127,6 +121,20 @@ export default function ClippingCard({ clipping, onDeleted, user }: ClippingCard
         {/* ── Hairline divider ── */}
         <View style={styles.divider} />
       </View>
+  )
+
+  if (readOnly) return cardContent
+
+  return (
+    <Swipeable
+      ref={swipeableRef}
+      renderRightActions={renderRightActions}
+      rightThreshold={60}
+      overshootRight={false}
+      friction={2}
+      overshootFriction={8}
+    >
+      {cardContent}
     </Swipeable>
   )
 }

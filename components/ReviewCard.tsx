@@ -9,6 +9,7 @@ import type { Review } from '@/types/database'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { useAvatarUrl } from '@/services/avatarCache'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useTabBar } from '@/contexts/TabBarContext'
 import { fonts, spacing, typography, getScaledTypography, type ThemeColors } from '@/theme'
 
 interface ReviewCardProps {
@@ -73,11 +74,13 @@ export default function ReviewCard({ review, hideAuthor = false }: ReviewCardPro
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const cachedAvatarUrl = useAvatarUrl(review.username)
   const { colors } = useTheme()
+  const { setTabBarVisible } = useTabBar()
   const styles = useMemo(() => createStyles(colors), [colors])
   const contentWidth = width - HORIZONTAL_PAD * 2
   const scaled = useMemo(() => getScaledTypography(preferences.fontMultiplier), [preferences.fontMultiplier])
   const handleLongPress = useCallback(() => {
     if (review.review) {
+      setTabBarVisible(false)
       navigation.navigate('ReviewReader', {
         reviewText: review.review,
         author: review.creator,
@@ -88,7 +91,7 @@ export default function ReviewCard({ review, hideAuthor = false }: ReviewCardPro
         original_url: review.link,
       })
     }
-  }, [navigation, review, cachedAvatarUrl])
+  }, [navigation, review, cachedAvatarUrl, setTabBarVisible])
 
   const textLength = useMemo(() => htmlTextLength(review.review), [review.review])
   const isLong = textLength > MAX_PREVIEW_LENGTH * (1 + TOLERANCE_RATIO)

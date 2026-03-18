@@ -6,6 +6,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import ProfileScreen from '@/screens/ProfileScreen'
 import EditProfileScreen from '@/screens/EditProfileScreen'
 import ExternalProfileScreen from '@/screens/ExternalProfileScreen'
+import NativeProfileScreen from '@/screens/NativeProfileScreen'
 import UserSearchScreen from '@/screens/UserSearchScreen'
 import ReviewReaderScreen from '@/screens/ReviewReaderScreen'
 import QuotePreviewScreen from '@/screens/QuotePreviewScreen'
@@ -68,6 +69,13 @@ export default function ProfileStackNavigator() {
               <Ionicons name="search-outline" size={20} color={colors.foreground} />
             </Pressable>
           ),
+        })}
+      />
+      <Stack.Screen
+        name="NativeProfile"
+        component={NativeProfileScreen}
+        options={({ route }) => ({
+          headerTitle: route.params.username ? `@${route.params.username}` : 'Profile',
         })}
       />
       <Stack.Screen

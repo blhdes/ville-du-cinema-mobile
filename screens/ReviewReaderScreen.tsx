@@ -8,7 +8,6 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated'
 import {
-  useFocusEffect,
   useNavigation,
   useRoute,
   type NavigationProp,
@@ -143,13 +142,8 @@ export default function ReviewReaderScreen() {
   const { setTabBarVisible } = useTabBar()
   const styles = useMemo(() => createStyles(colors), [colors])
 
-  // Hide tab bar for immersive reading, restore on leave
-  useFocusEffect(
-    useCallback(() => {
-      setTabBarVisible(false)
-      return () => setTabBarVisible(true)
-    }, [setTabBarVisible]),
-  )
+  // Tab bar is hidden before navigation (in ReviewCard);
+  // no cleanup here — FeedStackNavigator handles restoration via navigation state.
 
   const words = useMemo(() => parseWords(params.reviewText), [params.reviewText])
 
@@ -196,6 +190,7 @@ export default function ReviewReaderScreen() {
 
   const handleExport = useCallback(() => {
     if (!selectedText) return
+    setTabBarVisible(false)
     navigation.navigate('QuotePreview', {
       quote: selectedText,
       author: params.author,
@@ -204,7 +199,7 @@ export default function ReviewReaderScreen() {
       movieTitle: params.movieTitle,
       rating: params.rating,
     })
-  }, [navigation, selectedText, params])
+  }, [navigation, selectedText, params, setTabBarVisible])
 
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
 

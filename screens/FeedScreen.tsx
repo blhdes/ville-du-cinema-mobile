@@ -26,12 +26,15 @@ import { useUserLists } from '@/hooks/useUserLists'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { useTabBar } from '@/contexts/TabBarContext'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useProfile } from '@/contexts/ProfileContext'
+import { useClippings } from '@/hooks/useClippings'
 import { fetchFeed, clearFeedCache, refreshAvatarUrls, type FeedResult } from '@/services/feed'
 import { hydrateAvatarCache } from '@/services/avatarCache'
-import type { Review } from '@/types/database'
+import type { Review, FeedItem } from '@/types/database'
 import { fonts, spacing, typography, type ThemeColors } from '@/theme'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import ReviewCard from '@/components/ReviewCard'
+import ClippingCard from '@/components/profile/ClippingCard'
 import ReviewCardSkeleton from '@/components/feed/ReviewCardSkeleton'
 import WatchNotification from '@/components/WatchNotification'
 import QuoteOfTheDay from '@/components/QuoteOfTheDay'
@@ -50,7 +53,8 @@ const TOP_THRESHOLD = 250
 // Spring config for snap animations — relaxed, deliberate settling for an editorial feel.
 const SNAP_SPRING = { damping: 24, stiffness: 120, mass: 1.0, overshootClamping: true }
 
-const keyExtractor = (item: Review) => item.id
+const keyExtractor = (item: FeedItem): string =>
+  item.kind === 'review' ? `review-${item.data.id}` : `clipping-${item.data.id}`
 
 export default function FeedScreen() {
   const insets = useSafeAreaInsets()
@@ -62,6 +66,8 @@ export default function FeedScreen() {
   const { translateY, feedRefreshRequested, setIsFeedRefreshing } = useTabBar()
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
+  const { profile } = useProfile()
+  const { clippings, refetch: refetchClippings, removeClipping } = useClippings()
 
   // Header hide/show
   const [headerHeight, setHeaderHeight] = useState(0)
@@ -197,7 +203,7 @@ export default function FeedScreen() {
   const [hasMore, setHasMore] = useState(false)
   const [feedError, setFeedError] = useState<string | null>(null)
 
-  const flatListRef = useRef<Animated.FlatList<Review>>(null)
+  const flatListRef = useRef<Animated.FlatList<FeedItem>>(null)
   const [cacheReady, setCacheReady] = useState(false)
 
   // Hydrate the avatar cache from AsyncStorage before loading the feed
@@ -252,12 +258,13 @@ export default function FeedScreen() {
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true)
     clearFeedCache()
+    refetchClippings()
     loadFeed(1)
     // Background-refresh avatar URLs on pull-to-refresh
     if (usernames.length > 0) {
       refreshAvatarUrls(usernames).catch(() => {})
     }
-  }, [loadFeed, usernames])
+  }, [loadFeed, usernames, refetchClippings])
 
   // Smart tab press: scroll-to-top if scrolled down, refresh only if already at top
   useEffect(() => {
@@ -274,6 +281,7 @@ export default function FeedScreen() {
         setIsFeedRefreshing(true)
         setIsRefreshing(true)
         clearFeedCache()
+        refetchClippings()
         loadFeed(1, false, true)
         if (usernames.length > 0) {
           refreshAvatarUrls(usernames).catch(() => {})
@@ -306,12 +314,37 @@ export default function FeedScreen() {
     headerTranslateY.value = withTiming(0, { duration: 200 })
   }, [layoutKey, translateY, headerTranslateY])
 
-  // Filter watch notifications if preference is set
-  const filteredReviews = useMemo(
+  // Merge RSS reviews + saved clippings into a single chronological feed
+  const feedItems = useMemo((): FeedItem[] => {
+    const reviewItems = reviews.map((r): FeedItem => ({
+      kind: 'review',
+      sortKey: r.pubDate ? new Date(r.pubDate).getTime() : 0,
+      data: r,
+    }))
+
+    const ownerDisplayName = profile?.display_name ?? profile?.username ?? 'Me'
+    const ownerAvatarUrl = profile?.avatar_url ?? undefined
+
+    const clippingItems = clippings.map((c): FeedItem => ({
+      kind: 'clipping',
+      sortKey: new Date(c.created_at).getTime(),
+      data: c,
+      ownerAvatarUrl,
+      ownerDisplayName,
+    }))
+
+    return [...reviewItems, ...clippingItems].sort((a, b) => b.sortKey - a.sortKey)
+  }, [reviews, clippings, profile?.avatar_url, profile?.display_name, profile?.username])
+
+  // Filter watch notifications — clippings are always shown regardless
+  const filteredItems = useMemo(
     () => preferences.showWatchNotifications
-      ? reviews
-      : reviews.filter((r) => r.type !== 'watch'),
-    [reviews, preferences.showWatchNotifications],
+      ? feedItems
+      : feedItems.filter((item) => {
+          if (item.kind === 'clipping') return true
+          return item.data.type !== 'watch'
+        }),
+    [feedItems, preferences.showWatchNotifications],
   )
 
   const isInitialLoad = (isLoading || isListLoading) && page === 1 && reviews.length === 0
@@ -327,12 +360,21 @@ export default function FeedScreen() {
     opacity: spinnerProgress.value,
   }))
 
-  const renderItem = useCallback(({ item }: { item: Review }) => {
-    if (item.type === 'watch') {
-      return <WatchNotification review={item} />
+  const renderItem = useCallback(({ item }: { item: FeedItem }) => {
+    if (item.kind === 'clipping') {
+      return (
+        <ClippingCard
+          clipping={item.data}
+          onDeleted={removeClipping}
+          user={{ avatarUrl: item.ownerAvatarUrl, displayName: item.ownerDisplayName }}
+        />
+      )
     }
-    return <ReviewCard review={item} />
-  }, [])
+    if (item.data.type === 'watch') {
+      return <WatchNotification review={item.data} />
+    }
+    return <ReviewCard review={item.data} />
+  }, [removeClipping])
 
   const renderEmpty = useCallback(() => {
     if (isLoading || isListLoading) return null
@@ -375,7 +417,7 @@ export default function FeedScreen() {
     )
   }, [isInitialLoad, styles, spinnerCollapseStyle])
 
-  const hasReviews = filteredReviews.length > 0
+  const hasItems = filteredItems.length > 0
 
   const renderFooter = useCallback(() => {
     if (isLoadingMore) {
@@ -386,12 +428,12 @@ export default function FeedScreen() {
       )
     }
 
-    if (hasReviews && !hasMore) {
+    if (hasItems && !hasMore) {
       return <QuoteOfTheDay />
     }
 
     return null
-  }, [isLoadingMore, hasReviews, hasMore, styles])
+  }, [isLoadingMore, hasItems, hasMore, styles])
 
   const splashHidden = useRef(false)
   const onContainerLayout = useCallback(() => {
@@ -404,10 +446,10 @@ export default function FeedScreen() {
   const error = listError || feedError
 
   const listContentStyle = useMemo(
-    () => !hasReviews && !isInitialLoad
+    () => !hasItems && !isInitialLoad
       ? styles.emptyList
       : [styles.list, { paddingTop: headerHeight + spacing.md, paddingBottom: tabBarHeight + 20 }],
-    [hasReviews, isInitialLoad, styles, headerHeight, tabBarHeight],
+    [hasItems, isInitialLoad, styles, headerHeight, tabBarHeight],
   )
 
   return (
@@ -419,7 +461,7 @@ export default function FeedScreen() {
       <Animated.FlatList
         ref={flatListRef}
         key={layoutKey}
-        data={filteredReviews}
+        data={filteredItems}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         ListHeaderComponent={renderHeader}

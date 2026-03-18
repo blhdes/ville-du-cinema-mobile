@@ -32,6 +32,7 @@ export type QuotePreviewParams = {
 export type FeedStackParamList = {
   FeedDrawer: NavigatorScreenParams<FeedDrawerParamList> | undefined
   ExternalProfile: { username: string }
+  NativeProfile: { userId: string; username?: string }
   UserSearch: undefined
   ReviewReader: ReviewReaderParams
   QuotePreview: QuotePreviewParams
@@ -41,6 +42,7 @@ export type ProfileStackParamList = {
   ProfileMain: undefined
   EditProfile: undefined
   ExternalProfile: { username: string }
+  NativeProfile: { userId: string; username?: string }
   UserSearch: undefined
   ReviewReader: ReviewReaderParams
   QuotePreview: QuotePreviewParams

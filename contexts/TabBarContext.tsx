@@ -19,7 +19,12 @@ export function TabBarProvider({ children }: { children: React.ReactNode }) {
 
   const setTabBarVisible = useCallback(
     (visible: boolean) => {
-      translateY.value = withTiming(visible ? 0 : 200, { duration: 250 })
+      if (visible) {
+        translateY.value = withTiming(0, { duration: 250 })
+      } else {
+        // Hide instantly so the bar is gone before the screen transition starts
+        translateY.value = 200
+      }
     },
     [translateY],
   )
