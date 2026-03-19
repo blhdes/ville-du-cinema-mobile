@@ -2,6 +2,7 @@ import { memo, useState, useMemo, useCallback } from 'react'
 import { Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import { Image } from 'expo-image'
 import * as WebBrowser from 'expo-web-browser'
+import * as Haptics from 'expo-haptics'
 import RenderHtml, { defaultSystemFonts } from 'react-native-render-html'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import type { FeedStackParamList } from '@/navigation/types'
@@ -10,12 +11,18 @@ import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { useAvatarUrl } from '@/services/avatarCache'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useTabBar } from '@/contexts/TabBarContext'
+import { saveRepost } from '@/services/clippings'
 import { fonts, spacing, getScaledTypography, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
+import SwipeableRow from '@/components/ui/SwipeableRow'
 
 interface ReviewCardProps {
   review: Review
   hideAuthor?: boolean
+  /** Set to false to disable the swipe-to-repost gesture (e.g. inside RepostCard). */
+  repostable?: boolean
+  /** Reduces top padding — used when embedded inside a parent card (e.g. RepostCard). */
+  compact?: boolean
 }
 
 const MAX_PREVIEW_LENGTH = 300
@@ -68,7 +75,7 @@ function truncateHtml(html: string, max: number): string {
   return html.slice(0, i) + suffix
 }
 
-function ReviewCard({ review, hideAuthor = false }: ReviewCardProps) {
+function ReviewCard({ review, hideAuthor = false, repostable = true, compact = false }: ReviewCardProps) {
   const [expanded, setExpanded] = useState(false)
   const { preferences } = useDisplayPreferences()
   const { width } = useWindowDimensions()
@@ -166,15 +173,25 @@ function ReviewCard({ review, hideAuthor = false }: ReviewCardProps) {
 
   const dropCapSize = scaled.title.fontSize * 3
 
+  const handleRepost = useCallback(async () => {
+    try {
+      await saveRepost(review)
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    } catch (error) {
+      console.error('Failed to repost:', error)
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+    }
+  }, [review])
+
   const renderersProps = useMemo(() => ({
     a: {
       onPress: (_event: unknown, href: string) => Linking.openURL(href),
     },
   }), [])
 
-  return (
+  const cardContent = (
     <Pressable onLongPress={handleLongPress} delayLongPress={500}>
-    <View style={styles.article}>
+    <View style={[styles.article, compact && styles.articleCompact]}>
       {/* Title */}
       <Pressable
         onPress={() => {
@@ -285,6 +302,18 @@ function ReviewCard({ review, hideAuthor = false }: ReviewCardProps) {
     </View>
     </Pressable>
   )
+
+  if (!repostable) return cardContent
+
+  return (
+    <SwipeableRow
+      onAction={handleRepost}
+      actionColor={colors.teal}
+      actionIcon="repeat-outline"
+    >
+      {cardContent}
+    </SwipeableRow>
+  )
 }
 
 export default memo(ReviewCard)
@@ -295,6 +324,9 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       paddingHorizontal: HORIZONTAL_PAD,
       paddingTop: spacing.xl,
       paddingBottom: spacing.xs,
+    },
+    articleCompact: {
+      paddingTop: spacing.sm,
     },
     titlePressed: {
       opacity: 0.6,

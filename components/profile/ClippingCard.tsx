@@ -1,9 +1,6 @@
-import { memo, useCallback, useMemo, useRef, useState } from 'react'
-import { Animated, InteractionManager, LayoutAnimation, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
+import { memo, useCallback, useMemo, useState } from 'react'
+import { LayoutAnimation, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import { Image } from 'expo-image'
-import { Swipeable } from 'react-native-gesture-handler'
-import { Ionicons } from '@expo/vector-icons'
-import * as Haptics from 'expo-haptics'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import type { Clipping } from '@/types/database'
 import type { FeedStackParamList } from '@/navigation/types'
@@ -12,6 +9,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, getScaledTypography, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
+import SwipeableRow from '@/components/ui/SwipeableRow'
 
 interface ClippingCardProps {
   clipping: Clipping
@@ -30,7 +28,6 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false }: ClippingC
   const scaled = useMemo(() => getScaledTypography(preferences.fontMultiplier), [preferences.fontMultiplier])
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
   const [isExpanded, setIsExpanded] = useState(false)
-  const swipeableRef = useRef<Swipeable>(null)
 
   const handleExpand = useCallback(() => {
     if (isExpanded) return
@@ -38,40 +35,13 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false }: ClippingC
     setIsExpanded(true)
   }, [isExpanded])
 
-  const handleDelete = useCallback(async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-    try {
-      await deleteClipping(clipping.id)
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-      InteractionManager.runAfterInteractions(() => {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
-        onDeleted(clipping.id)
-      })
-    } catch (error) {
+  const handleDelete = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+    onDeleted(clipping.id)
+    deleteClipping(clipping.id).catch((error) => {
       console.error('Failed to delete clipping:', error)
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
-      swipeableRef.current?.close()
-    }
+    })
   }, [clipping.id, onDeleted])
-
-  const renderRightActions = useCallback(
-    (_progress: Animated.AnimatedInterpolation<number>, dragX: Animated.AnimatedInterpolation<number>) => {
-      const opacity = dragX.interpolate({
-        inputRange: [-100, -40],
-        outputRange: [1, 0],
-        extrapolate: 'clamp',
-      })
-
-      return (
-        <Pressable onPress={handleDelete} style={styles.deleteAction}>
-          <Animated.View style={{ opacity }}>
-            <Ionicons name="trash-outline" size={22} color={colors.red} />
-          </Animated.View>
-        </Pressable>
-      )
-    },
-    [handleDelete, styles.deleteAction, colors.red],
-  )
 
   const cardContent = (
       <View style={styles.surface}>
@@ -136,16 +106,13 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false }: ClippingC
   if (readOnly) return cardContent
 
   return (
-    <Swipeable
-      ref={swipeableRef}
-      renderRightActions={renderRightActions}
-      rightThreshold={60}
-      overshootRight={false}
-      friction={2}
-      overshootFriction={8}
+    <SwipeableRow
+      onAction={handleDelete}
+      actionColor={colors.red}
+      actionIcon="trash-outline"
     >
       {cardContent}
-    </Swipeable>
+    </SwipeableRow>
   )
 }
 
@@ -238,13 +205,6 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       height: StyleSheet.hairlineWidth,
       backgroundColor: colors.border,
       marginHorizontal: 20,
-    },
-
-    // ── Swipe delete ──
-    deleteAction: {
-      justifyContent: 'center',
-      alignItems: 'center',
-      width: 100,
     },
   })
 }

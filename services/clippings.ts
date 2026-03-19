@@ -4,7 +4,19 @@
  */
 
 import { supabase } from '@/lib/supabase/client'
-import type { Clipping } from '@/types/database'
+import type { Clipping, Database, Review } from '@/types/database'
+import { stripHtml } from '@/utils/html'
+
+type ClippingRow = Database['public']['Tables']['user_clippings']['Row']
+
+/** Map a Supabase row (loose types) to the stricter app-level Clipping interface. */
+function toClipping(row: ClippingRow): Clipping {
+  return {
+    ...row,
+    type: row.type as Clipping['type'],
+    review_json: row.review_json as Clipping['review_json'],
+  }
+}
 
 /** Payload for creating a new clipping (user_id comes from auth). */
 interface SaveClippingPayload {
@@ -42,7 +54,7 @@ export async function saveClipping(payload: SaveClippingPayload): Promise<Clippi
     throw new Error(`Failed to save clipping: ${error.message}`)
   }
 
-  return data
+  return toClipping(data)
 }
 
 /**
@@ -61,7 +73,7 @@ export async function getUserClippings(userId: string): Promise<Clipping[]> {
     return []
   }
 
-  return data ?? []
+  return (data ?? []).map(toClipping)
 }
 
 /**
@@ -82,7 +94,40 @@ export async function getVillageClippings(userIds: string[]): Promise<Clipping[]
     return []
   }
 
-  return data ?? []
+  return (data ?? []).map(toClipping)
+}
+
+/**
+ * Saves a full review as a repost in the user's clippings.
+ * Stores the complete Review object in `review_json` for rich rendering.
+ */
+export async function saveRepost(review: Review): Promise<Clipping> {
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('You must be signed in to repost.')
+  }
+
+  const { data, error } = await supabase
+    .from('user_clippings')
+    .insert({
+      user_id: user.id,
+      type: 'repost',
+      quote_text: stripHtml(review.review),
+      movie_title: review.movieTitle,
+      author_name: review.creator,
+      original_url: review.link,
+      review_json: JSON.parse(JSON.stringify(review)),
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('saveRepost error:', error.message)
+    throw new Error(`Failed to save repost: ${error.message}`)
+  }
+
+  return toClipping(data)
 }
 
 /**

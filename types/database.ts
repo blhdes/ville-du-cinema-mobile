@@ -103,6 +103,8 @@ export interface Database {
           author_name: string
           original_url: string
           created_at: string
+          type: string
+          review_json: Json | null
         }
         /** Shape accepted by INSERT statements. */
         Insert: {
@@ -113,6 +115,8 @@ export interface Database {
           author_name: string
           original_url: string
           created_at?: string
+          type?: string
+          review_json?: Json | null
         }
         /** Shape accepted by UPDATE statements (all fields optional). */
         Update: {
@@ -123,6 +127,8 @@ export interface Database {
           author_name?: string
           original_url?: string
           created_at?: string
+          type?: string
+          review_json?: Json | null
         }
         Relationships: []
       }
@@ -205,7 +211,7 @@ export interface PublicProfile {
 // Clippings types
 // ---------------------------------------------------------------------------
 
-/** A saved review quote from the user's Clippings archive. */
+/** A saved review quote or reposted review from the user's Clippings archive. */
 export interface Clipping {
   id: string // uuid
   user_id: string // uuid — FK to Supabase auth
@@ -214,6 +220,8 @@ export interface Clipping {
   author_name: string
   original_url: string
   created_at: string // ISO 8601 timestamp
+  type: 'quote' | 'repost'
+  review_json: Review | null
 }
 
 // ---------------------------------------------------------------------------
@@ -267,8 +275,24 @@ export interface ClippingFeedItem {
   ownerUsername?: string
 }
 
+/** A reposted review entry in the unified Super-Feed. */
+export interface RepostFeedItem {
+  kind: 'repost'
+  /** Milliseconds since epoch — derived from created_at once at mapping time. */
+  sortKey: number
+  data: Clipping
+  /** Avatar of the user who reposted. */
+  ownerAvatarUrl?: string
+  /** Display name of the user who reposted. */
+  ownerDisplayName: string
+  /** Supabase user ID — enables profile navigation. */
+  ownerUserId?: string
+  /** Village username snapshot. */
+  ownerUsername?: string
+}
+
 /** Discriminated union used as the single item type in the Super-Feed FlatList. */
-export type FeedItem = ReviewFeedItem | ClippingFeedItem
+export type FeedItem = ReviewFeedItem | ClippingFeedItem | RepostFeedItem
 
 // ---------------------------------------------------------------------------
 // API request types — used to type request bodies in API route handlers.

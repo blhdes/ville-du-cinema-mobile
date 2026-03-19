@@ -26,6 +26,7 @@ import ProfileHeader from '@/components/profile/ProfileHeader'
 import ProfileSkeleton from '@/components/profile/ProfileSkeleton'
 import FollowingList from '@/components/profile/FollowingList'
 import ClippingCard from '@/components/profile/ClippingCard'
+import RepostCard from '@/components/feed/RepostCard'
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -137,13 +138,27 @@ export default function ProfileScreen() {
     )
   }, [user, profile, followedUsers, villageUsers, colors, followingExpanded, toggleFollowing, clippingsLoading, clippingsError, clippings, styles])
 
-  const renderItem = useCallback(({ item }: { item: Clipping }) => (
-    <ClippingCard
-      clipping={item}
-      onDeleted={handleClippingDeleted}
-      user={clippingUser}
-    />
-  ), [handleClippingDeleted, clippingUser])
+  const renderItem = useCallback(({ item }: { item: Clipping }) => {
+    if (item.type === 'repost' && item.review_json) {
+      return (
+        <RepostCard
+          clipping={item}
+          onDeleted={handleClippingDeleted}
+          owner={{
+            avatarUrl: clippingUser?.avatarUrl,
+            displayName: clippingUser?.displayName ?? 'You',
+          }}
+        />
+      )
+    }
+    return (
+      <ClippingCard
+        clipping={item}
+        onDeleted={handleClippingDeleted}
+        user={clippingUser}
+      />
+    )
+  }, [handleClippingDeleted, clippingUser])
 
   // Guest mode
   if (!user) {

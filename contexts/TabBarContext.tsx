@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useState } from 'react'
-import { useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated'
+import { cancelAnimation, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated'
 
 interface TabBarContextValue {
   translateY: SharedValue<number>
@@ -19,6 +19,8 @@ export function TabBarProvider({ children }: { children: React.ReactNode }) {
 
   const setTabBarVisible = useCallback(
     (visible: boolean) => {
+      // Kill any in-flight spring/timing from the scroll handler before overriding.
+      cancelAnimation(translateY)
       if (visible) {
         translateY.value = withTiming(0, { duration: 250 })
       } else {

@@ -1,6 +1,7 @@
 import { XMLParser } from 'fast-xml-parser'
 import type { Review } from '@/types/database'
 import { getAvatarUrl, setAvatarUrl, setAvatarUrls } from '@/services/avatarCache'
+import { stripHtml } from '@/utils/html'
 
 const PAGE_SIZE = 50
 const FEED_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
@@ -126,10 +127,6 @@ function cleanDescription(description: string): string {
   return sanitised.trim()
 }
 
-/** Strip ALL HTML — used only to detect "Watched on" plain-text prefix. */
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, '').trim()
-}
 
 /**
  * Fetch the display name for a Letterboxd user from their RSS feed.

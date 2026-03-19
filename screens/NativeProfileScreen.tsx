@@ -22,6 +22,7 @@ import type { FeedStackParamList } from '@/navigation/types'
 import type { Clipping, FollowedVillageUser, VillagePublicProfile } from '@/types/database'
 import ProfileSkeleton from '@/components/profile/ProfileSkeleton'
 import ClippingCard from '@/components/profile/ClippingCard'
+import RepostCard from '@/components/feed/RepostCard'
 import ExpandableAvatar from '@/components/ui/ExpandableAvatar'
 import FollowButton from '@/components/ui/FollowButton'
 
@@ -149,14 +150,28 @@ export default function NativeProfileScreen() {
     )
   }, [profile, clippingsLoading, clippings, isFollowing, handleFollowToggle, styles, colors])
 
-  const renderItem = useCallback(({ item }: { item: Clipping }) => (
-    <ClippingCard
-      clipping={item}
-      onDeleted={NOOP}
-      readOnly
-      user={clippingUser}
-    />
-  ), [clippingUser])
+  const renderItem = useCallback(({ item }: { item: Clipping }) => {
+    if (item.type === 'repost' && item.review_json) {
+      return (
+        <RepostCard
+          clipping={item}
+          owner={{
+            avatarUrl: clippingUser?.avatarUrl,
+            displayName: clippingUser?.displayName ?? 'Village User',
+            userId,
+          }}
+        />
+      )
+    }
+    return (
+      <ClippingCard
+        clipping={item}
+        onDeleted={NOOP}
+        readOnly
+        user={clippingUser}
+      />
+    )
+  }, [clippingUser, userId])
 
   // ---------------------------------------------------------------------------
   // Render

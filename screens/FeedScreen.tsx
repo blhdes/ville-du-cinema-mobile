@@ -31,12 +31,13 @@ import { useClippings } from '@/hooks/useClippings'
 import { fetchFeed, clearFeedCache, refreshAvatarUrls, type FeedResult } from '@/services/feed'
 import { getVillageClippings } from '@/services/clippings'
 import { hydrateAvatarCache } from '@/services/avatarCache'
-import type { Review, FeedItem, Clipping } from '@/types/database'
+import type { Review, FeedItem, Clipping, RepostFeedItem } from '@/types/database'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import ReviewCard from '@/components/ReviewCard'
 import ClippingCard from '@/components/profile/ClippingCard'
+import RepostCard from '@/components/feed/RepostCard'
 import ReviewCardSkeleton from '@/components/feed/ReviewCardSkeleton'
 import WatchNotification from '@/components/WatchNotification'
 import QuoteOfTheDay from '@/components/QuoteOfTheDay'
@@ -56,8 +57,11 @@ const TOP_THRESHOLD = 250
 // Spring config for snap animations — relaxed, deliberate settling for an editorial feel.
 const SNAP_SPRING = { damping: 24, stiffness: 120, mass: 1.0, overshootClamping: true }
 
-const keyExtractor = (item: FeedItem): string =>
-  item.kind === 'review' ? `review-${item.data.id}` : `clipping-${item.data.id}`
+const keyExtractor = (item: FeedItem): string => {
+  if (item.kind === 'review') return `review-${item.data.id}`
+  if (item.kind === 'repost') return `repost-${item.data.id}`
+  return `clipping-${item.data.id}`
+}
 
 export default function FeedScreen() {
   const insets = useSafeAreaInsets()
@@ -81,6 +85,8 @@ export default function FeedScreen() {
   const scrollY = useSharedValue(0)
   const lastScrollDirection = useSharedValue(0)
   const spinnerProgress = useSharedValue(1)
+  // Gate: prevents scroll worklets from touching translateY after leaving FeedScreen.
+  const isFocused = useSharedValue(true)
 
   const onHeaderLayout = useCallback((e: LayoutChangeEvent) => {
     setHeaderHeight(e.nativeEvent.layout.height)
@@ -104,6 +110,8 @@ export default function FeedScreen() {
   // Snap bars to a definitive visible/hidden state — no halfway positions.
   const snapToFinalState = (currentScrollY: number) => {
     'worklet'
+    // Don't touch the tab bar after leaving FeedScreen (prevents stuck-hidden bug).
+    if (!isFocused.value) return
     // Top safe zone — always animate back to fully visible.
     if (currentScrollY < TOP_THRESHOLD) {
       translateY.value = withSpring(0, SNAP_SPRING)
@@ -139,6 +147,9 @@ export default function FeedScreen() {
       scrollY.value = currentY
       const delta = currentY - ctx.prevY
       ctx.prevY = currentY
+
+      // Don't manipulate bars after leaving FeedScreen.
+      if (!isFocused.value) return
 
       // Track direction during both drag and momentum (needed for snap decisions).
       if (delta !== 0) {
@@ -189,14 +200,16 @@ export default function FeedScreen() {
     },
   })
 
-  // Reset tab bar + header when leaving FeedScreen (fixes stuck-hidden bug on screen transitions).
+  // Gate the scroll handler and reset bars when leaving/returning to FeedScreen.
   useFocusEffect(
     useCallback(() => {
+      isFocused.value = true
       return () => {
+        isFocused.value = false
         translateY.value = withTiming(0, { duration: 200 })
         headerTranslateY.value = withTiming(0, { duration: 200 })
       }
-    }, [translateY, headerTranslateY])
+    }, [isFocused, translateY, headerTranslateY])
   )
 
   const [reviews, setReviews] = useState<Review[]>([])
@@ -367,7 +380,10 @@ export default function FeedScreen() {
     const ownerDisplayName = profile?.display_name ?? profile?.username ?? 'Me'
     const ownerAvatarUrl = profile?.avatar_url ?? undefined
 
-    const clippingItems = clippings.map((c): FeedItem => ({
+    const ownQuotes = clippings.filter((c) => c.type !== 'repost')
+    const ownReposts = clippings.filter((c) => c.type === 'repost')
+
+    const clippingItems = ownQuotes.map((c): FeedItem => ({
       kind: 'clipping',
       sortKey: new Date(c.created_at).getTime(),
       data: c,
@@ -375,7 +391,18 @@ export default function FeedScreen() {
       ownerDisplayName,
     }))
 
-    const villageClippingItems = villageClippings.map((c): FeedItem => {
+    const repostItems: FeedItem[] = ownReposts.map((c): RepostFeedItem => ({
+      kind: 'repost',
+      sortKey: new Date(c.created_at).getTime(),
+      data: c,
+      ownerAvatarUrl,
+      ownerDisplayName,
+    }))
+
+    const villageQuotes = villageClippings.filter((c) => c.type !== 'repost')
+    const villageReposts = villageClippings.filter((c) => c.type === 'repost')
+
+    const villageClippingItems = villageQuotes.map((c): FeedItem => {
       const owner = villageUserMap.get(c.user_id)
       return {
         kind: 'clipping',
@@ -388,7 +415,20 @@ export default function FeedScreen() {
       }
     })
 
-    return [...reviewItems, ...clippingItems, ...villageClippingItems].sort((a, b) => b.sortKey - a.sortKey)
+    const villageRepostItems: FeedItem[] = villageReposts.map((c): RepostFeedItem => {
+      const owner = villageUserMap.get(c.user_id)
+      return {
+        kind: 'repost',
+        sortKey: new Date(c.created_at).getTime(),
+        data: c,
+        ownerAvatarUrl: owner?.avatarUrl,
+        ownerDisplayName: owner?.displayName ?? 'Village User',
+        ownerUserId: c.user_id,
+        ownerUsername: owner?.username,
+      }
+    })
+
+    return [...reviewItems, ...clippingItems, ...repostItems, ...villageClippingItems, ...villageRepostItems].sort((a, b) => b.sortKey - a.sortKey)
   }, [reviews, clippings, villageClippings, villageUserMap, profile?.avatar_url, profile?.display_name, profile?.username])
 
   // Filter watch notifications — clippings are always shown regardless
@@ -396,7 +436,7 @@ export default function FeedScreen() {
     () => preferences.showWatchNotifications
       ? feedItems
       : feedItems.filter((item) => {
-          if (item.kind === 'clipping') return true
+          if (item.kind === 'clipping' || item.kind === 'repost') return true
           return item.data.type !== 'watch'
         }),
     [feedItems, preferences.showWatchNotifications],
@@ -416,6 +456,14 @@ export default function FeedScreen() {
   }))
 
   const renderItem = useCallback(({ item }: { item: FeedItem }) => {
+    if (item.kind === 'repost') {
+      return (
+        <RepostCard
+          clipping={item.data}
+          owner={{ avatarUrl: item.ownerAvatarUrl, displayName: item.ownerDisplayName, userId: item.ownerUserId, username: item.ownerUsername }}
+        />
+      )
+    }
     if (item.kind === 'clipping') {
       return (
         <ClippingCard
