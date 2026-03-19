@@ -17,7 +17,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { useTheme } from '@/contexts/ThemeContext'
-import { useTabBar } from '@/contexts/TabBarContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import { saveClipping } from '@/services/clippings'
@@ -141,11 +140,9 @@ export default function ReviewReaderScreen() {
   const { colors } = useTheme()
   const typography = useTypography()
   const insets = useSafeAreaInsets()
-  const { setTabBarVisible } = useTabBar()
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
-  // Tab bar is hidden before navigation (in ReviewCard);
-  // no cleanup here — FeedStackNavigator handles restoration via navigation state.
+  // Tab bar visibility is managed by AppTabs focus listeners + FeedStackNavigator state listener.
 
   const words = useMemo(() => parseWords(params.reviewText), [params.reviewText])
 
@@ -192,7 +189,6 @@ export default function ReviewReaderScreen() {
 
   const handleExport = useCallback(() => {
     if (!selectedText) return
-    setTabBarVisible(false)
     navigation.navigate('QuotePreview', {
       quote: selectedText,
       author: params.author,
@@ -201,7 +197,7 @@ export default function ReviewReaderScreen() {
       movieTitle: params.movieTitle,
       rating: params.rating,
     })
-  }, [navigation, selectedText, params, setTabBarVisible])
+  }, [navigation, selectedText, params])
 
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
 

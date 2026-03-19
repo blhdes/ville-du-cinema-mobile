@@ -26,6 +26,7 @@ import { TabBarProvider, useTabBar } from '@/contexts/TabBarContext'
 import { useTheme } from '@/contexts/ThemeContext'
 
 const AVATAR_SIZE = 26
+const HIDE_TAB_SCREENS = new Set(['ReviewReader', 'QuotePreview'])
 const BOUNCE_SPRING = { damping: 14, stiffness: 300, mass: 0.6 }
 const PROFILE_IN_SPRING = { damping: 14, stiffness: 260, mass: 0.6 }
 const PROFILE_OUT_SPRING = { damping: 14, stiffness: 260, mass: 0.6 }
@@ -139,7 +140,7 @@ const Tab = createBottomTabNavigator<AppTabsParamList>()
 
 function AppTabsInner() {
   const { colors } = useTheme()
-  const { requestFeedRefresh, isFeedRefreshing } = useTabBar()
+  const { requestFeedRefresh, isFeedRefreshing, setTabBarVisible } = useTabBar()
   const onFeedPress = useCallback(() => onTabFocus('Feed'), [])
   const onProfileBounce = useCallback(() => onTabFocus('Profile'), [])
   const onSettingsPress = useCallback(() => onTabFocus('Settings'), [])
@@ -204,6 +205,17 @@ function AppTabsInner() {
             }
             // Condition B — deep in stack: let default popToTop behavior happen (no refresh)
           },
+          focus: () => {
+            // Restore tab bar unless Feed stack is on a fullscreen route
+            const tabState = navigation.getState()
+            const feedRoute = tabState.routes.find((r: { name: string }) => r.name === 'Feed')
+            const feedStack = feedRoute?.state
+            if (feedStack) {
+              const topRoute = feedStack.routes[feedStack.index ?? 0]
+              if (HIDE_TAB_SCREENS.has(topRoute.name)) return
+            }
+            setTabBarVisible(true)
+          },
         })}
       />
       <Tab.Screen
@@ -212,7 +224,10 @@ function AppTabsInner() {
         options={{
           tabBarIcon: ({ color }) => <ProfileIcon color={color} />,
         }}
-        listeners={{ tabPress: onProfileBounce }}
+        listeners={{
+          tabPress: onProfileBounce,
+          focus: () => setTabBarVisible(true),
+        }}
       />
       <Tab.Screen
         name="Settings"
@@ -220,7 +235,10 @@ function AppTabsInner() {
         options={{
           tabBarIcon: ({ color, size }) => <SettingsIcon color={color} size={size} />,
         }}
-        listeners={{ tabPress: onSettingsPress }}
+        listeners={{
+          tabPress: onSettingsPress,
+          focus: () => setTabBarVisible(true),
+        }}
       />
     </Tab.Navigator>
   )

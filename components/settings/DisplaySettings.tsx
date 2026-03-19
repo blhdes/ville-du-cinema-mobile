@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import Slider from '@react-native-community/slider'
+import { Ionicons } from '@expo/vector-icons'
 import Toggle from '@/components/ui/Toggle'
 import { useTheme, type ThemePreference } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
@@ -18,10 +19,10 @@ interface DisplaySettingsProps {
   disableRemote?: boolean
 }
 
-const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
-  { value: 'system', label: 'System' },
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
+const THEME_OPTIONS: { value: ThemePreference; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { value: 'system', label: 'System', icon: 'phone-portrait-outline' },
+  { value: 'light', label: 'Light', icon: 'sunny-outline' },
+  { value: 'dark', label: 'Dark', icon: 'moon-outline' },
 ]
 
 export default function DisplaySettings({
@@ -62,6 +63,11 @@ export default function DisplaySettings({
                   style={[styles.segment, isActive && styles.segmentActive]}
                   onPress={() => setPreference(option.value)}
                 >
+                  <Ionicons
+                    name={option.icon}
+                    size={16}
+                    color={isActive ? colors.foreground : colors.secondaryText}
+                  />
                   <Text style={[styles.segmentText, isActive && styles.segmentTextActive]}>
                     {option.label}
                   </Text>
@@ -180,6 +186,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       paddingVertical: 6,
       alignItems: 'center',
       borderRadius: 6,
+      gap: 2,
     },
     segmentActive: {
       backgroundColor: colors.background,
