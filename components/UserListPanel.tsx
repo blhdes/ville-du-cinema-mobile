@@ -53,9 +53,11 @@ const AVATAR_SIZE = 26
 function VillageUserRow({
   user,
   onUnfollow,
+  onPress,
 }: {
   user: FollowedVillageUser
   onUnfollow: () => void
+  onPress: () => void
 }) {
   const { colors } = useTheme()
   const typography = useTypography()
@@ -65,7 +67,10 @@ function VillageUserRow({
 
   return (
     <View style={styles.userRow}>
-      <View style={styles.userInfo}>
+      <Pressable
+        style={({ pressed }) => [styles.userInfo, pressed && { opacity: 0.6 }]}
+        onPress={onPress}
+      >
         {user.avatar_url ? (
           <Image source={user.avatar_url} style={styles.avatar} cachePolicy="memory-disk" />
         ) : (
@@ -79,7 +84,7 @@ function VillageUserRow({
             <Text style={styles.handle}>{' '}@{user.username}</Text>
           ) : null}
         </Text>
-      </View>
+      </Pressable>
       <Pressable
         onPress={onUnfollow}
         hitSlop={8}
@@ -223,6 +228,7 @@ export default function UserListPanel({
       return (
         <VillageUserRow
           user={item.user}
+          onPress={() => navigation.navigate('NativeProfile', { userId: item.user.user_id, username: item.user.username ?? undefined })}
           onUnfollow={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
             onRemoveVillageUser(item.user.user_id)

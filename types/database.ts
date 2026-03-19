@@ -261,6 +261,10 @@ export interface ClippingFeedItem {
   ownerAvatarUrl?: string
   /** Display name of the logged-in user. */
   ownerDisplayName: string
+  /** Supabase user ID — enables profile navigation for Village users. */
+  ownerUserId?: string
+  /** Village username snapshot. */
+  ownerUsername?: string
 }
 
 /** Discriminated union used as the single item type in the Super-Feed FlatList. */

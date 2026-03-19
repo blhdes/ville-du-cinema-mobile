@@ -102,10 +102,17 @@ function VillageRow({ user, isLast }: { user: FollowedVillageUser; isLast: boole
           )}
         </View>
       </Pressable>
-      {/* Village logo — platform indicator */}
-      <View style={styles.platformIcon}>
+      {/* Village logo — tappable, navigates to profile */}
+      <Pressable
+        style={({ pressed }) => [styles.platformIcon, pressed && styles.rowPressed]}
+        onPress={() => navigation.navigate('NativeProfile', {
+          userId: user.user_id,
+          username: user.username ?? undefined,
+        })}
+        hitSlop={8}
+      >
         <LogoIcon size={34} fill={colors.secondaryText} />
-      </View>
+      </Pressable>
     </View>
   )
 }

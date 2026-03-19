@@ -4,7 +4,9 @@ import { Image } from 'expo-image'
 import { Swipeable } from 'react-native-gesture-handler'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
+import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import type { Clipping } from '@/types/database'
+import type { FeedStackParamList } from '@/navigation/types'
 import { deleteClipping } from '@/services/clippings'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, getScaledTypography, type ThemeColors } from '@/theme'
@@ -15,12 +17,13 @@ interface ClippingCardProps {
   clipping: Clipping
   onDeleted: (id: string) => void
   /** Optional social header — avatar URL + display name shown above the quote */
-  user?: { avatarUrl?: string; displayName: string }
+  user?: { avatarUrl?: string; displayName: string; userId?: string; username?: string }
   /** Disables swipe-to-delete. Use on read-only views (e.g. another user's profile). */
   readOnly?: boolean
 }
 
 function ClippingCard({ clipping, onDeleted, user, readOnly = false }: ClippingCardProps) {
+  const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const { colors } = useTheme()
   const typography = useTypography()
   const { preferences } = useDisplayPreferences()
@@ -80,7 +83,11 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false }: ClippingC
           {/* ── Header row: avatar + name on left, decorative " on right ── */}
           <View style={styles.headerRow}>
             {user && (
-              <View style={styles.identity}>
+              <Pressable
+                style={({ pressed }) => [styles.identity, pressed && user.userId && styles.pressed]}
+                onPress={user.userId ? () => navigation.navigate('NativeProfile', { userId: user.userId!, username: user.username }) : undefined}
+                disabled={!user.userId}
+              >
                 {user.avatarUrl ? (
                   <Image source={{ uri: user.avatarUrl }} style={styles.avatar} cachePolicy="memory-disk" />
                 ) : (
@@ -93,7 +100,7 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false }: ClippingC
                 <Text style={styles.displayName} numberOfLines={1}>
                   {user.displayName}
                 </Text>
-              </View>
+              </Pressable>
             )}
             <Text style={styles.openQuoteMark}>{'\u201C'}</Text>
           </View>

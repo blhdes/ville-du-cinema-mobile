@@ -345,11 +345,12 @@ export default function FeedScreen() {
 
   // Lookup map: Village user_id → display info (built from the followed-users list)
   const villageUserMap = useMemo(() => {
-    const map = new Map<string, { displayName: string; avatarUrl: string | undefined }>()
+    const map = new Map<string, { displayName: string; avatarUrl: string | undefined; username: string | undefined }>()
     for (const u of villageUsers) {
       map.set(u.user_id, {
         displayName: u.display_name ?? u.username ?? 'Village User',
         avatarUrl: u.avatar_url ?? undefined,
+        username: u.username ?? undefined,
       })
     }
     return map
@@ -382,6 +383,8 @@ export default function FeedScreen() {
         data: c,
         ownerAvatarUrl: owner?.avatarUrl,
         ownerDisplayName: owner?.displayName ?? 'Village User',
+        ownerUserId: c.user_id,
+        ownerUsername: owner?.username,
       }
     })
 
@@ -418,7 +421,7 @@ export default function FeedScreen() {
         <ClippingCard
           clipping={item.data}
           onDeleted={removeClipping}
-          user={{ avatarUrl: item.ownerAvatarUrl, displayName: item.ownerDisplayName }}
+          user={{ avatarUrl: item.ownerAvatarUrl, displayName: item.ownerDisplayName, userId: item.ownerUserId, username: item.ownerUsername }}
           readOnly
         />
       )
