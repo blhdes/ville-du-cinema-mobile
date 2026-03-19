@@ -209,7 +209,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       marginTop: spacing.md,
     },
     handle: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,
@@ -234,7 +234,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       marginBottom: spacing.xl,
     },
     metaCount: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
       letterSpacing: typography.magazineMeta.letterSpacing,
       color: colors.secondaryText,
@@ -245,7 +245,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       marginHorizontal: HORIZONTAL_PAD,
     },
     sectionLabel: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,
@@ -261,7 +261,8 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       gap: spacing.md,
     },
     emptyText: {
-      fontFamily: fonts.bodyItalic,
+      fontFamily: fonts.system,
+      fontStyle: 'italic' as const,
       fontSize: typography.magazineBody.fontSize,
       lineHeight: typography.magazineBody.lineHeight,
       color: colors.secondaryText,

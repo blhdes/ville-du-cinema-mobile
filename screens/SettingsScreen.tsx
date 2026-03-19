@@ -123,7 +123,8 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
     },
     content: {},
     sectionLabel: {
-      fontFamily: fonts.bodyBold,
+      fontFamily: fonts.system,
+      fontWeight: '600' as const,
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       color: colors.secondaryText,
@@ -133,7 +134,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       paddingBottom: spacing.sm,
     },
     sectionFooter: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
       color: colors.secondaryText,
       letterSpacing: typography.magazineMeta.letterSpacing,
@@ -160,12 +161,12 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       borderBottomColor: colors.border,
     },
     rowLabel: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.body.fontSize,
       color: colors.foreground,
     },
     rowValue: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.body.fontSize,
       color: colors.secondaryText,
     },
@@ -180,7 +181,8 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       paddingBottom: spacing.xxl,
     },
     signOutText: {
-      fontFamily: fonts.bodyBold,
+      fontFamily: fonts.system,
+      fontWeight: '600' as const,
       fontSize: typography.magazineMeta.fontSize,
       color: colors.red,
       letterSpacing: typography.magazineMeta.letterSpacing,

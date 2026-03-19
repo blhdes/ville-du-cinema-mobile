@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   subtitle: {
-    fontFamily: fonts.body,
+    fontFamily: fonts.system,
     textAlign: 'center',
   },
 })

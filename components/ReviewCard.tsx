@@ -321,7 +321,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       marginRight: 8,
     },
     meta: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,
@@ -331,7 +331,8 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       color: colors.yellow,
     },
     expandToggle: {
-      fontFamily: fonts.bodyBold,
+      fontFamily: fonts.system,
+      fontWeight: '600' as const,
       fontSize: typography.caption.fontSize,
       color: colors.teal,
       marginTop: spacing.sm,
@@ -342,7 +343,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       alignSelf: 'flex-end',
     },
     linkText: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,

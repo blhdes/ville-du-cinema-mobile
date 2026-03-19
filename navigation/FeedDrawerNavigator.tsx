@@ -85,7 +85,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       color: colors.foreground,
     },
     doneButton: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.body.fontSize,
       color: colors.blue,
     },

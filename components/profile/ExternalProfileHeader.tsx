@@ -357,7 +357,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       textAlign: 'center',
     },
     username: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,
@@ -387,8 +387,8 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       paddingBottom: spacing.xs,
     },
     readMoreText: {
-      fontFamily: fonts.bodyItalic,
-      fontStyle: 'normal',
+      fontFamily: fonts.system,
+      fontStyle: 'italic' as const,
       fontSize: typography.callout.fontSize,
       lineHeight: typography.callout.lineHeight,
       color: colors.secondaryText,
@@ -408,7 +408,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       gap: 4,
     },
     metadataLabel: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.caption.fontSize,
       lineHeight: typography.caption.lineHeight,
       color: colors.secondaryText,
@@ -419,7 +419,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       color: colors.teal,
     },
     metadataLink: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.caption.fontSize,
       lineHeight: typography.caption.lineHeight,
       color: colors.teal,

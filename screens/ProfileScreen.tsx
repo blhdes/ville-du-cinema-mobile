@@ -217,7 +217,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       paddingVertical: spacing.md,
     },
     accordionLabel: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,
@@ -230,7 +230,8 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       paddingVertical: 2,
     },
     countPillText: {
-      fontFamily: fonts.bodyBold,
+      fontFamily: fonts.system,
+      fontWeight: '600' as const,
       fontSize: typography.caption.fontSize,
       color: colors.secondaryText,
     },
@@ -238,7 +239,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       paddingBottom: spacing.md,
     },
     sectionLabel: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,
@@ -254,7 +255,8 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       gap: spacing.md,
     },
     emptyText: {
-      fontFamily: fonts.bodyItalic,
+      fontFamily: fonts.system,
+      fontStyle: 'italic' as const,
       fontSize: typography.magazineBody.fontSize,
       lineHeight: typography.magazineBody.lineHeight,
       color: colors.secondaryText,
@@ -275,7 +277,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       marginBottom: spacing.md,
     },
     guestText: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.magazineBody.fontSize,
       lineHeight: typography.magazineBody.lineHeight,
       color: colors.secondaryText,

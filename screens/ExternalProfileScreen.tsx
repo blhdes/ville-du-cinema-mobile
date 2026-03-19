@@ -227,7 +227,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       paddingVertical: spacing.xxl,
     },
     emptyText: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.body.fontSize,
       lineHeight: typography.body.lineHeight,
       color: colors.secondaryText,
@@ -238,7 +238,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       justifyContent: 'center',
     },
     fallbackLink: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.body.fontSize,
       color: colors.teal,
     },

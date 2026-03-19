@@ -158,12 +158,12 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       marginRight: spacing.md,
     },
     label: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.body.fontSize,
       color: colors.foreground,
     },
     description: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
       color: colors.secondaryText,
       letterSpacing: typography.magazineMeta.letterSpacing,
@@ -190,7 +190,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       elevation: 1,
     },
     segmentText: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.caption.fontSize,
       color: colors.secondaryText,
     },

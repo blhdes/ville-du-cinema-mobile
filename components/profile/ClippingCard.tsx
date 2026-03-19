@@ -182,12 +182,13 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       alignItems: 'center',
     },
     avatarInitial: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: 10,
       color: colors.secondaryText,
     },
     displayName: {
-      fontFamily: fonts.bodyBold,
+      fontFamily: fonts.system,
+      fontWeight: '600' as const,
       fontSize: typography.body.fontSize,
       lineHeight: typography.body.lineHeight,
       color: colors.foreground,
@@ -218,7 +219,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       color: colors.foreground,
     },
     authorMeta: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,

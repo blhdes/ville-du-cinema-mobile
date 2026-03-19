@@ -419,6 +419,7 @@ export default function FeedScreen() {
           clipping={item.data}
           onDeleted={removeClipping}
           user={{ avatarUrl: item.ownerAvatarUrl, displayName: item.ownerDisplayName }}
+          readOnly
         />
       )
     }
@@ -616,7 +617,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       marginBottom: spacing.sm,
     },
     emptySubtitle: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.body.fontSize,
       lineHeight: typography.body.lineHeight,
       color: colors.secondaryText,

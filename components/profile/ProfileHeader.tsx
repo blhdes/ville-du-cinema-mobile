@@ -93,7 +93,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       marginBottom: spacing.xs,
     },
     meta: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,
@@ -110,7 +110,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       paddingVertical: spacing.xs,
     },
     editButtonText: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
       letterSpacing: typography.magazineMeta.letterSpacing,
       color: colors.secondaryText,

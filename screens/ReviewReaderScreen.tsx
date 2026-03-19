@@ -447,7 +447,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       marginBottom: spacing.sm,
     },
     meta: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,
@@ -455,7 +455,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       marginBottom: spacing.lg,
     },
     hint: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.caption.fontSize,
       lineHeight: typography.caption.lineHeight,
       color: colors.secondaryText,

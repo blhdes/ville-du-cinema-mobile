@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   text: {
-    fontFamily: fonts.body,
+    fontFamily: fonts.system,
   },
   textOverlay: {
     position: 'absolute',

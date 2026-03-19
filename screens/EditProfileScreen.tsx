@@ -293,7 +293,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       color: colors.secondaryText,
     },
     changePhotoText: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.callout.fontSize,
       color: colors.teal,
       marginTop: spacing.sm,
@@ -302,7 +302,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       marginBottom: spacing.lg,
     },
     label: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
       letterSpacing: typography.magazineMeta.letterSpacing,
       color: colors.secondaryText,
@@ -312,14 +312,14 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
       paddingVertical: spacing.sm,
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.body.fontSize,
       lineHeight: typography.body.lineHeight,
       color: colors.foreground,
       backgroundColor: 'transparent',
     },
     usernameHint: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.caption.fontSize,
       color: colors.secondaryText,
       marginTop: spacing.xs,
@@ -329,7 +329,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       paddingTop: spacing.sm,
     },
     charCount: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.caption.fontSize,
       color: colors.secondaryText,
       textAlign: 'right',

@@ -14,8 +14,8 @@ import { useGuestMode } from '@/contexts/GuestModeContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import { getQuoteOfTheWeek } from '@/constants/filmmakerQuotes'
 import LogoIcon from '@/components/ui/LogoIcon'
+import FilmmakerQuote from '@/components/ui/FilmmakerQuote'
 import type { ThemeColors } from '@/theme'
-import { fonts } from '@/theme'
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Welcome'>
 
@@ -76,9 +76,8 @@ export default function WelcomeScreen({ navigation }: Props) {
           <LogoIcon size={148} fill={colors.foreground} />
         </Animated.View>
 
-        <Animated.View style={[styles.quoteSection, quoteStyle]}>
-          <Text style={styles.quoteText}>{quote.text}</Text>
-          <Text style={styles.authorText}>— {quote.author}</Text>
+        <Animated.View style={quoteStyle}>
+          <FilmmakerQuote text={quote.text} author={quote.author} />
         </Animated.View>
       </View>
 
@@ -121,25 +120,6 @@ function makeStyles(c: ThemeColors) {
       justifyContent: 'center',
       alignItems: 'center',
       gap: 48,
-    },
-
-    // ── Quote ──
-    quoteSection: {
-      paddingHorizontal: 2,
-    },
-    quoteText: {
-      fontFamily: fonts.body,
-      fontSize: 22,
-      fontStyle: 'italic',
-      color: c.foreground,
-      lineHeight: 34,
-      marginBottom: 16,
-    },
-    authorText: {
-      fontFamily: fonts.body,
-      fontSize: 14,
-      color: c.secondaryText,
-      letterSpacing: 0.5,
     },
 
     // ── Actions ──

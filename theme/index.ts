@@ -98,6 +98,10 @@ export const colors = lightColors
 // Typography
 // ---------------------------------------------------------------------------
 export const fonts = {
+  // ---- System UI (San Francisco on iOS, Roboto on Android) ----
+  system: Platform.select({ ios: 'System', default: 'sans-serif' }),
+
+  // ---- Editorial serif ----
   heading: Platform.select({ ios: 'PlayfairDisplay_700Bold', default: 'PlayfairDisplay_700Bold' }),
   body: Platform.select({ ios: 'EBGaramond_400Regular', default: 'EBGaramond_400Regular' }),
   bodyBold: Platform.select({ ios: 'EBGaramond_700Bold', default: 'EBGaramond_700Bold' }),

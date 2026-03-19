@@ -120,7 +120,8 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       opacity: 0.75,
     },
     pillLabel: {
-      fontFamily: fonts.bodyBold,
+      fontFamily: fonts.system,
+      fontWeight: '600' as const,
       fontSize: typography.callout.fontSize,
       lineHeight: typography.callout.lineHeight,
     },
