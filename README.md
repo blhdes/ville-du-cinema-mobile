@@ -1,21 +1,45 @@
-# Ville du Cinéma — Mobile
+# Village du Cin&eacute;ma
 
-**A cinephile social platform built for the art of cinema.**
+**A social app for cinema lovers, built with React Native.**
 
-<!-- HERO_BANNER: Replace with app screenshot or promotional banner -->
-<!-- e.g., ![Ville du Cinéma](./docs/hero-banner.png) -->
+Village (short for Village du Cin&eacute;ma) aggregates Letterboxd activity into an editorial-style feed. Follow your favorite film critics, save quotes from their reviews, and share beautifully typeset cards — all from your phone.
 
 ---
 
-## Key Features
+## Features
 
-- **Fluid 60 FPS UX** — gesture-driven navigation with `react-native-reanimated` and native screen transitions, zero dropped frames
-- **Reanimated Skeleton Loaders** — seamless splash-to-skeleton handoff eliminates FOUC (Flash of Unstyled Content) across every screen
-- **Custom Editorial Typography** — EB Garamond & Playfair Display font pairing inspired by Cahiers du Cinéma print aesthetics
-- **Supabase Backend-as-a-Service** — authentication (email/password + Google OAuth), Postgres database, and object storage for avatars
-- **Optimized List Rendering** — memoized components, virtualized feeds, and efficient re-render boundaries for smooth scrolling at scale
-- **Guest Mode** — full browse experience without sign-up, backed by AsyncStorage for local persistence
-- **Internationalization** — i18next-powered translations (French, English, Spanish)
+### Feed
+- **Letterboxd RSS integration** — follow any Letterboxd user by username and see their reviews, ratings, and watch activity in a unified timeline
+- **Merged social feed** — Letterboxd reviews, saved quotes, and reposts from followed Village members appear in one chronological stream
+- **Drawer filter** — swipe or tap the facepile to filter the feed by specific users
+- **Pull-to-refresh** with animated spinner and skeleton loading states
+
+### Social
+- **Village profiles** — create an account with avatar, display name, and bio
+- **Dual follow system** — follow Letterboxd users (via RSS) and native Village members
+- **User search** — find Village members by name or look up any Letterboxd username
+- **Repost reviews** — share a Letterboxd review to your Village feed with one swipe
+- **Linkable avatars** — tap any avatar or username in the feed to visit their profile
+
+### Reading & Sharing
+- **Immersive Review Reader** — full-screen reading experience with editorial typography
+- **Swipe-to-highlight** — select a passage from any review to save as a quote clipping
+- **Quote export** — generate shareable 9:16 story cards with film metadata, styled for Instagram/social
+- **Clippings scrapbook** — all saved quotes live in your profile tab
+
+### Design
+- **Editorial typography** — EB Garamond body text paired with Playfair Display headings, inspired by Cahiers du Cinema
+- **Dynamic font scaling** — adjustable text size across the entire app
+- **Dark mode** — full light/dark theme with system-aware switching
+- **60 FPS animations** — gesture-driven tab bar hide/show, spring-based transitions, and native stack navigation via Reanimated
+
+### Auth & Access
+- **Google OAuth** — one-tap sign in with branded button and automatic avatar import
+- **Email/password** — traditional auth with validation
+- **Guest mode** — full browse and follow experience without creating an account, persisted to local storage
+- **Profile setup flow** — guided onboarding after sign-up with avatar picker and validation
+
+---
 
 ## Tech Stack
 
@@ -29,86 +53,75 @@
 | Gestures | React Native Gesture Handler |
 | Fonts | Expo Google Fonts (EB Garamond, Playfair Display) |
 | State | React Context + custom hooks |
+| Image loading | expo-image with memory-disk caching |
 
-## Environment Variables
+---
 
-Create a `.env` file at the project root with the following keys:
-
-```env
-# Supabase project credentials (required for authenticated mode)
-EXPO_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
-
-> The app runs in **guest mode** if these variables are absent — no backend required to explore the UI.
-
-## Project Architecture
+## Project Structure
 
 ```
-ville-du-cinema-mobile/
-├── App.tsx                     # Root entry — providers, splash screen, navigation
-├── assets/                     # App icons, splash images, SVG assets
+village/
+├── screens/                    # 13 screens
+│   ├── FeedScreen              # Main timeline with scroll-driven header/tab bar
+│   ├── ReviewReaderScreen      # Immersive full-screen review reading
+│   ├── QuotePreviewScreen      # Quote export with shareable card generation
+│   ├── UserSearchScreen        # Dual search: Village members + Letterboxd users
+│   ├── ExternalProfileScreen   # Letterboxd user profile with follow/bio/feed
+│   ├── NativeProfileScreen     # Village member profile
+│   ├── ProfileScreen           # Own profile with clippings scrapbook
+│   ├── EditProfileScreen       # Avatar upload, display name, bio editing
+│   ├── ProfileSetupScreen      # Post-signup onboarding flow
+│   ├── SettingsScreen          # Theme, font scaling, display preferences
+│   ├── WelcomeScreen           # Landing page with animated logo and filmmaker quote
+│   ├── LoginScreen             # Email + Google OAuth sign in
+│   └── SignupScreen            # Account creation
 ├── components/
-│   ├── ui/                     # Reusable primitives (skeletons, buttons, inputs)
-│   ├── feed/                   # Feed-specific components (review cards, filters)
-│   ├── profile/                # Profile-specific components (avatar, stats)
-│   └── settings/               # Settings-specific components
-├── constants/                  # Static data (discovery users, filmmaker quotes)
-├── contexts/                   # React Context providers (auth, theme, preferences)
-├── hooks/                      # Custom hooks (useUser, useProfile, useUserLists)
-├── lib/
-│   ├── auth.ts                 # Portable auth abstraction layer
-│   ├── storage.ts              # Portable storage abstraction (AsyncStorage)
-│   └── supabase/               # Supabase client with Expo Secure Store
-├── messages/                   # i18n translation files (fr, en, es)
-├── navigation/
-│   ├── RootNavigator.tsx       # Auth vs App conditional routing
-│   ├── AuthStack.tsx           # Welcome → Login → Signup flow
-│   ├── AppTabs.tsx             # Bottom tab navigator (Feed, Profile, Settings)
-│   ├── FeedDrawerNavigator.tsx # Drawer overlay for feed filters
-│   └── types.ts                # Navigation param list types
-├── screens/                    # Full-page screen components
-├── services/                   # API services (feed, external profiles, caching)
-├── theme/                      # Design tokens and theme configuration
-└── types/                      # Shared TypeScript type definitions
-```
-
-## Local Setup
-
-### Prerequisites
-
-- Node.js 18+
-- Xcode 16+ (for iOS simulator)
-- [Expo CLI](https://docs.expo.dev/get-started/installation/)
-
-### Installation
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/your-org/ville-du-cinema-mobile.git
-cd ville-du-cinema-mobile
-
-# 2. Install dependencies
-npm install
-
-# 3. Set up environment variables
-cp .env.example .env
-# Edit .env with your Supabase credentials
-
-# 4. Generate native projects
-npx expo prebuild --clean
-
-# 5. Run on iOS simulator
-npm run ios
-```
-
-### Android
-
-```bash
-npm run android
+│   ├── ui/                     # Primitives (Spinner, SwipeableRow, FollowButton, etc.)
+│   ├── feed/                   # FeedEmptyState, RepostCard, DrawerTrigger, skeletons
+│   ├── profile/                # ClippingCard, ProfileHeader, FollowingList
+│   └── quote/                  # ExportCanvas (9:16 story card renderer)
+├── contexts/                   # 7 providers (Auth, Theme, GuestMode, TabBar, Profile, etc.)
+├── hooks/                      # 7 custom hooks (useUser, useClippings, useTypography, etc.)
+├── navigation/                 # Stack, tab, and drawer navigators with type-safe params
+├── services/                   # Feed fetching, avatar caching, clippings, external profiles
+├── theme/                      # Design tokens, color palettes, font registry
+└── types/                      # Shared TypeScript definitions
 ```
 
 ---
 
-<!-- APP_SCREENSHOTS: Add screenshots or screen recordings below -->
-<!-- e.g., ![Feed](./docs/screenshots/feed.png) ![Profile](./docs/screenshots/profile.png) -->
+## Setup
+
+### Prerequisites
+
+- Node.js 18+
+- Xcode 16+ (iOS)
+- [Expo CLI](https://docs.expo.dev/get-started/installation/)
+
+### Install and run
+
+```bash
+git clone https://github.com/your-org/ville-du-cinema-mobile.git
+cd ville-du-cinema-mobile
+npm install
+```
+
+Create a `.env` file:
+
+```env
+EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
+
+> Without these, the app runs in **guest mode** — no backend required to explore the UI.
+
+```bash
+npx expo prebuild --clean
+npm run ios
+```
+
+---
+
+## License
+
+Private — not open source.

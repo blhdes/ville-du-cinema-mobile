@@ -15,6 +15,7 @@ import { fetchDisplayName } from '@/services/feed'
 import { supabase } from '@/lib/supabase/client'
 import { useUser } from '@/hooks/useUser'
 import { useUserLists } from '@/hooks/useUserLists'
+import { useGuestMode } from '@/contexts/GuestModeContext'
 import type { FeedStackParamList } from '@/navigation/types'
 import type { FollowedVillageUser } from '@/types/database'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -120,13 +121,15 @@ function VillageResultRow({
 export default function UserSearchScreen() {
   const navigation = useNavigation<SearchNav>()
   const { user } = useUser()
+  const { isGuest } = useGuestMode()
   const { villageUserIds, addVillageUser, removeVillageUser } = useUserLists()
   const inputRef = useRef<TextInput>(null)
   const { colors } = useTheme()
   const typography = useTypography()
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
-  const [platform, setPlatform] = useState<Platform>('village')
+  // Guests can only search Letterboxd — no access to Village user search
+  const [platform, setPlatform] = useState<Platform>(isGuest ? 'letterboxd' : 'village')
   const [query, setQuery] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -245,23 +248,25 @@ export default function UserSearchScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Segmented control */}
-      <View style={styles.segmentedTrack}>
-        <Pressable
-          onPress={() => handlePlatformChange('village')}
-          style={[styles.segment, isVillage && styles.segmentActive]}
-        >
-          <LogoIcon size={26} fill={isVillage ? colors.foreground : colors.secondaryText} />
-        </Pressable>
-        <Pressable
-          onPress={() => handlePlatformChange('letterboxd')}
-          style={[styles.segment, !isVillage && styles.segmentActive]}
-        >
-          <View style={{ opacity: isVillage ? 0.4 : 1 }}>
-            <LetterboxdDots size={28} />
-          </View>
-        </Pressable>
-      </View>
+      {/* Segmented control — hidden for guests (Letterboxd-only) */}
+      {!isGuest && (
+        <View style={styles.segmentedTrack}>
+          <Pressable
+            onPress={() => handlePlatformChange('village')}
+            style={[styles.segment, isVillage && styles.segmentActive]}
+          >
+            <LogoIcon size={26} fill={isVillage ? colors.foreground : colors.secondaryText} />
+          </Pressable>
+          <Pressable
+            onPress={() => handlePlatformChange('letterboxd')}
+            style={[styles.segment, !isVillage && styles.segmentActive]}
+          >
+            <View style={{ opacity: isVillage ? 0.4 : 1 }}>
+              <LetterboxdDots size={28} />
+            </View>
+          </Pressable>
+        </View>
+      )}
 
       {/* Input row */}
       <View style={styles.inputRow}>
