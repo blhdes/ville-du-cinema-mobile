@@ -29,12 +29,22 @@ export function GuestModeProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const enterGuestMode = async () => {
-    await storage.setItem(GUEST_MODE_KEY, true)
+    try {
+      await storage.setItem(GUEST_MODE_KEY, true)
+    } catch (err) {
+      console.error('[GuestModeContext] Failed to persist guest mode:', err)
+    }
+    // Update in-memory state regardless of storage result — the user should
+    // still get into the app even if AsyncStorage has a transient failure.
     setIsGuest(true)
   }
 
   const exitGuestMode = async () => {
-    await storage.removeItem(GUEST_MODE_KEY)
+    try {
+      await storage.removeItem(GUEST_MODE_KEY)
+    } catch (err) {
+      console.error('[GuestModeContext] Failed to clear guest mode:', err)
+    }
     setIsGuest(false)
   }
 

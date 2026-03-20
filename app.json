@@ -2,6 +2,7 @@
   "expo": {
     "name": "ville-du-cinema-mobile",
     "slug": "ville-du-cinema-mobile",
+    "scheme": "villeducinema",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -52,7 +53,8 @@
             "backgroundColor": "#171717"
           }
         }
-      ]
+      ],
+      "expo-sharing"
     ]
   }
 }

@@ -1,8 +1,10 @@
-import { Image, StyleSheet } from 'react-native'
+import { StyleSheet } from 'react-native'
+import { Image } from 'expo-image'
 import { createBottomTabNavigator, type BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { BottomTabBar } from '@react-navigation/bottom-tabs'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, {
+  cancelAnimation,
   Easing,
   makeMutable,
   useAnimatedStyle,
@@ -24,6 +26,7 @@ import { TabBarProvider, useTabBar } from '@/contexts/TabBarContext'
 import { useTheme } from '@/contexts/ThemeContext'
 
 const AVATAR_SIZE = 26
+const HIDE_TAB_SCREENS = new Set(['ReviewReader', 'QuotePreview'])
 const BOUNCE_SPRING = { damping: 14, stiffness: 300, mass: 0.6 }
 const PROFILE_IN_SPRING = { damping: 14, stiffness: 260, mass: 0.6 }
 const PROFILE_OUT_SPRING = { damping: 14, stiffness: 260, mass: 0.6 }
@@ -77,7 +80,10 @@ function ProfileIcon({ color }: { color: string }) {
         -1,
         true,
       )
+    } else {
+      cancelAnimation(pulse)
     }
+    return () => { cancelAnimation(pulse) }
   }, [isLoading, pulse])
 
   if (isLoading) {
@@ -93,7 +99,7 @@ function ProfileIcon({ color }: { color: string }) {
   if (profile?.avatar_url) {
     return (
       <Animated.View style={[styles.avatarWrapper, style]}>
-        <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
+        <Image source={{ uri: profile.avatar_url }} style={styles.avatar} cachePolicy="memory-disk" />
       </Animated.View>
     )
   }
@@ -134,7 +140,7 @@ const Tab = createBottomTabNavigator<AppTabsParamList>()
 
 function AppTabsInner() {
   const { colors } = useTheme()
-  const { requestFeedRefresh, isFeedRefreshing } = useTabBar()
+  const { requestFeedRefresh, isFeedRefreshing, setTabBarVisible, requestProfileScrollTop } = useTabBar()
   const onFeedPress = useCallback(() => onTabFocus('Feed'), [])
   const onProfileBounce = useCallback(() => onTabFocus('Profile'), [])
   const onSettingsPress = useCallback(() => onTabFocus('Settings'), [])
@@ -151,8 +157,8 @@ function AppTabsInner() {
           backgroundColor: colors.background,
           borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: colors.border,
-          height: 54,
-          paddingTop: 4,
+          height: 46,
+          paddingTop: 2,
           elevation: 0,
           shadowOpacity: 0,
         },
@@ -199,6 +205,17 @@ function AppTabsInner() {
             }
             // Condition B — deep in stack: let default popToTop behavior happen (no refresh)
           },
+          focus: () => {
+            // Restore tab bar unless Feed stack is on a fullscreen route
+            const tabState = navigation.getState()
+            const feedRoute = tabState.routes.find((r: { name: string }) => r.name === 'Feed')
+            const feedStack = feedRoute?.state
+            if (feedStack) {
+              const topRoute = feedStack.routes[feedStack.index ?? 0]
+              if (HIDE_TAB_SCREENS.has(topRoute.name)) return
+            }
+            setTabBarVisible(true)
+          },
         })}
       />
       <Tab.Screen
@@ -207,7 +224,24 @@ function AppTabsInner() {
         options={{
           tabBarIcon: ({ color }) => <ProfileIcon color={color} />,
         }}
-        listeners={{ tabPress: onProfileBounce }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            onProfileBounce()
+
+            if (!navigation.isFocused()) return
+
+            const state = navigation.getState()
+            const profileRoute = state.routes.find((r: { name: string }) => r.name === 'Profile')
+            const profileStack = profileRoute?.state
+            const isAtRoot = !profileStack || profileStack.index === 0
+
+            if (isAtRoot) {
+              e.preventDefault()
+              requestProfileScrollTop()
+            }
+          },
+          focus: () => setTabBarVisible(true),
+        })}
       />
       <Tab.Screen
         name="Settings"
@@ -215,7 +249,10 @@ function AppTabsInner() {
         options={{
           tabBarIcon: ({ color, size }) => <SettingsIcon color={color} size={size} />,
         }}
-        listeners={{ tabPress: onSettingsPress }}
+        listeners={{
+          tabPress: onSettingsPress,
+          focus: () => setTabBarVisible(true),
+        }}
       />
     </Tab.Navigator>
   )

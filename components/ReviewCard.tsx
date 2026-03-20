@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react'
+import { memo, useState, useMemo, useCallback } from 'react'
 import { Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import { Image } from 'expo-image'
 import * as WebBrowser from 'expo-web-browser'
+import * as Haptics from 'expo-haptics'
 import RenderHtml, { defaultSystemFonts } from 'react-native-render-html'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import type { FeedStackParamList } from '@/navigation/types'
@@ -9,11 +10,19 @@ import type { Review } from '@/types/database'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { useAvatarUrl } from '@/services/avatarCache'
 import { useTheme } from '@/contexts/ThemeContext'
-import { fonts, spacing, typography, getScaledTypography, type ThemeColors } from '@/theme'
+import { useTabBar } from '@/contexts/TabBarContext'
+import { saveRepost } from '@/services/clippings'
+import { fonts, spacing, getScaledTypography, type ThemeColors } from '@/theme'
+import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
+import SwipeableRow from '@/components/ui/SwipeableRow'
 
 interface ReviewCardProps {
   review: Review
   hideAuthor?: boolean
+  /** Set to false to disable the swipe-to-repost gesture (e.g. inside RepostCard). */
+  repostable?: boolean
+  /** Reduces top padding — used when embedded inside a parent card (e.g. RepostCard). */
+  compact?: boolean
 }
 
 const MAX_PREVIEW_LENGTH = 300
@@ -66,16 +75,32 @@ function truncateHtml(html: string, max: number): string {
   return html.slice(0, i) + suffix
 }
 
-export default function ReviewCard({ review, hideAuthor = false }: ReviewCardProps) {
+function ReviewCard({ review, hideAuthor = false, repostable = true, compact = false }: ReviewCardProps) {
   const [expanded, setExpanded] = useState(false)
   const { preferences } = useDisplayPreferences()
   const { width } = useWindowDimensions()
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const cachedAvatarUrl = useAvatarUrl(review.username)
   const { colors } = useTheme()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const typography = useTypography()
+  const { setTabBarVisible } = useTabBar()
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
   const contentWidth = width - HORIZONTAL_PAD * 2
   const scaled = useMemo(() => getScaledTypography(preferences.fontMultiplier), [preferences.fontMultiplier])
+  const handleLongPress = useCallback(() => {
+    if (review.review) {
+      setTabBarVisible(false)
+      navigation.navigate('ReviewReader', {
+        reviewText: review.review,
+        author: review.creator,
+        username: review.username,
+        avatarUrl: cachedAvatarUrl,
+        movieTitle: review.movieTitle,
+        rating: review.rating,
+        original_url: review.link,
+      })
+    }
+  }, [navigation, review, cachedAvatarUrl, setTabBarVisible])
 
   const textLength = useMemo(() => htmlTextLength(review.review), [review.review])
   const isLong = textLength > MAX_PREVIEW_LENGTH * (1 + TOLERANCE_RATIO)
@@ -90,7 +115,7 @@ export default function ReviewCard({ review, hideAuthor = false }: ReviewCardPro
         month: 'short',
         day: 'numeric',
         year: 'numeric',
-      }).toUpperCase()
+      })
     : ''
 
   const tagsStyles = useMemo(() => ({
@@ -148,14 +173,25 @@ export default function ReviewCard({ review, hideAuthor = false }: ReviewCardPro
 
   const dropCapSize = scaled.title.fontSize * 3
 
+  const handleRepost = useCallback(async () => {
+    try {
+      await saveRepost(review)
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    } catch (error) {
+      console.error('Failed to repost:', error)
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+    }
+  }, [review])
+
   const renderersProps = useMemo(() => ({
     a: {
       onPress: (_event: unknown, href: string) => Linking.openURL(href),
     },
   }), [])
 
-  return (
-    <View style={styles.article}>
+  const cardContent = (
+    <Pressable onLongPress={handleLongPress} delayLongPress={500}>
+    <View style={[styles.article, compact && styles.articleCompact]}>
       {/* Title */}
       <Pressable
         onPress={() => {
@@ -183,7 +219,7 @@ export default function ReviewCard({ review, hideAuthor = false }: ReviewCardPro
             />
           ) : null}
           <Text style={styles.meta}>
-            BY {review.creator.toUpperCase()}
+            {review.creator}
             {dateStr ? ` \u00B7 ${dateStr}` : ''}
             {review.rating && preferences.showRatings ? (
               <Text style={styles.rating}>{` \u00B7 ${review.rating}`}</Text>
@@ -215,7 +251,8 @@ export default function ReviewCard({ review, hideAuthor = false }: ReviewCardPro
                     minWidth: dropCapSize * 0.75,
                   },
                 ]}
-                selectable
+                selectable={false}
+                suppressHighlighting
               >
                 {dropCapData.firstLetter}
               </Text>
@@ -226,7 +263,7 @@ export default function ReviewCard({ review, hideAuthor = false }: ReviewCardPro
                   tagsStyles={tagsStyles}
                   systemFonts={SYSTEM_FONTS}
                   renderersProps={renderersProps}
-                  defaultTextProps={{ selectable: true }}
+                  defaultTextProps={{ selectable: false, suppressHighlighting: true }}
                 />
               </View>
             </View>
@@ -237,7 +274,7 @@ export default function ReviewCard({ review, hideAuthor = false }: ReviewCardPro
               tagsStyles={tagsStyles}
               systemFonts={SYSTEM_FONTS}
               renderersProps={renderersProps}
-              defaultTextProps={{ selectable: true }}
+              defaultTextProps={{ selectable: false, suppressHighlighting: true }}
             />
           )}
           {isLong && !expanded && (
@@ -255,7 +292,7 @@ export default function ReviewCard({ review, hideAuthor = false }: ReviewCardPro
       >
         {({ pressed }) => (
           <Text style={[styles.linkText, pressed && styles.linkPressed]}>
-            VIEW ON LETTERBOXD
+            View on Letterboxd
           </Text>
         )}
       </Pressable>
@@ -263,15 +300,34 @@ export default function ReviewCard({ review, hideAuthor = false }: ReviewCardPro
       {/* Hairline separator */}
       <View style={styles.divider} />
     </View>
+    </Pressable>
+  )
+
+  if (!repostable) return cardContent
+
+  return (
+    <SwipeableRow
+      onAction={handleRepost}
+      actionColor={colors.teal}
+      actionIcon="repeat-outline"
+      actionLabel="Repost this review"
+    >
+      {cardContent}
+    </SwipeableRow>
   )
 }
 
-function createStyles(colors: ThemeColors) {
+export default memo(ReviewCard)
+
+function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({
     article: {
       paddingHorizontal: HORIZONTAL_PAD,
       paddingTop: spacing.xl,
       paddingBottom: spacing.xs,
+    },
+    articleCompact: {
+      paddingTop: spacing.sm,
     },
     titlePressed: {
       opacity: 0.6,
@@ -292,13 +348,13 @@ function createStyles(colors: ThemeColors) {
       opacity: 0.6,
     },
     avatar: {
-      width: 20,
-      height: 20,
-      borderRadius: 10,
+      width: 26,
+      height: 26,
+      borderRadius: 13,
       marginRight: 8,
     },
     meta: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,
@@ -308,7 +364,8 @@ function createStyles(colors: ThemeColors) {
       color: colors.yellow,
     },
     expandToggle: {
-      fontFamily: fonts.bodyBold,
+      fontFamily: fonts.system,
+      fontWeight: '600' as const,
       fontSize: typography.caption.fontSize,
       color: colors.teal,
       marginTop: spacing.sm,
@@ -319,7 +376,7 @@ function createStyles(colors: ThemeColors) {
       alignSelf: 'flex-end',
     },
     linkText: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,

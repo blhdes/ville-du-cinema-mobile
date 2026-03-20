@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import * as WebBrowser from 'expo-web-browser'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
@@ -6,7 +6,8 @@ import type { FeedStackParamList } from '@/navigation/types'
 import type { Review } from '@/types/database'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { useTheme } from '@/contexts/ThemeContext'
-import { fonts, spacing, typography, type ThemeColors } from '@/theme'
+import { fonts, spacing, type ThemeColors } from '@/theme'
+import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import EyeIcon from '@/components/ui/EyeIcon'
 
 interface WatchNotificationProps {
@@ -14,12 +15,13 @@ interface WatchNotificationProps {
   hideAuthor?: boolean
 }
 
-export default function WatchNotification({ review, hideAuthor = false }: WatchNotificationProps) {
+function WatchNotification({ review, hideAuthor = false }: WatchNotificationProps) {
   const { preferences } = useDisplayPreferences()
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const [titlePressed, setTitlePressed] = useState(false)
   const { colors } = useTheme()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const typography = useTypography()
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
   return (
     <Pressable
@@ -60,7 +62,9 @@ export default function WatchNotification({ review, hideAuthor = false }: WatchN
   )
 }
 
-function createStyles(colors: ThemeColors) {
+export default memo(WatchNotification)
+
+function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({
     container: {
       flexDirection: 'row',
@@ -77,26 +81,26 @@ function createStyles(colors: ThemeColors) {
     content: {
       flex: 1,
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'baseline',
       gap: spacing.xs,
     },
     author: {
-      fontFamily: fonts.bodyBold,
+      fontFamily: fonts.system,
+      fontWeight: '600' as const,
       fontSize: typography.caption.fontSize,
       lineHeight: typography.caption.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,
       color: colors.secondaryText,
     },
     watchedLabel: {
-      fontFamily: fonts.body,
-      textTransform: 'uppercase',
+      fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
       letterSpacing: typography.magazineMeta.letterSpacing,
       color: colors.secondaryText,
     },
     movie: {
       flex: 1,
-      fontFamily: fonts.bodyItalic,
+      fontFamily: fonts.headingItalic,
       fontSize: typography.caption.fontSize,
       lineHeight: typography.caption.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,

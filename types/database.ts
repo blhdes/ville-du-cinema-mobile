@@ -12,9 +12,6 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-/** Supported UI locales. `fr` is the default. */
-export type Locale = 'fr' | 'en' | 'es'
-
 /**
  * A Letterboxd account that a user has chosen to follow.
  * Stored as a JSONB array in `user_data.followed_users`.
@@ -23,6 +20,19 @@ export interface FollowedUser {
   username: string
   display_name?: string
   added_at: string // ISO 8601 timestamp
+}
+
+/**
+ * A native Village user that has been followed.
+ * Stored as a JSONB array in `user_data.followed_village_users`.
+ * Uses UUID as the canonical key — never collides with Letterboxd usernames.
+ */
+export interface FollowedVillageUser {
+  user_id: string          // Supabase auth UUID
+  username: string | null  // Village handle snapshot at follow time
+  display_name: string | null
+  avatar_url: string | null
+  added_at: string         // ISO 8601 timestamp
 }
 
 /**
@@ -37,7 +47,8 @@ export interface Database {
         Row: {
           user_id: string
           followed_users: FollowedUser[]
-          language: Locale
+          followed_village_users: FollowedVillageUser[]
+
           avatar_url: string | null
           bio: string
           display_name: string | null
@@ -51,7 +62,8 @@ export interface Database {
         Insert: {
           user_id: string
           followed_users?: FollowedUser[]
-          language?: Locale
+          followed_village_users?: FollowedVillageUser[]
+
           avatar_url?: string | null
           bio?: string
           display_name?: string | null
@@ -65,7 +77,8 @@ export interface Database {
         Update: {
           user_id?: string
           followed_users?: FollowedUser[]
-          language?: Locale
+          followed_village_users?: FollowedVillageUser[]
+
           avatar_url?: string | null
           bio?: string
           display_name?: string | null
@@ -74,6 +87,45 @@ export interface Database {
           hide_watch_notifications?: boolean
           username?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      user_clippings: {
+        /** Full row returned by SELECT queries. */
+        Row: {
+          id: string
+          user_id: string
+          quote_text: string
+          movie_title: string
+          author_name: string
+          original_url: string
+          created_at: string
+          type: string
+          review_json: Json | null
+        }
+        /** Shape accepted by INSERT statements. */
+        Insert: {
+          id?: string
+          user_id: string
+          quote_text: string
+          movie_title: string
+          author_name: string
+          original_url: string
+          created_at?: string
+          type?: string
+          review_json?: Json | null
+        }
+        /** Shape accepted by UPDATE statements (all fields optional). */
+        Update: {
+          id?: string
+          user_id?: string
+          quote_text?: string
+          movie_title?: string
+          author_name?: string
+          original_url?: string
+          created_at?: string
+          type?: string
+          review_json?: Json | null
         }
         Relationships: []
       }
@@ -117,12 +169,25 @@ export interface UserProfile {
   bio: string
   display_name: string | null
   followed_users: FollowedUser[]
-  language: Locale
+  followed_village_users: FollowedVillageUser[]
   hide_userlist_main: boolean
   feed_grid_columns: 1 | 2 | 3
   hide_watch_notifications: boolean
   username: string | null
   updated_at: string
+}
+
+/**
+ * Public-safe subset of another Village user's profile.
+ * Fetched directly from Supabase user_data by NativeProfileScreen.
+ * Excludes all private preferences and followed_* arrays.
+ */
+export interface VillagePublicProfile {
+  user_id: string
+  username: string | null
+  display_name: string | null
+  avatar_url: string | null
+  bio: string
 }
 
 /**
@@ -135,6 +200,24 @@ export interface PublicProfile {
   avatar_url: string | null
   bio: string
   followed_users: FollowedUser[]
+  followed_village_users: FollowedVillageUser[]
+}
+
+// ---------------------------------------------------------------------------
+// Clippings types
+// ---------------------------------------------------------------------------
+
+/** A saved review quote or reposted review from the user's Clippings archive. */
+export interface Clipping {
+  id: string // uuid
+  user_id: string // uuid — FK to Supabase auth
+  quote_text: string
+  movie_title: string
+  author_name: string
+  original_url: string
+  created_at: string // ISO 8601 timestamp
+  type: 'quote' | 'repost'
+  review_json: Review | null
 }
 
 // ---------------------------------------------------------------------------
@@ -159,6 +242,53 @@ export interface Review {
   /** Letterboxd profile avatar URL extracted from the RSS channel image */
   avatarUrl?: string
 }
+
+// ---------------------------------------------------------------------------
+// Super-Feed types
+// ---------------------------------------------------------------------------
+
+/** A Letterboxd review entry in the unified Super-Feed. */
+export interface ReviewFeedItem {
+  kind: 'review'
+  /** Milliseconds since epoch — derived from pubDate once at mapping time. */
+  sortKey: number
+  data: Review
+}
+
+/** A saved clipping entry in the unified Super-Feed. */
+export interface ClippingFeedItem {
+  kind: 'clipping'
+  /** Milliseconds since epoch — derived from created_at once at mapping time. */
+  sortKey: number
+  data: Clipping
+  /** Avatar of the logged-in user who saved the clipping. */
+  ownerAvatarUrl?: string
+  /** Display name of the logged-in user. */
+  ownerDisplayName: string
+  /** Supabase user ID — enables profile navigation for Village users. */
+  ownerUserId?: string
+  /** Village username snapshot. */
+  ownerUsername?: string
+}
+
+/** A reposted review entry in the unified Super-Feed. */
+export interface RepostFeedItem {
+  kind: 'repost'
+  /** Milliseconds since epoch — derived from created_at once at mapping time. */
+  sortKey: number
+  data: Clipping
+  /** Avatar of the user who reposted. */
+  ownerAvatarUrl?: string
+  /** Display name of the user who reposted. */
+  ownerDisplayName: string
+  /** Supabase user ID — enables profile navigation. */
+  ownerUserId?: string
+  /** Village username snapshot. */
+  ownerUsername?: string
+}
+
+/** Discriminated union used as the single item type in the Super-Feed FlatList. */
+export type FeedItem = ReviewFeedItem | ClippingFeedItem | RepostFeedItem
 
 // ---------------------------------------------------------------------------
 // API request types — used to type request bodies in API route handlers.

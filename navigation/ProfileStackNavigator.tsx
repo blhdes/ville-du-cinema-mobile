@@ -6,9 +6,13 @@ import { useTheme } from '@/contexts/ThemeContext'
 import ProfileScreen from '@/screens/ProfileScreen'
 import EditProfileScreen from '@/screens/EditProfileScreen'
 import ExternalProfileScreen from '@/screens/ExternalProfileScreen'
+import NativeProfileScreen from '@/screens/NativeProfileScreen'
 import UserSearchScreen from '@/screens/UserSearchScreen'
+import ReviewReaderScreen from '@/screens/ReviewReaderScreen'
+import QuotePreviewScreen from '@/screens/QuotePreviewScreen'
 import type { ProfileStackParamList } from '@/navigation/types'
-import { fonts, typography } from '@/theme'
+import { fonts } from '@/theme'
+import { useTypography } from '@/hooks/useTypography'
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>()
 
@@ -24,6 +28,7 @@ function BackButton() {
 
 export default function ProfileStackNavigator() {
   const { colors } = useTheme()
+  const typography = useTypography()
 
   return (
     <Stack.Navigator
@@ -69,9 +74,26 @@ export default function ProfileStackNavigator() {
         })}
       />
       <Stack.Screen
+        name="NativeProfile"
+        component={NativeProfileScreen}
+        options={({ route }) => ({
+          headerTitle: route.params.username ? `@${route.params.username}` : 'Profile',
+        })}
+      />
+      <Stack.Screen
         name="UserSearch"
         component={UserSearchScreen}
         options={{ headerTitle: 'Search' }}
+      />
+      <Stack.Screen
+        name="ReviewReader"
+        component={ReviewReaderScreen}
+        options={{ headerTitle: '' }}
+      />
+      <Stack.Screen
+        name="QuotePreview"
+        component={QuotePreviewScreen}
+        options={{ headerTitle: 'Quote' }}
       />
     </Stack.Navigator>
   )

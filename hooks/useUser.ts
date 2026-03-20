@@ -16,18 +16,15 @@ export const UserContext = createContext<UserState>({
 
 /**
  * Internal hook — only used by UserProvider.
- * Initialises Supabase auth once and subscribes to changes.
+ * Subscribes to Supabase auth state changes. The INITIAL_SESSION event fires
+ * immediately from the cached SecureStore token, so no separate getUser()
+ * network call is needed for initialisation.
  */
 export function useUserProvider(): UserState {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    auth.getUser().then((u) => {
-      setUser(u)
-      setIsLoading(false)
-    })
-
     const unsubscribe = auth.onAuthStateChange((u) => {
       setUser(u)
       setIsLoading(false)

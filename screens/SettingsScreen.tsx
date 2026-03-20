@@ -5,7 +5,8 @@ import { useUser } from '@/hooks/useUser'
 import { useGuestMode } from '@/contexts/GuestModeContext'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { useTheme } from '@/contexts/ThemeContext'
-import { fonts, spacing, typography, type ThemeColors } from '@/theme'
+import { fonts, spacing, type ThemeColors } from '@/theme'
+import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import DisplaySettings from '@/components/settings/DisplaySettings'
 import SettingsSkeleton from '@/components/settings/SettingsSkeleton'
 
@@ -14,7 +15,8 @@ export default function SettingsScreen() {
   const { user, isLoading: isAuthLoading, signOut } = useUser()
   const { isGuest, exitGuestMode } = useGuestMode()
   const { colors } = useTheme()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const typography = useTypography()
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
   const {
     preferences,
     isLoading: isPrefsLoading,
@@ -104,7 +106,7 @@ export default function SettingsScreen() {
   )
 }
 
-function createStyles(colors: ThemeColors) {
+function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -121,21 +123,20 @@ function createStyles(colors: ThemeColors) {
     },
     content: {},
     sectionLabel: {
-      fontFamily: fonts.bodyBold,
+      fontFamily: fonts.system,
+      fontWeight: '600' as const,
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       color: colors.secondaryText,
-      textTransform: 'uppercase',
       letterSpacing: typography.magazineMeta.letterSpacing,
       paddingHorizontal: 20,
       paddingTop: spacing.xl,
       paddingBottom: spacing.sm,
     },
     sectionFooter: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
       color: colors.secondaryText,
-      textTransform: 'uppercase',
       letterSpacing: typography.magazineMeta.letterSpacing,
       paddingHorizontal: 20,
       paddingTop: spacing.xs,
@@ -160,12 +161,12 @@ function createStyles(colors: ThemeColors) {
       borderBottomColor: colors.border,
     },
     rowLabel: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.body.fontSize,
       color: colors.foreground,
     },
     rowValue: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.body.fontSize,
       color: colors.secondaryText,
     },
@@ -180,10 +181,10 @@ function createStyles(colors: ThemeColors) {
       paddingBottom: spacing.xxl,
     },
     signOutText: {
-      fontFamily: fonts.bodyBold,
+      fontFamily: fonts.system,
+      fontWeight: '600' as const,
       fontSize: typography.magazineMeta.fontSize,
       color: colors.red,
-      textTransform: 'uppercase',
       letterSpacing: typography.magazineMeta.letterSpacing,
     },
     signOutPressed: {

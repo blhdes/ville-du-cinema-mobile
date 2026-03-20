@@ -6,30 +6,34 @@ import { useUserLists } from '@/hooks/useUserLists'
 import FeedScreen from '@/screens/FeedScreen'
 import UserListPanel from '@/components/UserListPanel'
 import { useTheme } from '@/contexts/ThemeContext'
-import { fonts, spacing, typography, type ThemeColors } from '@/theme'
+import { fonts, spacing, type ThemeColors } from '@/theme'
+import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import type { FeedDrawerParamList } from '@/navigation/types'
 
 const Drawer = createDrawerNavigator<FeedDrawerParamList>()
 
 function DrawerContent({ navigation }: { navigation: any }) {
   const insets = useSafeAreaInsets()
-  const { users, isAuthenticated, addUser, removeUser } = useUserLists()
+  const { users, villageUsers, isAuthenticated, addUser, removeUser, removeVillageUser } = useUserLists()
   const { colors } = useTheme()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const typography = useTypography()
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
   return (
     <View style={[styles.drawer, { paddingTop: insets.top + spacing.md }]}>
       <View style={styles.drawerHeader}>
-        <Text style={styles.drawerTitle}>Your Village</Text>
+        <Text style={styles.drawerTitle}>Village du Cin{'\u00E9'}ma</Text>
         <Pressable onPress={() => navigation.closeDrawer()} hitSlop={8}>
           <Text style={styles.doneButton}>Done</Text>
         </Pressable>
       </View>
       <UserListPanel
         users={users}
+        villageUsers={villageUsers}
         isAuthenticated={isAuthenticated}
         onAdd={addUser}
         onRemove={removeUser}
+        onRemoveVillageUser={removeVillageUser}
       />
     </View>
   )
@@ -59,7 +63,7 @@ export default function FeedDrawerNavigator() {
   )
 }
 
-function createStyles(colors: ThemeColors) {
+function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({
     drawer: {
       flex: 1,
@@ -81,7 +85,7 @@ function createStyles(colors: ThemeColors) {
       color: colors.foreground,
     },
     doneButton: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.body.fontSize,
       color: colors.blue,
     },

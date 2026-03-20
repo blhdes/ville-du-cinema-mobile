@@ -4,17 +4,25 @@ import storage from '@/lib/storage'
 import { supabase } from '@/lib/supabase/client'
 import { fetchDisplayName, refreshAvatarUrls } from '@/services/feed'
 import { useUser } from '@/hooks/useUser'
-import type { FollowedUser } from '@/types/database'
+import type { FollowedUser, FollowedVillageUser } from '@/types/database'
 
 const LOCALFORAGE_KEY = 'followed_users'
+const VILLAGE_LOCALFORAGE_KEY = 'followed_village_users'
 
 interface UserListsState {
+  // Letterboxd
   users: FollowedUser[]
   usernames: string[]
-  isLoading: boolean
-  error: string | null
   addUser: (username: string) => Promise<{ success: boolean; error?: string }>
   removeUser: (username: string) => Promise<void>
+  // Village
+  villageUsers: FollowedVillageUser[]
+  villageUserIds: string[]
+  addVillageUser: (user: FollowedVillageUser) => Promise<{ success: boolean; error?: string }>
+  removeVillageUser: (userId: string) => Promise<void>
+  // Shared
+  isLoading: boolean
+  error: string | null
   isAuthenticated: boolean
   clearError: () => void
 }
@@ -38,13 +46,14 @@ function convertToFollowedUsers(data: string[] | FollowedUser[]): FollowedUser[]
 export function UserListsProvider({ children }: { children: ReactNode }) {
   const { user, isLoading: isAuthLoading } = useUser()
   const [users, setUsers] = useState<FollowedUser[]>([])
+  const [villageUsers, setVillageUsers] = useState<FollowedVillageUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const backfillRan = useRef(false)
 
   const isAuthenticated = !!user
 
-  // Load users on mount / auth change
+  // Load both Letterboxd and Village follows on mount / auth change
   useEffect(() => {
     if (isAuthLoading) return
     backfillRan.current = false
@@ -57,28 +66,31 @@ export function UserListsProvider({ children }: { children: ReactNode }) {
         if (isAuthenticated && user) {
           const { data, error: dbError } = await supabase
             .from('user_data')
-            .select('followed_users')
+            .select('followed_users, followed_village_users')
             .eq('user_id', user.id)
             .single()
 
           if (dbError) {
             if (dbError.code === 'PGRST116') {
               setUsers([])
+              setVillageUsers([])
               return
             }
             throw new Error(dbError.message)
           }
 
           setUsers(data?.followed_users || [])
+          setVillageUsers(data?.followed_village_users || [])
         } else {
-          const savedUsers = await storage.getItem<string[] | FollowedUser[]>(
-            LOCALFORAGE_KEY
-          )
+          const savedUsers = await storage.getItem<string[] | FollowedUser[]>(LOCALFORAGE_KEY)
           if (savedUsers) {
             setUsers(convertToFollowedUsers(savedUsers))
           } else {
             setUsers([])
           }
+
+          const savedVillageUsers = await storage.getItem<FollowedVillageUser[]>(VILLAGE_LOCALFORAGE_KEY)
+          setVillageUsers(savedVillageUsers || [])
         }
       } catch (err) {
         console.error('Error loading users:', err)
@@ -91,7 +103,7 @@ export function UserListsProvider({ children }: { children: ReactNode }) {
     loadUsers()
   }, [isAuthenticated, isAuthLoading, user])
 
-  // Backfill display names
+  // Backfill Letterboxd display names (not needed for Village users — snapshot is stored inline)
   useEffect(() => {
     if (isLoading || users.length === 0 || backfillRan.current) return
 
@@ -99,11 +111,14 @@ export function UserListsProvider({ children }: { children: ReactNode }) {
     if (needsBackfill.length === 0) return
 
     backfillRan.current = true
+    let cancelled = false
 
     const run = async () => {
       const names = await Promise.all(
         needsBackfill.map((u) => fetchDisplayName(u.username))
       )
+
+      if (cancelled) return
 
       const nameMap = new Map<string, string>()
       needsBackfill.forEach((u, i) => {
@@ -116,7 +131,7 @@ export function UserListsProvider({ children }: { children: ReactNode }) {
         nameMap.has(u.username) ? { ...u, display_name: nameMap.get(u.username) } : u
       )
 
-      setUsers(updated)
+      if (!cancelled) setUsers(updated)
 
       if (isAuthenticated && user) {
         const { error: dbError } = await supabase
@@ -130,13 +145,12 @@ export function UserListsProvider({ children }: { children: ReactNode }) {
     }
 
     run()
+    return () => { cancelled = true }
   }, [isLoading, users, isAuthenticated, user])
 
-  // Optimistic add — update UI immediately, then persist in background
+  // Optimistic add (Letterboxd) — validate on Letterboxd first, then persist
   const addUser = useCallback(
-    async (
-      username: string
-    ): Promise<{ success: boolean; error?: string }> => {
+    async (username: string): Promise<{ success: boolean; error?: string }> => {
       const normalizedUsername = username.trim().toLowerCase()
 
       if (!normalizedUsername) {
@@ -150,7 +164,6 @@ export function UserListsProvider({ children }: { children: ReactNode }) {
       setError(null)
 
       try {
-        // Validate the user exists on Letterboxd first (can't optimistically skip this)
         let displayName: string | undefined
         try {
           displayName = await fetchDisplayName(normalizedUsername)
@@ -168,13 +181,9 @@ export function UserListsProvider({ children }: { children: ReactNode }) {
         }
         const updatedUsers = [...users, newUser]
 
-        // Optimistic update — show the new user immediately
         setUsers(updatedUsers)
-
-        // Scrape and cache the new user's avatar in the background
         refreshAvatarUrls([normalizedUsername]).catch(() => {})
 
-        // Persist in the background
         try {
           if (isAuthenticated && user) {
             const { error: dbError } = await supabase
@@ -188,7 +197,6 @@ export function UserListsProvider({ children }: { children: ReactNode }) {
             await storage.setItem(LOCALFORAGE_KEY, updatedUsers)
           }
         } catch (persistErr) {
-          // Revert optimistic update on failure
           console.error('Failed to persist add:', persistErr)
           setUsers(users)
           return { success: false, error: 'Failed to save — please try again' }
@@ -205,18 +213,15 @@ export function UserListsProvider({ children }: { children: ReactNode }) {
     [isAuthenticated, users, user]
   )
 
-  // Optimistic remove — update UI immediately, then persist in background
+  // Optimistic remove (Letterboxd)
   const removeUser = useCallback(
     async (username: string): Promise<void> => {
       const normalizedUsername = username.trim().toLowerCase()
       setError(null)
 
       const previousUsers = users
-      const updatedUsers = users.filter(
-        (u) => u.username !== normalizedUsername
-      )
+      const updatedUsers = users.filter((u) => u.username !== normalizedUsername)
 
-      // Optimistic update — remove from UI immediately
       setUsers(updatedUsers)
 
       try {
@@ -231,7 +236,6 @@ export function UserListsProvider({ children }: { children: ReactNode }) {
           await storage.setItem(LOCALFORAGE_KEY, updatedUsers)
         }
       } catch (err) {
-        // Revert optimistic update on failure
         console.error('Error removing user:', err)
         setUsers(previousUsers)
         setError('Failed to remove user')
@@ -240,24 +244,93 @@ export function UserListsProvider({ children }: { children: ReactNode }) {
     [isAuthenticated, users, user]
   )
 
+  // Optimistic add (Village) — caller provides the full profile snapshot
+  const addVillageUser = useCallback(
+    async (newUser: FollowedVillageUser): Promise<{ success: boolean; error?: string }> => {
+      if (villageUsers.some((u) => u.user_id === newUser.user_id)) {
+        return { success: false, error: 'Already following this user' }
+      }
+
+      setError(null)
+      const updatedVillageUsers = [...villageUsers, newUser]
+      setVillageUsers(updatedVillageUsers)
+
+      try {
+        if (isAuthenticated && user) {
+          const { error: dbError } = await supabase
+            .from('user_data')
+            .update({ followed_village_users: updatedVillageUsers })
+            .eq('user_id', user.id)
+          if (dbError) throw new Error(dbError.message)
+        } else {
+          await storage.setItem(VILLAGE_LOCALFORAGE_KEY, updatedVillageUsers)
+        }
+      } catch (persistErr) {
+        console.error('Failed to persist village follow:', persistErr)
+        setVillageUsers(villageUsers)
+        return { success: false, error: 'Failed to save — please try again' }
+      }
+
+      return { success: true }
+    },
+    [isAuthenticated, villageUsers, user]
+  )
+
+  // Optimistic remove (Village)
+  const removeVillageUser = useCallback(
+    async (userId: string): Promise<void> => {
+      setError(null)
+      const previousVillageUsers = villageUsers
+      const updatedVillageUsers = villageUsers.filter((u) => u.user_id !== userId)
+
+      setVillageUsers(updatedVillageUsers)
+
+      try {
+        if (isAuthenticated && user) {
+          const { error: dbError } = await supabase
+            .from('user_data')
+            .update({ followed_village_users: updatedVillageUsers })
+            .eq('user_id', user.id)
+          if (dbError) throw new Error(dbError.message)
+        } else {
+          await storage.setItem(VILLAGE_LOCALFORAGE_KEY, updatedVillageUsers)
+        }
+      } catch (err) {
+        console.error('Error removing village user:', err)
+        setVillageUsers(previousVillageUsers)
+        setError('Failed to remove user')
+      }
+    },
+    [isAuthenticated, villageUsers, user]
+  )
+
   const clearError = useCallback(() => {
     setError(null)
   }, [])
 
   const usernames = useMemo(() => users.map((u) => u.username), [users])
+  const villageUserIds = useMemo(() => villageUsers.map((u) => u.user_id), [villageUsers])
 
   const value = useMemo(
     () => ({
       users,
       usernames,
-      isLoading: isLoading || isAuthLoading,
-      error,
       addUser,
       removeUser,
+      villageUsers,
+      villageUserIds,
+      addVillageUser,
+      removeVillageUser,
+      isLoading: isLoading || isAuthLoading,
+      error,
       isAuthenticated,
       clearError,
     }),
-    [users, usernames, isLoading, isAuthLoading, error, addUser, removeUser, isAuthenticated, clearError]
+    [
+      users, usernames, addUser, removeUser,
+      villageUsers, villageUserIds, addVillageUser, removeVillageUser,
+      isLoading, isAuthLoading, error, isAuthenticated, clearError,
+    ]
   )
 
   return (

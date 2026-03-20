@@ -47,7 +47,10 @@ export default function DrawerTrigger({ onPress }: DrawerTriggerProps) {
           {displayUsers.map((user, i) => (
             <View
               key={user.username}
-              style={i > 0 ? { marginLeft: OVERLAP } : undefined}
+              style={[
+                themed.avatarRing,
+                i > 0 ? { marginLeft: OVERLAP } : undefined,
+              ]}
             >
               <MiniAvatar username={user.username} />
             </View>
@@ -80,6 +83,11 @@ function themedStyles(colors: ThemeColors) {
       minWidth: 44,
       minHeight: 44,
       justifyContent: 'flex-start',
+    },
+    avatarRing: {
+      borderRadius: (AVATAR_SIZE + 3) / 2,
+      borderWidth: 1.5,
+      borderColor: colors.background,
     },
   })
 }

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Linking, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import { Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import Animated, {
-  interpolateColor,
+  cancelAnimation,
+  FadeInUp,
+  FadeOut,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -12,11 +14,13 @@ import * as Haptics from 'expo-haptics'
 import * as WebBrowser from 'expo-web-browser'
 import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
-import RenderHtml, { defaultSystemFonts } from 'react-native-render-html'
 import LetterboxdDots from '@/components/ui/LetterboxdDots'
+import ExpandableAvatar from '@/components/ui/ExpandableAvatar'
+import FollowButton from '@/components/ui/FollowButton'
 import type { FavoriteFilm } from '@/services/externalProfile'
 import { useTheme } from '@/contexts/ThemeContext'
-import { fonts, spacing, typography, type ThemeColors } from '@/theme'
+import { fonts, spacing, type ThemeColors } from '@/theme'
+import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 
 interface ExternalProfileHeaderProps {
   displayName: string
@@ -35,19 +39,29 @@ interface ExternalProfileHeaderProps {
 
 const AVATAR_SIZE = 72
 const HORIZONTAL_PAD = 20
-// 8 lines of magazineBody (lineHeight 24) = 192px
-const BIO_COLLAPSED_HEIGHT = 192
-const SYSTEM_FONTS = [
-  ...defaultSystemFonts,
-  fonts.heading,
-  fonts.body,
-  fonts.bodyBold,
-  fonts.bodyItalic,
-]
+/** Strip HTML tags and decode common entities into plain text. */
+function stripHtml(html: string): string {
+  const entities: Record<string, string> = {
+    '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"',
+    '&#39;': "'", '&apos;': "'", '&nbsp;': ' ',
+    '&ndash;': '\u2013', '&mdash;': '\u2014',
+    '&lsquo;': '\u2018', '&rsquo;': '\u2019',
+    '&ldquo;': '\u201C', '&rdquo;': '\u201D',
+    '&hellip;': '\u2026',
+  }
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&(?:#(\d+)|#x([0-9a-fA-F]+)|[a-z]+);/gi, (match, dec, hex) => {
+      if (dec) return String.fromCharCode(Number(dec))
+      if (hex) return String.fromCharCode(parseInt(hex, 16))
+      return entities[match] ?? match
+    })
+    .trim()
+}
 
 const SKELETON_DURATION = 800
-const FOLLOW_DURATION = 250
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
 function FavouritesSkeleton({
   count,
@@ -59,7 +73,8 @@ function FavouritesSkeleton({
   posterHeight: number
 }) {
   const { colors } = useTheme()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const typography = useTypography()
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
   const shimmer = useSharedValue(0.06)
 
   useEffect(() => {
@@ -70,6 +85,7 @@ function FavouritesSkeleton({
       ),
       -1,
     )
+    return () => { cancelAnimation(shimmer) }
   }, [shimmer])
 
   const skeletonStyle = useAnimatedStyle(() => ({
@@ -96,53 +112,6 @@ function FavouritesSkeleton({
   )
 }
 
-function FollowButton({ isFollowing, onPress }: { isFollowing: boolean; onPress: () => void }) {
-  const { colors } = useTheme()
-  const styles = useMemo(() => createStyles(colors), [colors])
-  const progress = useSharedValue(isFollowing ? 1 : 0)
-
-  useEffect(() => {
-    progress.value = withTiming(isFollowing ? 1 : 0, { duration: FOLLOW_DURATION })
-  }, [isFollowing, progress])
-
-  const buttonStyle = useAnimatedStyle(() => ({
-    borderColor: interpolateColor(
-      progress.value,
-      [0, 1],
-      [colors.border, 'transparent'],
-    ),
-  }))
-
-  // Crossfade: FOLLOW fades out while FOLLOWING fades in
-  const followOpacity = useAnimatedStyle(() => ({ opacity: 1 - progress.value }))
-  const followingOpacity = useAnimatedStyle(() => ({ opacity: progress.value }))
-
-  const followColor = useAnimatedStyle(() => ({
-    color: colors.foreground,
-  }))
-  const followingColor = useAnimatedStyle(() => ({
-    color: colors.secondaryText,
-  }))
-
-  return (
-    <AnimatedPressable
-      style={[styles.followButton, buttonStyle]}
-      onPress={onPress}
-    >
-      <View style={styles.followTextContainer}>
-        {/* FOLLOWING sits in normal flow to size the container (it's the longer label) */}
-        <Animated.Text style={[styles.followText, followingColor, followingOpacity]}>
-          FOLLOWING
-        </Animated.Text>
-        {/* FOLLOW overlays on top, centered */}
-        <Animated.Text style={[styles.followText, styles.followTextOverlay, followColor, followOpacity]}>
-          FOLLOW
-        </Animated.Text>
-      </View>
-    </AnimatedPressable>
-  )
-}
-
 export default function ExternalProfileHeader({
   displayName,
   username,
@@ -158,11 +127,10 @@ export default function ExternalProfileHeader({
   onFollowToggle,
 }: ExternalProfileHeaderProps) {
   const [bioExpanded, setBioExpanded] = useState(false)
-  const [bioOverflows, setBioOverflows] = useState(false)
-  const [avatarOpen, setAvatarOpen] = useState(false)
   const { width } = useWindowDimensions()
   const { colors } = useTheme()
-  const styles = useMemo(() => createStyles(colors), [colors])
+  const typography = useTypography()
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
   const contentWidth = width - HORIZONTAL_PAD * 2
   const hasMetadata = !!location || !!websiteUrl || !!twitterUrl
   const posterWidth = (contentWidth - spacing.sm * 3) / 4
@@ -187,125 +155,77 @@ export default function ExternalProfileHeader({
     opacity: postersOpacity.value,
   }))
 
-  const handleBioLayout = useCallback((e: { nativeEvent: { layout: { height: number } } }) => {
-    if (!bioExpanded && e.nativeEvent.layout.height > BIO_COLLAPSED_HEIGHT) {
-      setBioOverflows(true)
-    }
-  }, [bioExpanded])
+  const plainBio = useMemo(() => stripHtml(bio), [bio])
+  const bioParagraphs = useMemo(() => plainBio.split(/\n\n+/), [plainBio])
+  const hasMoreParagraphs = bioParagraphs.length > 1
+  const remainingText = useMemo(
+    () => bioParagraphs.slice(1).join('\n\n'),
+    [bioParagraphs],
+  )
 
-  const bioTagsStyles = useMemo(() => ({
-    body: {
-      fontFamily: fonts.body,
-      fontSize: typography.magazineBody.fontSize,
-      lineHeight: typography.magazineBody.lineHeight,
-      color: colors.foreground,
-      textAlign: 'center' as const,
-    },
-    p: {
-      marginTop: 0,
-      marginBottom: spacing.sm,
-      textAlign: 'center' as const,
-    },
-    a: {
-      fontFamily: fonts.body,
-      color: colors.teal,
-      textDecorationLine: 'none' as const,
-    },
-    i: { fontFamily: fonts.bodyItalic, fontStyle: 'normal' as const },
-    em: { fontFamily: fonts.bodyItalic, fontStyle: 'normal' as const },
-    b: { fontFamily: fonts.bodyBold, fontWeight: 'normal' as const },
-    strong: { fontFamily: fonts.bodyBold, fontWeight: 'normal' as const },
-  }), [colors])
-
-  const bioRenderersProps = useMemo(() => ({
-    a: {
-      onPress: (_event: unknown, href: string) => WebBrowser.openBrowserAsync(href),
-    },
-  }), [])
+  const expandBio = useCallback(() => {
+    if (!hasMoreParagraphs || bioExpanded) return
+    setBioExpanded(true)
+  }, [hasMoreParagraphs, bioExpanded])
 
   return (
     <View style={styles.container}>
       {/* Avatar */}
       <View style={styles.avatarWrapper}>
-        {avatarUrl ? (
-          <Pressable onPress={() => setAvatarOpen(true)}>
-            <Image source={{ uri: avatarUrl }} style={styles.avatar} />
-          </Pressable>
-        ) : (
-          <View style={[styles.avatar, styles.avatarPlaceholder]}>
-            <Text style={styles.avatarInitial}>
-              {(displayName || username || '?')[0].toUpperCase()}
-            </Text>
-          </View>
-        )}
+        <ExpandableAvatar
+          avatarUrl={avatarUrl}
+          displayName={displayName}
+          username={username}
+          size={AVATAR_SIZE}
+        />
       </View>
 
-      {/* Enlarged avatar modal — overlay stays dark (photo context, not themed) */}
-      {avatarUrl ? (
-        <Modal
-          visible={avatarOpen}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setAvatarOpen(false)}
-        >
-          <Pressable style={styles.avatarOverlay} onPress={() => setAvatarOpen(false)}>
-            <Image
-              source={{ uri: avatarUrl }}
-              style={[styles.avatarEnlarged, { width: width * 0.6, height: width * 0.6 }]}
-            />
-            <Text style={styles.avatarOverlayName}>{displayName}</Text>
-          </Pressable>
-        </Modal>
-      ) : null}
-
       {/* Display name */}
-      <Text style={styles.displayName}>{displayName}</Text>
+      <Pressable
+        style={styles.displayNameRow}
+        onPress={() => Linking.openURL(letterboxdUrl)}
+      >
+        <Text style={styles.displayName}>{displayName}</Text>
+        <View style={styles.dotsOffset}>
+          <LetterboxdDots size={16} />
+        </View>
+      </Pressable>
 
-      {/* @USERNAME */}
-      <Text style={styles.username}>@{username.toUpperCase()}</Text>
+      {/* @username */}
+      <Text
+        style={styles.username}
+        onPress={() => Linking.openURL(letterboxdUrl)}
+        suppressHighlighting
+      >
+        @{username}
+      </Text>
 
       {/* Bio */}
       {bio ? (
-        <View style={styles.bioWrapper}>
-          <View
-            style={
-              !bioExpanded && bioOverflows
-                ? { maxHeight: BIO_COLLAPSED_HEIGHT, overflow: 'hidden' as const }
-                : undefined
-            }
-          >
-            <View onLayout={handleBioLayout}>
-              <RenderHtml
-                contentWidth={contentWidth}
-                source={{ html: bio }}
-                tagsStyles={bioTagsStyles}
-                systemFonts={SYSTEM_FONTS}
-                renderersProps={bioRenderersProps}
-              />
-            </View>
-          </View>
-
-          {/* Fade overlay at bottom of clamped bio */}
-          {!bioExpanded && bioOverflows ? (
-            <View style={styles.bioFade} pointerEvents="none">
-              <View style={[styles.bioFadeStep, { opacity: 0 }]} />
-              <View style={[styles.bioFadeStep, { opacity: 0.4 }]} />
-              <View style={[styles.bioFadeStep, { opacity: 0.7 }]} />
-              <View style={[styles.bioFadeStep, { opacity: 0.95 }]} />
-            </View>
-          ) : null}
-
-          {/* Editorial Read More */}
-          {!bioExpanded && bioOverflows ? (
-            <Pressable
-              style={styles.readMoreButton}
-              onPress={() => setBioExpanded(true)}
-              hitSlop={12}
+        <Pressable
+          style={styles.bioWrapper}
+          onPress={expandBio}
+          disabled={!hasMoreParagraphs || bioExpanded}
+        >
+          <Text style={styles.bioText}>{bioParagraphs[0]}</Text>
+          {bioExpanded && remainingText ? (
+            <Animated.View
+              entering={FadeInUp.duration(300).delay(120)}
             >
-              <Text style={styles.readMoreText}>Read More</Text>
-            </Pressable>
+              <Text style={[styles.bioText, styles.bioRemainder]}>
+                {remainingText}
+              </Text>
+            </Animated.View>
           ) : null}
-        </View>
+          {!bioExpanded && hasMoreParagraphs ? (
+            <Animated.Text
+              exiting={FadeOut.duration(120)}
+              style={styles.readMoreText}
+            >
+              Read More
+            </Animated.Text>
+          ) : null}
+        </Pressable>
       ) : null}
 
       {/* Metadata row */}
@@ -343,8 +263,6 @@ export default function ExternalProfileHeader({
       {/* Favourites */}
       {favoriteFilms && favoriteFilms.length > 0 ? (
         <View style={styles.favoritesSection}>
-          <Text style={styles.favoritesLabel}>FAVOURITES</Text>
-
           {/* Skeleton — overlays posters until all have loaded */}
           {!allPostersLoaded ? (
             <View style={styles.skeletonOverlay}>
@@ -385,18 +303,14 @@ export default function ExternalProfileHeader({
       ) : null}
 
       {/* Follow / Following */}
-      <FollowButton isFollowing={isFollowing} onPress={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-        onFollowToggle()
-      }} />
-
-      {/* Letterboxd link */}
-      <Pressable
-        style={styles.letterboxdButton}
-        onPress={() => Linking.openURL(letterboxdUrl)}
-      >
-        <LetterboxdDots size={20} />
-      </Pressable>
+      <FollowButton
+        isFollowing={isFollowing}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+          onFollowToggle()
+        }}
+        style={styles.followButtonMargin}
+      />
 
       {/* Bottom hairline divider */}
       <View style={styles.divider} />
@@ -404,7 +318,7 @@ export default function ExternalProfileHeader({
   )
 }
 
-function createStyles(colors: ThemeColors) {
+function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({
     container: {
       alignItems: 'center',
@@ -414,38 +328,13 @@ function createStyles(colors: ThemeColors) {
     avatarWrapper: {
       marginBottom: spacing.md,
     },
-    avatar: {
-      width: AVATAR_SIZE,
-      height: AVATAR_SIZE,
-      borderRadius: AVATAR_SIZE / 2,
-    },
-    avatarOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    displayNameRow: {
+      flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
+      gap: 6,
     },
-    avatarEnlarged: {
-      borderRadius: 9999,
-    },
-    avatarOverlayName: {
-      fontFamily: fonts.heading,
-      fontSize: typography.title1.fontSize,
-      color: colors.white,
-      marginTop: spacing.lg,
-      textAlign: 'center',
-    },
-    avatarPlaceholder: {
-      backgroundColor: colors.background,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    avatarInitial: {
-      fontFamily: fonts.heading,
-      fontSize: 28,
-      color: colors.secondaryText,
+    dotsOffset: {
+      marginTop: 2,
     },
     displayName: {
       fontFamily: fonts.heading,
@@ -455,7 +344,7 @@ function createStyles(colors: ThemeColors) {
       textAlign: 'center',
     },
     username: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,
@@ -467,30 +356,25 @@ function createStyles(colors: ThemeColors) {
       alignSelf: 'stretch',
       marginTop: spacing.lg,
     },
-    bioFade: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: 32,
-      flexDirection: 'column',
-    },
-    bioFadeStep: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    readMoreButton: {
-      alignItems: 'center',
-      paddingTop: spacing.sm,
-      paddingBottom: spacing.xs,
+    bioText: {
+      fontFamily: fonts.system,
+      fontSize: typography.callout.fontSize,
+      lineHeight: typography.callout.lineHeight,
+      color: colors.foreground,
+      textAlign: 'center',
     },
     readMoreText: {
-      fontFamily: fonts.bodyItalic,
-      fontStyle: 'normal',
+      textAlign: 'center',
+      marginTop: spacing.xs,
+      fontFamily: fonts.system,
+      fontStyle: 'italic' as const,
       fontSize: typography.callout.fontSize,
       lineHeight: typography.callout.lineHeight,
       color: colors.secondaryText,
       letterSpacing: 0.3,
+    },
+    bioRemainder: {
+      marginTop: spacing.sm,
     },
     metadataRow: {
       flexDirection: 'row',
@@ -506,7 +390,7 @@ function createStyles(colors: ThemeColors) {
       gap: 4,
     },
     metadataLabel: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.caption.fontSize,
       lineHeight: typography.caption.lineHeight,
       color: colors.secondaryText,
@@ -517,7 +401,7 @@ function createStyles(colors: ThemeColors) {
       color: colors.teal,
     },
     metadataLink: {
-      fontFamily: fonts.body,
+      fontFamily: fonts.system,
       fontSize: typography.caption.fontSize,
       lineHeight: typography.caption.lineHeight,
       color: colors.teal,
@@ -526,15 +410,6 @@ function createStyles(colors: ThemeColors) {
       alignSelf: 'stretch',
       marginTop: spacing.lg,
       alignItems: 'center',
-    },
-    favoritesLabel: {
-      fontFamily: fonts.body,
-      fontSize: typography.magazineMeta.fontSize,
-      lineHeight: typography.magazineMeta.lineHeight,
-      letterSpacing: typography.magazineMeta.letterSpacing,
-      color: colors.secondaryText,
-      textTransform: 'uppercase',
-      marginBottom: spacing.sm,
     },
     favoritesRow: {
       flexDirection: 'row',
@@ -550,30 +425,8 @@ function createStyles(colors: ThemeColors) {
     posterPressed: {
       opacity: 0.6,
     },
-    followButton: {
+    followButtonMargin: {
       marginTop: spacing.md,
-      paddingVertical: 8,
-      paddingHorizontal: spacing.md,
-      alignItems: 'center',
-      borderWidth: 1,
-      borderRadius: 4,
-      backgroundColor: 'transparent',
-    },
-    followTextContainer: {
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    followText: {
-      fontFamily: fonts.body,
-      fontSize: typography.magazineMeta.fontSize,
-      letterSpacing: typography.magazineMeta.letterSpacing,
-    },
-    followTextOverlay: {
-      position: 'absolute',
-    },
-    letterboxdButton: {
-      marginTop: spacing.md,
-      padding: spacing.sm,
     },
     divider: {
       height: StyleSheet.hairlineWidth,

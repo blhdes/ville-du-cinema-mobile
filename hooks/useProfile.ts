@@ -20,7 +20,7 @@ const DEFAULT_PROFILE: Omit<UserProfile, 'user_id' | 'updated_at'> = {
   bio: '',
   display_name: null,
   followed_users: [],
-  language: 'fr',
+  followed_village_users: [],
   hide_userlist_main: false,
   feed_grid_columns: 1,
   hide_watch_notifications: false,

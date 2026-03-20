@@ -1,13 +1,20 @@
 import { useUserListsContext } from '@/contexts/UserListsProvider'
-import type { FollowedUser } from '@/types/database'
+import type { FollowedUser, FollowedVillageUser } from '@/types/database'
 
 interface UseUserListsReturn {
+  // Letterboxd
   users: FollowedUser[]
   usernames: string[]
-  isLoading: boolean
-  error: string | null
   addUser: (username: string) => Promise<{ success: boolean; error?: string }>
   removeUser: (username: string) => Promise<void>
+  // Village
+  villageUsers: FollowedVillageUser[]
+  villageUserIds: string[]
+  addVillageUser: (user: FollowedVillageUser) => Promise<{ success: boolean; error?: string }>
+  removeVillageUser: (userId: string) => Promise<void>
+  // Shared
+  isLoading: boolean
+  error: string | null
   isAuthenticated: boolean
   clearError: () => void
 }
