@@ -310,6 +310,7 @@ function ReviewCard({ review, hideAuthor = false, repostable = true, compact = f
       onAction={handleRepost}
       actionColor={colors.teal}
       actionIcon="repeat-outline"
+      actionLabel="Repost this review"
     >
       {cardContent}
     </SwipeableRow>

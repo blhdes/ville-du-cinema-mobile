@@ -108,6 +108,14 @@ export async function saveRepost(review: Review): Promise<Clipping> {
     throw new Error('You must be signed in to repost.')
   }
 
+  // Remove previous repost of the same review (if any) so it resurfaces as fresh
+  await supabase
+    .from('user_clippings')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('type', 'repost')
+    .eq('original_url', review.link)
+
   const { data, error } = await supabase
     .from('user_clippings')
     .insert({

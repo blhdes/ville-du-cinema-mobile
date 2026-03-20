@@ -585,7 +585,7 @@ export default function FeedScreen() {
       {/* Header: outer shell stays opaque, inner content fades on scroll */}
       <Animated.View
         onLayout={onHeaderLayout}
-        style={[styles.header, { paddingTop: insets.top + 12 }, headerAnimatedStyle]}
+        style={[styles.header, { paddingTop: insets.top + 6 }, headerAnimatedStyle]}
       >
         <Animated.View style={[styles.headerContent, headerContentOpacity]}>
           <DrawerTrigger onPress={openDrawer} />
@@ -597,7 +597,7 @@ export default function FeedScreen() {
             }}
             hitSlop={8}
           >
-            <LogoIcon size={40} fill={colors.foreground} />
+            <LogoIcon size={48} fill={colors.foreground} />
           </Pressable>
           <Pressable
             onPress={() => navigation.navigate('UserSearch')}
@@ -627,7 +627,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingHorizontal: spacing.md,
-      paddingBottom: 12,
+      paddingBottom: 6,
       backgroundColor: colors.background,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,

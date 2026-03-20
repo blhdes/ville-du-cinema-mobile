@@ -24,9 +24,11 @@ interface SwipeableRowProps {
   actionIcon: keyof typeof Ionicons.glyphMap
   /** 'wash' = faint 12% accent bg, 'minimal' = no bg, just the icon. Default: 'wash'. */
   variant?: 'wash' | 'minimal'
+  /** Accessibility label for the swipe action (e.g. "Repost this review"). */
+  actionLabel?: string
 }
 
-function SwipeableRow({ children, onAction, actionColor, actionIcon, variant = 'wash' }: SwipeableRowProps) {
+function SwipeableRow({ children, onAction, actionColor, actionIcon, variant = 'wash', actionLabel }: SwipeableRowProps) {
   const swipeableRef = useRef<Swipeable>(null)
   const fired = useRef(false)
 
@@ -59,7 +61,11 @@ function SwipeableRow({ children, onAction, actionColor, actionIcon, variant = '
 
       return (
         <View style={styles.actionClip}>
-          <Animated.View style={[styles.actionContainer, { backgroundColor: bgColor, transform: [{ translateX }] }]}>
+          <Animated.View
+            style={[styles.actionContainer, { backgroundColor: bgColor, transform: [{ translateX }] }]}
+            accessibilityRole="button"
+            accessibilityLabel={actionLabel}
+          >
             <Animated.View style={{ opacity }}>
               <Ionicons name={actionIcon} size={22} color={actionColor} />
             </Animated.View>

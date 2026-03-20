@@ -24,8 +24,9 @@ import Spinner from '@/components/ui/Spinner'
 
 const AVATAR_SIZE = 96
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/
+const USERNAME_MIN_LENGTH = 4
 
-type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
+type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'short'
 
 export default function EditProfileScreen() {
   const insets = useSafeAreaInsets()
@@ -76,6 +77,11 @@ export default function EditProfileScreen() {
       return
     }
 
+    if (trimmed.length < USERNAME_MIN_LENGTH) {
+      setUsernameStatus('short')
+      return
+    }
+
     setUsernameStatus('checking')
     let cancelled = false
 
@@ -107,8 +113,11 @@ export default function EditProfileScreen() {
   }, [])
 
   const isSaveDisabled = isSaving
+    || !displayName.trim()
+    || username.trim().length < USERNAME_MIN_LENGTH
     || usernameStatus === 'taken'
     || usernameStatus === 'invalid'
+    || usernameStatus === 'short'
     || usernameStatus === 'checking'
 
   const handleSave = useCallback(async () => {
@@ -121,7 +130,7 @@ export default function EditProfileScreen() {
 
       await updateProfile({
         display_name: displayName.trim() || undefined,
-        username: username.trim().toLowerCase() || null,
+        username: username.trim().toLowerCase() || undefined,
         bio: bio.trim(),
       })
 
@@ -224,12 +233,13 @@ export default function EditProfileScreen() {
               <Text style={[
                 styles.usernameHint,
                 usernameStatus === 'available' && { color: colors.teal },
-                (usernameStatus === 'taken' || usernameStatus === 'invalid') && { color: colors.red },
+                (usernameStatus === 'taken' || usernameStatus === 'invalid' || usernameStatus === 'short') && { color: colors.red },
               ]}>
                 {usernameStatus === 'checking' && 'Checking…'}
                 {usernameStatus === 'available' && 'Available'}
                 {usernameStatus === 'taken' && 'Already taken'}
                 {usernameStatus === 'invalid' && 'Letters, numbers and _ only'}
+                {usernameStatus === 'short' && `At least ${USERNAME_MIN_LENGTH} characters`}
               </Text>
             )}
           </View>

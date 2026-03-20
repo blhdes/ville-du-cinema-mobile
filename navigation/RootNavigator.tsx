@@ -4,13 +4,16 @@ import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/
 import * as SplashScreen from 'expo-splash-screen'
 import { useUser } from '@/hooks/useUser'
 import { useGuestMode } from '@/contexts/GuestModeContext'
+import { useProfile } from '@/contexts/ProfileContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import AuthStack from '@/navigation/AuthStack'
 import AppTabs from '@/navigation/AppTabs'
+import ProfileSetupScreen from '@/screens/ProfileSetupScreen'
 
 export default function RootNavigator() {
   const { user, isLoading: isAuthLoading } = useUser()
   const { isGuest, isLoading: isGuestLoading } = useGuestMode()
+  const { profile, isLoading: isProfileLoading } = useProfile()
   const { resolved, colors } = useTheme()
   const splashHidden = useRef(false)
 
@@ -50,15 +53,38 @@ export default function RootNavigator() {
     }
   }, [resolved, colors])
 
+  // Hide splash when ProfileSetupScreen paints
+  const onSetupLayout = useCallback(() => {
+    if (!splashHidden.current) {
+      splashHidden.current = true
+      SplashScreen.hideAsync()
+    }
+  }, [])
+
   if (isAuthLoading || isGuestLoading) {
     return (
       <View style={[styles.loading, { backgroundColor: colors.background }]} />
     )
   }
 
+  // Authenticated real user whose profile is still loading — hold on a blank screen
+  // so we don't flash ProfileSetupScreen for returning users who already have a username.
+  if (user && !isGuest && isProfileLoading) {
+    return (
+      <View style={[styles.loading, { backgroundColor: colors.background }]} />
+    )
+  }
+
+  // Real user with no username yet — must complete profile setup before entering the app
+  const needsSetup = user && !isGuest && !profile?.username
+
   return (
     <NavigationContainer theme={navTheme}>
-      {user || isGuest ? (
+      {needsSetup ? (
+        <View style={styles.authWrapper} onLayout={onSetupLayout}>
+          <ProfileSetupScreen />
+        </View>
+      ) : user || isGuest ? (
         <AppTabs />
       ) : (
         <View style={styles.authWrapper} onLayout={onAuthLayout}>

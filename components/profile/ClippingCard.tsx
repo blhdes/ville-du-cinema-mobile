@@ -110,6 +110,7 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false }: ClippingC
       onAction={handleDelete}
       actionColor={colors.red}
       actionIcon="trash-outline"
+      actionLabel="Delete clipping"
     >
       {cardContent}
     </SwipeableRow>

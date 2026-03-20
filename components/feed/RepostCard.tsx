@@ -81,6 +81,7 @@ function RepostCard({ clipping, owner, onDeleted }: RepostCardProps) {
       onAction={handleDelete}
       actionColor={colors.red}
       actionIcon="trash-outline"
+      actionLabel="Delete repost"
     >
       {cardContent}
     </SwipeableRow>

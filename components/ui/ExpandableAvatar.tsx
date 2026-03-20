@@ -9,6 +9,8 @@ interface ExpandableAvatarProps {
   avatarUrl?: string | null
   displayName?: string | null
   username?: string | null
+  /** Used as last-resort fallback for the initial letter (new users with no name/handle). */
+  email?: string | null
   size?: number
 }
 
@@ -16,6 +18,7 @@ export default function ExpandableAvatar({
   avatarUrl,
   displayName,
   username,
+  email,
   size = 72,
 }: ExpandableAvatarProps) {
   const [open, setOpen] = useState(false)
@@ -23,7 +26,7 @@ export default function ExpandableAvatar({
   const { colors } = useTheme()
   const typography = useTypography()
 
-  const initial = (displayName || username || '?')[0].toUpperCase()
+  const initial = (displayName || username || email || '?')[0].toUpperCase()
   const label = displayName || username || ''
   const avatarStyle = { width: size, height: size, borderRadius: size / 2 }
 
@@ -37,7 +40,7 @@ export default function ExpandableAvatar({
         <View style={[
           avatarStyle,
           styles.placeholder,
-          { backgroundColor: colors.background, borderColor: colors.border },
+          { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
         ]}>
           <Text style={[styles.initial, { fontSize: Math.round(size * 0.38), color: colors.secondaryText }]}>
             {initial}

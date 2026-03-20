@@ -33,6 +33,7 @@ export default function ProfileHeader({ profile, email, showEdit }: ProfileHeade
             avatarUrl={profile.avatar_url}
             displayName={profile.display_name}
             username={profile.username}
+            email={email}
             size={AVATAR_SIZE}
           />
         </View>
@@ -60,9 +61,11 @@ export default function ProfileHeader({ profile, email, showEdit }: ProfileHeade
         </View>
       </View>
 
-      {/* Bio */}
+      {/* Bio or onboarding nudge */}
       {profile.bio ? (
         <Text style={styles.bioText}>{profile.bio}</Text>
+      ) : showEdit ? (
+        <Text style={styles.nudgeText}>Tap Edit to set up your profile.</Text>
       ) : null}
     </View>
   )
@@ -120,6 +123,13 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       fontSize: typography.magazineBody.fontSize,
       lineHeight: typography.magazineBody.lineHeight,
       color: colors.foreground,
+      marginTop: spacing.lg,
+    },
+    nudgeText: {
+      fontFamily: fonts.bodyItalic,
+      fontSize: typography.magazineBody.fontSize,
+      lineHeight: typography.magazineBody.lineHeight,
+      color: colors.secondaryText,
       marginTop: spacing.lg,
     },
   })
