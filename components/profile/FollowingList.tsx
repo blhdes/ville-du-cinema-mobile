@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { memo, useMemo } from 'react'
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import { Image } from 'expo-image'
 import { useNavigation } from '@react-navigation/native'
@@ -27,7 +27,7 @@ type RowItem =
 // Letterboxd row (uses avatar cache + opens Letterboxd URL on right)
 // ---------------------------------------------------------------------------
 
-function LetterboxdRow({ user, isLast }: { user: FollowedUser; isLast: boolean }) {
+const LetterboxdRow = memo(function LetterboxdRow({ user, isLast }: { user: FollowedUser; isLast: boolean }) {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>()
   const { colors } = useTheme()
   const typography = useTypography()
@@ -64,13 +64,13 @@ function LetterboxdRow({ user, isLast }: { user: FollowedUser; isLast: boolean }
       </Pressable>
     </View>
   )
-}
+})
 
 // ---------------------------------------------------------------------------
 // Village row (direct avatar_url, Village logo as platform indicator)
 // ---------------------------------------------------------------------------
 
-function VillageRow({ user, isLast }: { user: FollowedVillageUser; isLast: boolean }) {
+const VillageRow = memo(function VillageRow({ user, isLast }: { user: FollowedVillageUser; isLast: boolean }) {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>()
   const { colors } = useTheme()
   const typography = useTypography()
@@ -115,7 +115,7 @@ function VillageRow({ user, isLast }: { user: FollowedVillageUser; isLast: boole
       </Pressable>
     </View>
   )
-}
+})
 
 // ---------------------------------------------------------------------------
 // Main component

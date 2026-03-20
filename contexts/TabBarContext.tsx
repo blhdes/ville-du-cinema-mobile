@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState } from 'react'
+import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 import { cancelAnimation, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated'
 
 interface TabBarContextValue {
@@ -42,8 +42,12 @@ export function TabBarProvider({ children }: { children: React.ReactNode }) {
     setProfileScrollTopRequested((prev) => prev + 1)
   }, [])
 
+  const value = useMemo(() => ({
+    translateY, setTabBarVisible, feedRefreshRequested, isFeedRefreshing, setIsFeedRefreshing, requestFeedRefresh, profileScrollTopRequested, requestProfileScrollTop,
+  }), [translateY, setTabBarVisible, feedRefreshRequested, isFeedRefreshing, setIsFeedRefreshing, requestFeedRefresh, profileScrollTopRequested, requestProfileScrollTop])
+
   return (
-    <TabBarContext.Provider value={{ translateY, setTabBarVisible, feedRefreshRequested, isFeedRefreshing, setIsFeedRefreshing, requestFeedRefresh, profileScrollTopRequested, requestProfileScrollTop }}>
+    <TabBarContext.Provider value={value}>
       {children}
     </TabBarContext.Provider>
   )

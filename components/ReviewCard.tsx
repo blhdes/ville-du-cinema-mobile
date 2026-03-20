@@ -172,6 +172,11 @@ function ReviewCard({ review, hideAuthor = false, repostable = true, compact = f
   }, [preferences.useDropCap, displayHtml])
 
   const dropCapSize = scaled.title.fontSize * 3
+  const dropCapDynamicStyle = useMemo(() => ({
+    fontSize: dropCapSize,
+    lineHeight: dropCapSize * 1.15,
+    minWidth: dropCapSize * 0.75,
+  }), [dropCapSize])
 
   const handleRepost = useCallback(async () => {
     try {
@@ -243,14 +248,7 @@ function ReviewCard({ review, hideAuthor = false, repostable = true, compact = f
           {dropCapData ? (
             <View style={styles.dropCapRow}>
               <Text
-                style={[
-                  styles.dropCapLetter,
-                  {
-                    fontSize: dropCapSize,
-                    lineHeight: dropCapSize * 1.15,
-                    minWidth: dropCapSize * 0.75,
-                  },
-                ]}
+                style={[styles.dropCapLetter, dropCapDynamicStyle]}
                 selectable={false}
                 suppressHighlighting
               >

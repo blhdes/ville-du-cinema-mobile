@@ -65,19 +65,13 @@ export function DisplayPreferencesProvider({ children }: { children: ReactNode }
   }, [])
 
   // Sync showWatchNotifications from profile (invert Supabase's hide_watch_notifications)
+  const hideWatchNotifications = profile?.hide_watch_notifications
   useEffect(() => {
-    if (profile) {
-      setPrefs((prev) => ({
-        ...prev,
-        showWatchNotifications: !profile.hide_watch_notifications,
-      }))
-    } else {
-      setPrefs((prev) => ({
-        ...prev,
-        showWatchNotifications: true,
-      }))
-    }
-  }, [profile])
+    setPrefs((prev) => ({
+      ...prev,
+      showWatchNotifications: hideWatchNotifications ? false : true,
+    }))
+  }, [hideWatchNotifications])
 
   const setShowWatchNotifications = useCallback(
     (value: boolean) => {

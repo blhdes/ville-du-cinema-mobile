@@ -23,7 +23,7 @@ Village (short for Village du Cin&eacute;ma) aggregates Letterboxd activity into
 
 ### Reading & Sharing
 - **Immersive Review Reader** — full-screen reading experience with editorial typography
-- **Swipe-to-highlight** — select a passage from any review to save as a quote clipping
+- **Long-press to clip** — press and hold a passage in any review to save it as a quote clipping
 - **Quote export** — generate shareable 9:16 story cards with film metadata, styled for Instagram/social
 - **Clippings scrapbook** — all saved quotes live in your profile tab
 
