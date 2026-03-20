@@ -255,6 +255,8 @@ export default function FeedScreen() {
       setReviews([])
       setHasMore(false)
       setIsLoading(false)
+      setIsRefreshing(false)
+      setIsFeedRefreshing(false)
       return
     }
 
@@ -305,7 +307,7 @@ export default function FeedScreen() {
     if (usernames.length > 0) {
       refreshAvatarUrls(usernames).catch(() => {})
     }
-  }, [loadFeed, usernames, refetchClippings])
+  }, [loadFeed, usernames, refetchClippings, refetchVillageClippings])
 
   // Smart tab press: scroll-to-top if scrolled down, refresh only if already at top
   useEffect(() => {

@@ -12,9 +12,6 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-/** Supported UI locales. `fr` is the default. */
-export type Locale = 'fr' | 'en' | 'es'
-
 /**
  * A Letterboxd account that a user has chosen to follow.
  * Stored as a JSONB array in `user_data.followed_users`.
@@ -51,7 +48,7 @@ export interface Database {
           user_id: string
           followed_users: FollowedUser[]
           followed_village_users: FollowedVillageUser[]
-          language: Locale
+
           avatar_url: string | null
           bio: string
           display_name: string | null
@@ -66,7 +63,7 @@ export interface Database {
           user_id: string
           followed_users?: FollowedUser[]
           followed_village_users?: FollowedVillageUser[]
-          language?: Locale
+
           avatar_url?: string | null
           bio?: string
           display_name?: string | null
@@ -81,7 +78,7 @@ export interface Database {
           user_id?: string
           followed_users?: FollowedUser[]
           followed_village_users?: FollowedVillageUser[]
-          language?: Locale
+
           avatar_url?: string | null
           bio?: string
           display_name?: string | null
@@ -173,7 +170,6 @@ export interface UserProfile {
   display_name: string | null
   followed_users: FollowedUser[]
   followed_village_users: FollowedVillageUser[]
-  language: Locale
   hide_userlist_main: boolean
   feed_grid_columns: 1 | 2 | 3
   hide_watch_notifications: boolean

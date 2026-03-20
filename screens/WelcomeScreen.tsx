@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import Animated, {
   Easing,
@@ -15,7 +15,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { getQuoteOfTheWeek } from '@/constants/filmmakerQuotes'
 import LogoIcon from '@/components/ui/LogoIcon'
 import FilmmakerQuote from '@/components/ui/FilmmakerQuote'
-import type { ThemeColors } from '@/theme'
+import { fonts, type ThemeColors } from '@/theme'
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Welcome'>
 
@@ -36,6 +36,13 @@ export default function WelcomeScreen({ navigation }: Props) {
   const actionsOpacity = useSharedValue(0)
   const actionsY = useSharedValue(16)
 
+  // Tagline crossfade — starts hidden, revealed on logo tap
+  const taglineOpacity = useSharedValue(0)
+  const taglineY = useSharedValue(-12)
+  const markY = useSharedValue(0)
+  const [logoReady, setLogoReady] = useState(false)
+  const [revealed, setRevealed] = useState(false)
+
   useEffect(() => {
     markOpacity.value = withTiming(1, { duration: 800, easing: ease })
     markScale.value = withTiming(1, { duration: 800, easing: ease })
@@ -45,12 +52,34 @@ export default function WelcomeScreen({ navigation }: Props) {
 
     actionsOpacity.value = withDelay(600, withTiming(1, { duration: DURATION, easing: ease }))
     actionsY.value = withDelay(600, withTiming(0, { duration: DURATION, easing: ease }))
+
+    // Logo is "ready" after its entrance animation completes
+    const timer = setTimeout(() => setLogoReady(true), 850)
+    return () => clearTimeout(timer)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const handleLogoTap = useCallback(() => {
+    if (!logoReady || revealed) return
+    setRevealed(true)
+
+    // Logo fades out and drifts down gently
+    markOpacity.value = withTiming(0, { duration: 900, easing: ease })
+    markY.value = withTiming(20, { duration: 900, easing: ease })
+
+    // Tagline drifts down into place from slightly above, fading in
+    taglineOpacity.value = withDelay(400, withTiming(1, { duration: 800, easing: ease }))
+    taglineY.value = withDelay(400, withTiming(0, { duration: 800, easing: ease }))
+  }, [logoReady, revealed, markOpacity, markY, taglineOpacity, taglineY])
+
   const markStyle = useAnimatedStyle(() => ({
     opacity: markOpacity.value,
-    transform: [{ scale: markScale.value }],
+    transform: [{ scale: markScale.value }, { translateY: markY.value }],
+  }))
+
+  const taglineStyle = useAnimatedStyle(() => ({
+    opacity: taglineOpacity.value,
+    transform: [{ translateY: taglineY.value }],
   }))
 
   const quoteStyle = useAnimatedStyle(() => ({
@@ -72,9 +101,17 @@ export default function WelcomeScreen({ navigation }: Props) {
     >
       {/* ── Logo + Quote centered together ── */}
       <View style={styles.centerGroup}>
-        <Animated.View style={markStyle}>
-          <LogoIcon size={148} fill={colors.foreground} />
-        </Animated.View>
+        <View style={styles.logoArea}>
+          <Animated.View style={[styles.logoAbsolute, markStyle]}>
+            <Pressable onPress={handleLogoTap} disabled={!logoReady || revealed}>
+              <LogoIcon size={148} fill={colors.foreground} />
+            </Pressable>
+          </Animated.View>
+
+          <Animated.View style={[styles.logoAbsolute, taglineStyle]} pointerEvents="none">
+            <Text style={styles.tagline}>Where cinema{'\n'}meets taste.</Text>
+          </Animated.View>
+        </View>
 
         <Animated.View style={quoteStyle}>
           <FilmmakerQuote text={quote.text} author={quote.author} />
@@ -120,6 +157,24 @@ function makeStyles(c: ThemeColors) {
       justifyContent: 'center',
       alignItems: 'center',
       gap: 48,
+    },
+    logoArea: {
+      height: 148,
+      alignItems: 'center',
+      justifyContent: 'center',
+      alignSelf: 'stretch',
+    },
+    logoAbsolute: {
+      position: 'absolute',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    tagline: {
+      fontFamily: fonts.bodyItalic,
+      fontSize: 26,
+      lineHeight: 36,
+      color: c.foreground,
+      textAlign: 'center',
     },
 
     // ── Actions ──

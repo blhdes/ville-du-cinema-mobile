@@ -140,7 +140,7 @@ const Tab = createBottomTabNavigator<AppTabsParamList>()
 
 function AppTabsInner() {
   const { colors } = useTheme()
-  const { requestFeedRefresh, isFeedRefreshing, setTabBarVisible } = useTabBar()
+  const { requestFeedRefresh, isFeedRefreshing, setTabBarVisible, requestProfileScrollTop } = useTabBar()
   const onFeedPress = useCallback(() => onTabFocus('Feed'), [])
   const onProfileBounce = useCallback(() => onTabFocus('Profile'), [])
   const onSettingsPress = useCallback(() => onTabFocus('Settings'), [])
@@ -224,10 +224,24 @@ function AppTabsInner() {
         options={{
           tabBarIcon: ({ color }) => <ProfileIcon color={color} />,
         }}
-        listeners={{
-          tabPress: onProfileBounce,
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            onProfileBounce()
+
+            if (!navigation.isFocused()) return
+
+            const state = navigation.getState()
+            const profileRoute = state.routes.find((r: { name: string }) => r.name === 'Profile')
+            const profileStack = profileRoute?.state
+            const isAtRoot = !profileStack || profileStack.index === 0
+
+            if (isAtRoot) {
+              e.preventDefault()
+              requestProfileScrollTop()
+            }
+          },
           focus: () => setTabBarVisible(true),
-        }}
+        })}
       />
       <Tab.Screen
         name="Settings"

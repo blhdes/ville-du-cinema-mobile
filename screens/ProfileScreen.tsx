@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   FlatList,
   LayoutAnimation,
@@ -15,6 +15,7 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { Ionicons } from '@expo/vector-icons'
 import { useUser } from '@/hooks/useUser'
 import { useProfile } from '@/contexts/ProfileContext'
+import { useTabBar } from '@/contexts/TabBarContext'
 import { useUserLists } from '@/hooks/useUserLists'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
@@ -43,7 +44,16 @@ export default function ProfileScreen() {
   const { users: followedUsers, villageUsers } = useUserLists()
   const { colors } = useTheme()
   const typography = useTypography()
+  const { profileScrollTopRequested } = useTabBar()
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
+  const flatListRef = useRef<FlatList>(null)
+
+  // Scroll to top when Profile tab is tapped while already at root
+  useEffect(() => {
+    if (profileScrollTopRequested > 0) {
+      flatListRef.current?.scrollToOffset({ offset: 0, animated: true })
+    }
+  }, [profileScrollTopRequested])
 
   // Following accordion state
   const [followingExpanded, setFollowingExpanded] = useState(false)
@@ -189,6 +199,7 @@ export default function ProfileScreen() {
         <ProfileSkeleton variant="self" />
       ) : (
         <FlatList
+          ref={flatListRef}
           data={clippings}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}

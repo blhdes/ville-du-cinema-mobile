@@ -9,6 +9,7 @@ import { useGoogleAuth } from '@/hooks/useGoogleAuth'
 import AuthScreenLayout from '@/components/auth/AuthScreenLayout'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import Divider from '@/components/ui/Divider'
+import GoogleSignInButton from '@/components/auth/GoogleSignInButton'
 import Spinner from '@/components/ui/Spinner'
 import type { ThemeColors } from '@/theme'
 
@@ -125,17 +126,11 @@ export default function SignupScreen({ navigation }: Props) {
 
         <Divider label="or" marginVertical={8} />
 
-        <Pressable
-          style={[styles.googleButton, isGoogleLoading && styles.buttonDisabled]}
+        <GoogleSignInButton
           onPress={googleSignIn}
-          disabled={isGoogleLoading}
-        >
-          {isGoogleLoading ? (
-            <Spinner size={18} color={colors.foreground} />
-          ) : (
-            <Text style={styles.googleButtonText}>Continue with Google</Text>
-          )}
-        </Pressable>
+          isLoading={isGoogleLoading}
+          label="Sign up with Google"
+        />
       </View>
 
       <View style={styles.footer}>
@@ -191,18 +186,6 @@ function makeStyles(c: ThemeColors) {
       fontSize: 16,
       fontWeight: '600',
       letterSpacing: 1,
-    },
-    googleButton: {
-      borderWidth: 1.5,
-      borderColor: c.foreground,
-      paddingVertical: 14,
-      borderRadius: 4,
-      alignItems: 'center',
-    },
-    googleButtonText: {
-      color: c.foreground,
-      fontSize: 16,
-      fontWeight: '600',
     },
     footer: {
       marginTop: 32,

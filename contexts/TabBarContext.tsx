@@ -8,6 +8,8 @@ interface TabBarContextValue {
   isFeedRefreshing: boolean
   setIsFeedRefreshing: (value: boolean) => void
   requestFeedRefresh: () => void
+  profileScrollTopRequested: number
+  requestProfileScrollTop: () => void
 }
 
 const TabBarContext = createContext<TabBarContextValue | null>(null)
@@ -16,6 +18,7 @@ export function TabBarProvider({ children }: { children: React.ReactNode }) {
   const translateY = useSharedValue(0)
   const [feedRefreshRequested, setFeedRefreshRequested] = useState(0)
   const [isFeedRefreshing, setIsFeedRefreshing] = useState(false)
+  const [profileScrollTopRequested, setProfileScrollTopRequested] = useState(0)
 
   const setTabBarVisible = useCallback(
     (visible: boolean) => {
@@ -35,8 +38,12 @@ export function TabBarProvider({ children }: { children: React.ReactNode }) {
     setFeedRefreshRequested((prev) => prev + 1)
   }, [])
 
+  const requestProfileScrollTop = useCallback(() => {
+    setProfileScrollTopRequested((prev) => prev + 1)
+  }, [])
+
   return (
-    <TabBarContext.Provider value={{ translateY, setTabBarVisible, feedRefreshRequested, isFeedRefreshing, setIsFeedRefreshing, requestFeedRefresh }}>
+    <TabBarContext.Provider value={{ translateY, setTabBarVisible, feedRefreshRequested, isFeedRefreshing, setIsFeedRefreshing, requestFeedRefresh, profileScrollTopRequested, requestProfileScrollTop }}>
       {children}
     </TabBarContext.Provider>
   )
