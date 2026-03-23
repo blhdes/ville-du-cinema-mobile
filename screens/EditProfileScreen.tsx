@@ -39,6 +39,11 @@ export default function EditProfileScreen() {
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '')
   const [username, setUsername] = useState(profile?.username ?? '')
   const [bio, setBio] = useState(profile?.bio ?? '')
+  const [location, setLocation] = useState(profile?.location ?? '')
+  const [websiteUrl, setWebsiteUrl] = useState(profile?.website_url ?? '')
+  const [websiteLabel, setWebsiteLabel] = useState(profile?.website_label ?? '')
+  const [twitterHandle, setTwitterHandle] = useState(profile?.twitter_handle ?? '')
+  const [letterboxdUsername, setLetterboxdUsername] = useState(profile?.letterboxd_username ?? '')
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -51,6 +56,11 @@ export default function EditProfileScreen() {
       setDisplayName(profile.display_name ?? '')
       setUsername(profile.username ?? '')
       setBio(profile.bio ?? '')
+      setLocation(profile.location ?? '')
+      setWebsiteUrl(profile.website_url ?? '')
+      setWebsiteLabel(profile.website_label ?? '')
+      setTwitterHandle(profile.twitter_handle ?? '')
+      setLetterboxdUsername(profile.letterboxd_username ?? '')
       initialized.current = true
     }
   }, [profile])
@@ -128,10 +138,22 @@ export default function EditProfileScreen() {
     try {
       if (selectedImageUri) await uploadAvatar(selectedImageUri)
 
+      // Strip @ prefix from social handles, trailing slash from Letterboxd username
+      const cleanTwitter = twitterHandle.trim().replace(/^@/, '') || null
+      const cleanLetterboxd = letterboxdUsername.trim().replace(/^@/, '').replace(/\/$/, '') || null
+      const cleanWebsiteUrl = websiteUrl.trim() || null
+      const cleanWebsiteLabel = websiteLabel.trim() || null
+      const cleanLocation = location.trim() || null
+
       await updateProfile({
         display_name: displayName.trim() || undefined,
         username: username.trim().toLowerCase() || undefined,
         bio: bio.trim(),
+        location: cleanLocation,
+        website_url: cleanWebsiteUrl,
+        website_label: cleanWebsiteLabel,
+        twitter_handle: cleanTwitter,
+        letterboxd_username: cleanLetterboxd,
       })
 
       await refetch()
@@ -143,7 +165,7 @@ export default function EditProfileScreen() {
     } finally {
       setIsSaving(false)
     }
-  }, [isSaveDisabled, selectedImageUri, displayName, username, bio, uploadAvatar, updateProfile, refetch, navigation])
+  }, [isSaveDisabled, selectedImageUri, displayName, username, bio, location, websiteUrl, websiteLabel, twitterHandle, letterboxdUsername, uploadAvatar, updateProfile, refetch, navigation])
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -260,6 +282,82 @@ export default function EditProfileScreen() {
             />
             <Text style={styles.charCount}>{bio.length}/160</Text>
           </View>
+
+          {/* Location */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Location</Text>
+            <TextInput
+              style={styles.input}
+              value={location}
+              onChangeText={setLocation}
+              placeholder="City, Country"
+              placeholderTextColor={colors.secondaryText}
+              autoCapitalize="words"
+              autoCorrect={false}
+              maxLength={60}
+              editable={!isSaving}
+            />
+          </View>
+
+          {/* Website */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Website</Text>
+            <TextInput
+              style={styles.input}
+              value={websiteUrl}
+              onChangeText={setWebsiteUrl}
+              placeholder="https://yoursite.com"
+              placeholderTextColor={colors.secondaryText}
+              keyboardType="url"
+              autoCapitalize="none"
+              autoCorrect={false}
+              maxLength={200}
+              editable={!isSaving}
+            />
+            <TextInput
+              style={[styles.input, styles.sublabelInput]}
+              value={websiteLabel}
+              onChangeText={setWebsiteLabel}
+              placeholder="Display label (optional)"
+              placeholderTextColor={colors.secondaryText}
+              autoCapitalize="none"
+              autoCorrect={false}
+              maxLength={40}
+              editable={!isSaving}
+            />
+          </View>
+
+          {/* X / Twitter */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>X / Twitter</Text>
+            <TextInput
+              style={styles.input}
+              value={twitterHandle}
+              onChangeText={(t) => setTwitterHandle(t.replace(/^@/, ''))}
+              placeholder="@yourhandle"
+              placeholderTextColor={colors.secondaryText}
+              autoCapitalize="none"
+              autoCorrect={false}
+              maxLength={50}
+              editable={!isSaving}
+            />
+          </View>
+
+          {/* Letterboxd */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Letterboxd</Text>
+            <TextInput
+              style={styles.input}
+              value={letterboxdUsername}
+              onChangeText={(t) => setLetterboxdUsername(t.replace(/^@/, '').replace(/\/$/, ''))}
+              placeholder="letterboxd_username"
+              placeholderTextColor={colors.secondaryText}
+              autoCapitalize="none"
+              autoCorrect={false}
+              maxLength={50}
+              editable={!isSaving}
+            />
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -337,6 +435,9 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
     bioInput: {
       minHeight: 80,
       paddingTop: spacing.sm,
+    },
+    sublabelInput: {
+      marginTop: spacing.sm,
     },
     charCount: {
       fontFamily: fonts.system,

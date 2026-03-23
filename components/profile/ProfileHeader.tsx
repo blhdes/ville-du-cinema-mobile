@@ -1,16 +1,19 @@
 import { useMemo } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
+import * as WebBrowser from 'expo-web-browser'
+import { Ionicons } from '@expo/vector-icons'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import type { UserProfile } from '@/types/database'
+import type { UserProfile, VillagePublicProfile } from '@/types/database'
 import type { ProfileStackParamList } from '@/navigation/types'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import ExpandableAvatar from '@/components/ui/ExpandableAvatar'
+import LetterboxdDots from '@/components/ui/LetterboxdDots'
 
 interface ProfileHeaderProps {
-  profile: UserProfile
+  profile: UserProfile | VillagePublicProfile
   email?: string
   showEdit?: boolean
 }
@@ -66,6 +69,53 @@ export default function ProfileHeader({ profile, email, showEdit }: ProfileHeade
         <Text style={styles.bioText}>{profile.bio}</Text>
       ) : showEdit ? (
         <Text style={styles.nudgeText}>Tap Edit to set up your profile.</Text>
+      ) : null}
+
+      {/* Metadata row — location, website, X, Letterboxd */}
+      {(profile.location || profile.website_url || profile.twitter_handle || profile.letterboxd_username) ? (
+        <View style={styles.metadataRow}>
+          {profile.location ? (
+            <View style={styles.metadataItem}>
+              <Ionicons name="location-sharp" size={13} color={colors.secondaryText} />
+              <Text style={styles.metadataLabel}>{profile.location}</Text>
+            </View>
+          ) : null}
+
+          {profile.website_url ? (
+            <Pressable
+              style={styles.metadataItem}
+              onPress={() => WebBrowser.openBrowserAsync(profile.website_url!)}
+              hitSlop={4}
+            >
+              <Ionicons name="globe-outline" size={13} color={colors.teal} />
+              <Text style={styles.metadataLink}>
+                {profile.website_label || profile.website_url}
+              </Text>
+            </Pressable>
+          ) : null}
+
+          {profile.twitter_handle ? (
+            <Pressable
+              style={styles.metadataItem}
+              onPress={() => Linking.openURL(`https://x.com/${profile.twitter_handle}`)}
+              hitSlop={4}
+            >
+              <Text style={[styles.xLogo, { color: colors.teal }]}>{'\u{1D54F}'}</Text>
+              <Text style={styles.metadataLink}>@{profile.twitter_handle}</Text>
+            </Pressable>
+          ) : null}
+
+          {profile.letterboxd_username ? (
+            <Pressable
+              style={styles.metadataItem}
+              onPress={() => Linking.openURL(`https://letterboxd.com/${profile.letterboxd_username}/`)}
+              hitSlop={4}
+            >
+              <LetterboxdDots size={14} />
+              <Text style={styles.metadataLink}>{profile.letterboxd_username}</Text>
+            </Pressable>
+          ) : null}
+        </View>
       ) : null}
     </View>
   )
@@ -131,6 +181,33 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       lineHeight: typography.magazineBody.lineHeight,
       color: colors.secondaryText,
       marginTop: spacing.lg,
+    },
+    metadataRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+      marginTop: spacing.md,
+    },
+    metadataItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    metadataLabel: {
+      fontFamily: fonts.system,
+      fontSize: typography.caption.fontSize,
+      lineHeight: typography.caption.lineHeight,
+      color: colors.secondaryText,
+    },
+    metadataLink: {
+      fontFamily: fonts.system,
+      fontSize: typography.caption.fontSize,
+      lineHeight: typography.caption.lineHeight,
+      color: colors.teal,
+    },
+    xLogo: {
+      fontSize: 13,
+      fontWeight: '700' as const,
     },
   })
 }

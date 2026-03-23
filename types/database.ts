@@ -57,6 +57,11 @@ export interface Database {
           hide_watch_notifications: boolean
           username: string | null
           updated_at: string // ISO 8601 timestamp
+          location: string | null
+          website_url: string | null
+          website_label: string | null
+          twitter_handle: string | null
+          letterboxd_username: string | null
         }
         /** Shape accepted by INSERT statements. */
         Insert: {
@@ -72,6 +77,11 @@ export interface Database {
           hide_watch_notifications?: boolean
           username?: string | null
           updated_at?: string
+          location?: string | null
+          website_url?: string | null
+          website_label?: string | null
+          twitter_handle?: string | null
+          letterboxd_username?: string | null
         }
         /** Shape accepted by UPDATE statements (all fields optional). */
         Update: {
@@ -87,6 +97,11 @@ export interface Database {
           hide_watch_notifications?: boolean
           username?: string | null
           updated_at?: string
+          location?: string | null
+          website_url?: string | null
+          website_label?: string | null
+          twitter_handle?: string | null
+          letterboxd_username?: string | null
         }
         Relationships: []
       }
@@ -175,6 +190,11 @@ export interface UserProfile {
   hide_watch_notifications: boolean
   username: string | null
   updated_at: string
+  location: string | null
+  website_url: string | null
+  website_label: string | null
+  twitter_handle: string | null
+  letterboxd_username: string | null
 }
 
 /**
@@ -188,6 +208,11 @@ export interface VillagePublicProfile {
   display_name: string | null
   avatar_url: string | null
   bio: string
+  location: string | null
+  website_url: string | null
+  website_label: string | null
+  twitter_handle: string | null
+  letterboxd_username: string | null
 }
 
 /**
@@ -201,6 +226,11 @@ export interface PublicProfile {
   bio: string
   followed_users: FollowedUser[]
   followed_village_users: FollowedVillageUser[]
+  location: string | null
+  website_url: string | null
+  website_label: string | null
+  twitter_handle: string | null
+  letterboxd_username: string | null
 }
 
 // ---------------------------------------------------------------------------

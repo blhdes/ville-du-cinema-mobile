@@ -8,7 +8,16 @@ export interface UseProfileReturn {
   isLoading: boolean
   error: string | null
   refetch: () => Promise<void>
-  updateProfile: (data: { bio?: string; display_name?: string; username?: string }) => Promise<void>
+  updateProfile: (data: {
+    bio?: string
+    display_name?: string
+    username?: string
+    location?: string | null
+    website_url?: string | null
+    website_label?: string | null
+    twitter_handle?: string | null
+    letterboxd_username?: string | null
+  }) => Promise<void>
   updateDisplayPreferences: (data: Partial<DisplayPreferences>) => Promise<void>
   uploadAvatar: (uri: string) => Promise<string>
   setAvatarUrl: (url: string) => Promise<void>
@@ -25,6 +34,11 @@ const DEFAULT_PROFILE: Omit<UserProfile, 'user_id' | 'updated_at'> = {
   feed_grid_columns: 1,
   hide_watch_notifications: false,
   username: null,
+  location: null,
+  website_url: null,
+  website_label: null,
+  twitter_handle: null,
+  letterboxd_username: null,
 }
 
 export function useProfileInternal(): UseProfileReturn {
@@ -79,7 +93,16 @@ export function useProfileInternal(): UseProfileReturn {
   }, [user, isUserLoading, fetchProfile])
 
   const updateProfile = useCallback(
-    async (data: { bio?: string; display_name?: string; username?: string }) => {
+    async (data: {
+      bio?: string
+      display_name?: string
+      username?: string
+      location?: string | null
+      website_url?: string | null
+      website_label?: string | null
+      twitter_handle?: string | null
+      letterboxd_username?: string | null
+    }) => {
       if (!user) return
       setError(null)
 

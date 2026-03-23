@@ -56,7 +56,7 @@ export default function NativeProfileScreen() {
       const [profileResult, clippingsResult] = await Promise.allSettled([
         supabase
           .from('user_data')
-          .select('user_id, username, display_name, avatar_url, bio')
+          .select('user_id, username, display_name, avatar_url, bio, location, website_url, website_label, twitter_handle, letterboxd_username')
           .eq('user_id', userId)
           .single(),
         getUserClippings(userId),
