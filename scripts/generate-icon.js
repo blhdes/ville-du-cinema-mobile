@@ -27,9 +27,9 @@ async function main() {
   // The colored offsets extend to the bottom-right, so the total visual group
   // is the glyph + the maximum offset. We need to center the WHOLE group,
   // not just the black V.
-  const OFFSET_R = 38 // red — furthest offset
-  const OFFSET_B = 25 // blue — middle offset
-  const OFFSET_Y = 13 // yellow — smallest offset
+  const OFFSET_R = 80 // red — furthest offset
+  const OFFSET_B = 52 // blue — middle offset
+  const OFFSET_Y = 26 // yellow — smallest offset
 
   // Total visual bounding box including offsets
   const totalW = glyphW + OFFSET_R

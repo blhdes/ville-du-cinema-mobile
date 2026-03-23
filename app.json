@@ -19,7 +19,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.ville-du-cinema-mobile"
+      "bundleIdentifier": "com.villageducinema.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -29,7 +29,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.villeducinemamobile"
+      "package": "com.villageducinema.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
