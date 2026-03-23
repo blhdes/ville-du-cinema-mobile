@@ -1,6 +1,5 @@
 import { XMLParser } from 'fast-xml-parser'
 import type { Review } from '@/types/database'
-import { getAvatarUrl, setAvatarUrl, setAvatarUrls } from '@/services/avatarCache'
 import { stripHtml } from '@/utils/html'
 
 const PAGE_SIZE = 50
@@ -12,85 +11,6 @@ interface FeedCacheEntry {
 }
 
 const feedCache = new Map<string, FeedCacheEntry>()
-
-/**
- * Match the 220px avatar from a Letterboxd profile page.
- * Letterboxd hosts avatars on their own CDN (a.ltrbxd.com) or falls back to Gravatar.
- */
-const AVATAR_REGEX =
-  /src="(https:\/\/a\.ltrbxd\.com\/resized\/avatar\/[^"]*-0-220-0-220-crop[^"]*)"|src="(https:\/\/secure\.gravatar\.com\/avatar\/[^"]*size=220[^"]*)"/i
-
-function extractAvatarUrl(html: string): string | undefined {
-  const match = html.match(AVATAR_REGEX)
-  // Group 1 = Letterboxd CDN, Group 2 = Gravatar
-  return match?.[1] ?? match?.[2]
-}
-
-/** Tracks in-flight avatar fetches so we don't duplicate requests. */
-const avatarFetching = new Map<string, Promise<string | undefined>>()
-
-/**
- * Scrape the user's avatar URL from their Letterboxd profile page.
- * Reads from the persistent cache first, then scrapes if missing.
- */
-async function fetchAvatarUrl(username: string): Promise<string | undefined> {
-  const cached = getAvatarUrl(username)
-  if (cached) return cached
-
-  // Deduplicate concurrent fetches for the same user
-  const existing = avatarFetching.get(username)
-  if (existing) return existing
-
-  const promise = (async () => {
-    try {
-      const res = await fetch(`https://letterboxd.com/${username}/`)
-      if (!res.ok) return undefined
-      const html = await res.text()
-      const url = extractAvatarUrl(html)
-      if (url) await setAvatarUrl(username, url)
-      return url
-    } catch {
-      return undefined
-    } finally {
-      avatarFetching.delete(username)
-    }
-  })()
-
-  avatarFetching.set(username, promise)
-  return promise
-}
-
-/**
- * Scrape avatar URLs for a list of usernames in the background.
- * Always hits the network (bypasses cache) to pick up profile picture changes.
- * Writes results back to the persistent cache.
- */
-export async function refreshAvatarUrls(usernames: string[]): Promise<void> {
-  const results = await Promise.allSettled(
-    usernames.map(async (username) => {
-      try {
-        const res = await fetch(`https://letterboxd.com/${username}/`)
-        if (!res.ok) return undefined
-        const html = await res.text()
-        return extractAvatarUrl(html)
-      } catch {
-        return undefined
-      }
-    })
-  )
-
-  const updates: Record<string, string> = {}
-  usernames.forEach((username, i) => {
-    const result = results[i]
-    if (result.status === 'fulfilled' && result.value) {
-      updates[username] = result.value
-    }
-  })
-
-  if (Object.keys(updates).length > 0) {
-    await setAvatarUrls(updates)
-  }
-}
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -148,11 +68,7 @@ export async function fetchDisplayName(username: string): Promise<string | undef
 
 async function _fetchUserFeed(username: string): Promise<Review[]> {
   try {
-    // Fetch RSS feed and avatar in parallel — avatar is cached after first call
-    const [response, avatarUrl] = await Promise.all([
-      fetch(`https://letterboxd.com/${username}/rss/`),
-      fetchAvatarUrl(username),
-    ])
+    const response = await fetch(`https://letterboxd.com/${username}/rss/`)
     if (!response.ok) return []
 
     const xml = await response.text()
@@ -193,7 +109,6 @@ async function _fetchUserFeed(username: string): Promise<Review[]> {
         rating: extractRating(title),
         movieTitle: extractMovieTitle(title),
         type: isWatch ? 'watch' : 'review',
-        avatarUrl,
       })
     }
 

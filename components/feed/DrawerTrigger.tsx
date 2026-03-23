@@ -3,56 +3,54 @@ import { Pressable, StyleSheet, View } from 'react-native'
 import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
 import { useUserLists } from '@/hooks/useUserLists'
-import { useAvatarUrl } from '@/services/avatarCache'
 import { useTheme } from '@/contexts/ThemeContext'
 import type { ThemeColors } from '@/theme'
 
 const AVATAR_SIZE = 26
 const OVERLAP = -10
+const MIN_FOR_FACEPILE = 2
 
 interface DrawerTriggerProps {
   onPress: () => void
 }
 
-/** A single tiny circular avatar that reactively loads from the avatar cache. */
-function MiniAvatar({ username }: { username: string }) {
-  const url = useAvatarUrl(username)
-  if (!url) return null
-  return (
-    <Image
-      source={url}
-      style={styles.avatar}
-      cachePolicy="memory-disk"
-    />
-  )
-}
-
 export default function DrawerTrigger({ onPress }: DrawerTriggerProps) {
-  const { users } = useUserLists()
+  const { villageUsers } = useUserLists()
   const { colors } = useTheme()
   const themed = useMemo(() => themedStyles(colors), [colors])
+
+  // Only Village users have a reliable avatar_url (no scraping)
+  const usersWithAvatar = useMemo(
+    () => villageUsers.filter((u) => !!u.avatar_url),
+    [villageUsers],
+  )
 
   // Seed a random offset once per mount so the facepile shows different people each launch
   const seed = useRef(Math.random()).current
   const displayUsers = useMemo(() => {
-    if (users.length <= 3) return users
-    const shuffled = [...users].sort(() => seed - 0.5)
-    return shuffled.slice(0, 3)
-  }, [users, seed])
+    if (usersWithAvatar.length <= 3) return usersWithAvatar
+    return [...usersWithAvatar].sort(() => seed - 0.5).slice(0, 3)
+  }, [usersWithAvatar, seed])
+
+  const showFacepile = displayUsers.length >= MIN_FOR_FACEPILE
 
   return (
     <Pressable onPress={onPress} hitSlop={8} style={themed.container}>
-      {displayUsers.length >= 2 ? (
+      {showFacepile ? (
         <View style={styles.facepile}>
           {displayUsers.map((user, i) => (
             <View
-              key={user.username}
+              key={user.user_id}
               style={[
                 themed.avatarRing,
                 i > 0 ? { marginLeft: OVERLAP } : undefined,
               ]}
             >
-              <MiniAvatar username={user.username} />
+              <Image
+                source={user.avatar_url!}
+                style={styles.avatar}
+                cachePolicy="memory-disk"
+              />
             </View>
           ))}
         </View>

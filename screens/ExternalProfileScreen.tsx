@@ -12,13 +12,7 @@ import {
 import { useRoute, type RouteProp } from '@react-navigation/native'
 import type { FeedStackParamList } from '@/navigation/types'
 import type { Review } from '@/types/database'
-import {
-  fetchExternalProfileMeta,
-  clearProfileCache,
-  type ExternalProfileMeta,
-} from '@/services/externalProfile'
 import { fetchUserFeed, clearFeedCache } from '@/services/feed'
-import { useAvatarUrl } from '@/services/avatarCache'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { useUserLists } from '@/hooks/useUserLists'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -39,7 +33,6 @@ export default function ExternalProfileScreen() {
   const { params } = useRoute<ExternalProfileRoute>()
   const { username } = params
 
-  const avatarUrl = useAvatarUrl(username)
   const { preferences } = useDisplayPreferences()
   const { usernames, addUser, removeUser } = useUserLists()
   const isFollowing = usernames.includes(username)
@@ -48,28 +41,20 @@ export default function ExternalProfileScreen() {
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
   const [reviews, setReviews] = useState<Review[]>([])
-  const [meta, setMeta] = useState<ExternalProfileMeta | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
 
+  // Display name from the first RSS item's dc:creator field
+  const displayName = reviews[0]?.creator || username
+
   const loadData = useCallback(async () => {
     setError(null)
 
-    const [feedResult, metaResult] = await Promise.allSettled([
-      fetchUserFeed(username),
-      fetchExternalProfileMeta(username),
-    ])
-
-    if (feedResult.status === 'fulfilled') {
-      setReviews(feedResult.value)
-    }
-    if (metaResult.status === 'fulfilled') {
-      setMeta(metaResult.value)
-    }
-
-    // Both failed → show error
-    if (feedResult.status === 'rejected' && metaResult.status === 'rejected') {
+    try {
+      const feed = await fetchUserFeed(username)
+      setReviews(feed)
+    } catch {
       setError('Failed to load profile')
     }
   }, [username])
@@ -92,7 +77,6 @@ export default function ExternalProfileScreen() {
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true)
-    clearProfileCache()
     clearFeedCache()
     await loadData()
     setRefreshing(false)
@@ -125,7 +109,6 @@ export default function ExternalProfileScreen() {
       return <ProfileSkeleton variant="external" />
     }
 
-    const displayName = meta?.displayName || username
     return (
       <>
         {refreshing && (
@@ -136,20 +119,12 @@ export default function ExternalProfileScreen() {
         <ExternalProfileHeader
           displayName={displayName}
           username={username}
-          bio={meta?.bio ?? ''}
-          avatarUrl={avatarUrl}
-          location={meta?.location}
-          websiteUrl={meta?.websiteUrl}
-          websiteLabel={meta?.websiteLabel}
-          twitterHandle={meta?.twitterHandle}
-          twitterUrl={meta?.twitterUrl}
-          favoriteFilms={meta?.favoriteFilms}
           isFollowing={isFollowing}
           onFollowToggle={handleFollowToggle}
         />
       </>
     )
-  }, [isLoading, meta, username, avatarUrl, refreshing, isFollowing, handleFollowToggle, styles])
+  }, [isLoading, displayName, username, refreshing, isFollowing, handleFollowToggle, styles])
 
   const renderEmpty = useCallback(() => {
     if (isLoading) return null
@@ -161,7 +136,7 @@ export default function ExternalProfileScreen() {
   }, [isLoading, styles])
 
   // Error state — both fetches failed
-  if (error && reviews.length === 0 && !meta) {
+  if (error && reviews.length === 0) {
     return (
       <View style={styles.container}>
         <ErrorBanner message={error} />

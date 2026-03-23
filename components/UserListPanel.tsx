@@ -18,7 +18,6 @@ import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import type { FeedStackParamList } from '@/navigation/types'
 import type { FollowedUser, FollowedVillageUser } from '@/types/database'
-import { useAvatarUrl } from '@/services/avatarCache'
 import LetterboxdDots from '@/components/ui/LetterboxdDots'
 
 // ---------------------------------------------------------------------------
@@ -108,7 +107,6 @@ function LetterboxdUserRow({
   const { colors } = useTheme()
   const typography = useTypography()
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
-  const avatarUrl = useAvatarUrl(user.username)
   const initial = (user.display_name || user.username || '?')[0].toUpperCase()
 
   return (
@@ -117,13 +115,9 @@ function LetterboxdUserRow({
         style={({ pressed }) => [styles.userInfo, pressed && { opacity: 0.6 }]}
         onPress={onPress}
       >
-        {avatarUrl ? (
-          <Image source={avatarUrl} style={styles.avatar} cachePolicy="memory-disk" />
-        ) : (
-          <View style={[styles.avatar, styles.avatarPlaceholder]}>
-            <Text style={[styles.avatarInitial, { color: colors.secondaryText }]}>{initial}</Text>
-          </View>
-        )}
+        <View style={[styles.avatar, styles.avatarPlaceholder]}>
+          <Text style={[styles.avatarInitial, { color: colors.secondaryText }]}>{initial}</Text>
+        </View>
         <Text style={styles.username} numberOfLines={1}>
           {user.display_name || user.username}
           <Text style={styles.handle}>{' '}@{user.username}</Text>

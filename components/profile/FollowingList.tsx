@@ -5,7 +5,6 @@ import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import type { FollowedUser, FollowedVillageUser } from '@/types/database'
 import type { ProfileStackParamList } from '@/navigation/types'
-import { useAvatarUrl } from '@/services/avatarCache'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
@@ -32,7 +31,6 @@ const LetterboxdRow = memo(function LetterboxdRow({ user, isLast }: { user: Foll
   const { colors } = useTheme()
   const typography = useTypography()
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
-  const avatarUrl = useAvatarUrl(user.username)
 
   return (
     <View style={[styles.row, !isLast && styles.rowBorder]}>
@@ -40,15 +38,11 @@ const LetterboxdRow = memo(function LetterboxdRow({ user, isLast }: { user: Foll
         style={({ pressed }) => [styles.rowContent, pressed && styles.rowPressed]}
         onPress={() => navigation.navigate('ExternalProfile', { username: user.username })}
       >
-        {avatarUrl ? (
-          <Image source={avatarUrl} style={styles.avatar} cachePolicy="memory-disk" />
-        ) : (
-          <View style={[styles.avatar, styles.avatarPlaceholder]}>
-            <Text style={styles.avatarInitial}>
-              {(user.display_name || user.username)[0].toUpperCase()}
-            </Text>
-          </View>
-        )}
+        <View style={[styles.avatar, styles.avatarPlaceholder]}>
+          <Text style={styles.avatarInitial}>
+            {(user.display_name || user.username)[0].toUpperCase()}
+          </Text>
+        </View>
         <View style={styles.textColumn}>
           <Text style={styles.displayName}>{user.display_name || user.username}</Text>
           <Text style={styles.handle}>@{user.username}</Text>

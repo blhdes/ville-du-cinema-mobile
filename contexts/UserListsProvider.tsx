@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from 'react'
 import storage from '@/lib/storage'
 import { supabase } from '@/lib/supabase/client'
-import { fetchDisplayName, refreshAvatarUrls } from '@/services/feed'
+import { fetchDisplayName } from '@/services/feed'
 import { useUser } from '@/hooks/useUser'
 import type { FollowedUser, FollowedVillageUser } from '@/types/database'
 
@@ -182,7 +182,6 @@ export function UserListsProvider({ children }: { children: ReactNode }) {
         const updatedUsers = [...users, newUser]
 
         setUsers(updatedUsers)
-        refreshAvatarUrls([normalizedUsername]).catch(() => {})
 
         try {
           if (isAuthenticated && user) {

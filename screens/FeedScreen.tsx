@@ -28,9 +28,8 @@ import { useTabBar } from '@/contexts/TabBarContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useProfile } from '@/contexts/ProfileContext'
 import { useClippings } from '@/hooks/useClippings'
-import { fetchFeed, clearFeedCache, refreshAvatarUrls, type FeedResult } from '@/services/feed'
+import { fetchFeed, clearFeedCache, type FeedResult } from '@/services/feed'
 import { getVillageClippings } from '@/services/clippings'
-import { hydrateAvatarCache } from '@/services/avatarCache'
 import type { Review, FeedItem, Clipping, RepostFeedItem } from '@/types/database'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
@@ -221,13 +220,7 @@ export default function FeedScreen() {
   const [feedError, setFeedError] = useState<string | null>(null)
 
   const flatListRef = useRef<Animated.FlatList<FeedItem>>(null)
-  const [cacheReady, setCacheReady] = useState(false)
   const [villageClippings, setVillageClippings] = useState<Clipping[]>([])
-
-  // Hydrate the avatar cache from AsyncStorage before loading the feed
-  useEffect(() => {
-    hydrateAvatarCache().then(() => setCacheReady(true))
-  }, [])
 
   // Fetch clippings from followed Village users whenever the follow list changes
   useEffect(() => {
@@ -292,10 +285,10 @@ export default function FeedScreen() {
   // Wait for cache hydration + user list before loading the feed.
   // fetchUserFeed already scrapes any missing avatars, so no extra refresh needed here.
   useEffect(() => {
-    if (!isListLoading && cacheReady) {
+    if (!isListLoading) {
       loadFeed(1)
     }
-  }, [usernames, isListLoading, cacheReady, loadFeed])
+  }, [usernames, isListLoading, loadFeed])
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true)
@@ -303,11 +296,7 @@ export default function FeedScreen() {
     refetchClippings()
     refetchVillageClippings()
     loadFeed(1)
-    // Background-refresh avatar URLs on pull-to-refresh
-    if (usernames.length > 0) {
-      refreshAvatarUrls(usernames).catch(() => {})
-    }
-  }, [loadFeed, usernames, refetchClippings, refetchVillageClippings])
+  }, [loadFeed, refetchClippings, refetchVillageClippings])
 
   // Smart tab press: scroll-to-top if scrolled down, refresh only if already at top
   useEffect(() => {
@@ -327,9 +316,6 @@ export default function FeedScreen() {
         refetchClippings()
         refetchVillageClippings()
         loadFeed(1, false, true)
-        if (usernames.length > 0) {
-          refreshAvatarUrls(usernames).catch(() => {})
-        }
       }
     }
   }, [feedRefreshRequested]) // eslint-disable-line react-hooks/exhaustive-deps

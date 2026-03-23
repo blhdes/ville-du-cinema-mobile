@@ -8,7 +8,6 @@ import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import type { FeedStackParamList } from '@/navigation/types'
 import type { Review } from '@/types/database'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
-import { useAvatarUrl } from '@/services/avatarCache'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useTabBar } from '@/contexts/TabBarContext'
 import { saveRepost } from '@/services/clippings'
@@ -80,7 +79,6 @@ function ReviewCard({ review, hideAuthor = false, repostable = true, compact = f
   const { preferences } = useDisplayPreferences()
   const { width } = useWindowDimensions()
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
-  const cachedAvatarUrl = useAvatarUrl(review.username)
   const { colors } = useTheme()
   const typography = useTypography()
   const { setTabBarVisible } = useTabBar()
@@ -94,13 +92,12 @@ function ReviewCard({ review, hideAuthor = false, repostable = true, compact = f
         reviewText: review.review,
         author: review.creator,
         username: review.username,
-        avatarUrl: cachedAvatarUrl,
         movieTitle: review.movieTitle,
         rating: review.rating,
         original_url: review.link,
       })
     }
-  }, [navigation, review, cachedAvatarUrl, setTabBarVisible])
+  }, [navigation, review, setTabBarVisible])
 
   const textLength = useMemo(() => htmlTextLength(review.review), [review.review])
   const isLong = textLength > MAX_PREVIEW_LENGTH * (1 + TOLERANCE_RATIO)
@@ -216,13 +213,6 @@ function ReviewCard({ review, hideAuthor = false, repostable = true, compact = f
           onPress={() => navigation.navigate('ExternalProfile', { username: review.username })}
           style={({ pressed }) => [styles.metaRow, pressed && styles.metaPressed]}
         >
-          {cachedAvatarUrl ? (
-            <Image
-              source={cachedAvatarUrl}
-              style={styles.avatar}
-              cachePolicy="memory-disk"
-            />
-          ) : null}
           <Text style={styles.meta}>
             {review.creator}
             {dateStr ? ` \u00B7 ${dateStr}` : ''}
