@@ -29,6 +29,11 @@ export type QuotePreviewParams = {
   rating: string
 }
 
+export type FilmCardParams = {
+  tmdbId: number
+  movieTitle: string
+}
+
 export type FeedStackParamList = {
   FeedDrawer: NavigatorScreenParams<FeedDrawerParamList> | undefined
   ExternalProfile: { username: string }
@@ -36,6 +41,7 @@ export type FeedStackParamList = {
   UserSearch: undefined
   ReviewReader: ReviewReaderParams
   QuotePreview: QuotePreviewParams
+  FilmCard: FilmCardParams
 }
 
 export type ProfileStackParamList = {
@@ -46,6 +52,7 @@ export type ProfileStackParamList = {
   UserSearch: undefined
   ReviewReader: ReviewReaderParams
   QuotePreview: QuotePreviewParams
+  FilmCard: FilmCardParams
 }
 
 export type AppTabsParamList = {

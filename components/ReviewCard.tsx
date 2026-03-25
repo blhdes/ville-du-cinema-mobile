@@ -1,7 +1,6 @@
 import { memo, useState, useMemo, useCallback } from 'react'
 import { Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import { Image } from 'expo-image'
-import * as WebBrowser from 'expo-web-browser'
 import * as Haptics from 'expo-haptics'
 import RenderHtml, { defaultSystemFonts } from 'react-native-render-html'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
@@ -11,6 +10,7 @@ import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useTabBar } from '@/contexts/TabBarContext'
 import { saveRepost } from '@/services/clippings'
+import { findMovieByTitle } from '@/services/tmdb'
 import { fonts, spacing, getScaledTypography, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import SwipeableRow from '@/components/ui/SwipeableRow'
@@ -194,11 +194,16 @@ function ReviewCard({ review, hideAuthor = false, repostable = true, compact = f
   const cardContent = (
     <Pressable onLongPress={handleLongPress} delayLongPress={500}>
     <View style={[styles.article, compact && styles.articleCompact]}>
-      {/* Title */}
+      {/* Title — navigates to Film Card (TMDB) */}
       <Pressable
-        onPress={() => {
-          const query = encodeURIComponent(`${review.movieTitle} film`)
-          WebBrowser.openBrowserAsync(`https://www.google.com/search?q=${query}`)
+        onPress={async () => {
+          const match = await findMovieByTitle(review.movieTitle)
+          if (match) {
+            navigation.navigate('FilmCard', { tmdbId: match.id, movieTitle: match.title })
+          } else {
+            // Fallback: search on Letterboxd if TMDB has no match
+            Linking.openURL(`https://letterboxd.com/search/${encodeURIComponent(review.movieTitle)}/`)
+          }
         }}
         style={({ pressed }) => pressed && styles.titlePressed}
       >

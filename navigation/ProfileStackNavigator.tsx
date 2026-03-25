@@ -10,6 +10,7 @@ import NativeProfileScreen from '@/screens/NativeProfileScreen'
 import UserSearchScreen from '@/screens/UserSearchScreen'
 import ReviewReaderScreen from '@/screens/ReviewReaderScreen'
 import QuotePreviewScreen from '@/screens/QuotePreviewScreen'
+import FilmCardScreen from '@/screens/FilmCardScreen'
 import type { ProfileStackParamList } from '@/navigation/types'
 import { fonts } from '@/theme'
 import { useTypography } from '@/hooks/useTypography'
@@ -94,6 +95,13 @@ export default function ProfileStackNavigator() {
         name="QuotePreview"
         component={QuotePreviewScreen}
         options={{ headerTitle: 'Quote' }}
+      />
+      <Stack.Screen
+        name="FilmCard"
+        component={FilmCardScreen}
+        options={({ route }) => ({
+          headerTitle: route.params.movieTitle,
+        })}
       />
     </Stack.Navigator>
   )
