@@ -136,11 +136,34 @@ TMDB is the free movie metadata backbone. Film Cards are the atomic unit of Vill
 
 ---
 
+## Phase 4 — Discovery Tab
+
+**Commits:** (uncommitted — working tree)
+
+### Added
+- `services/takes.ts` — `getNetworkFilms(userIds, limit?)`: queries recent takes from followed Village users, groups by `tmdb_id` client-side, returns top N films sorted by take count. Exports `NetworkFilm` interface
+- `components/discover/TrendingPosterCard.tsx` — small poster card (120×180) for horizontal carousel: poster image, title, year. Taps → FilmCard. Memo-wrapped
+- `components/discover/NetworkFilmRow.tsx` — row component: mini poster thumbnail (44×66) + film title + take count label. Taps → FilmCard. Memo-wrapped
+- `screens/DiscoverScreen.tsx` — Discovery hub screen: search bar with debounced TMDB search (350ms), "Trending This Week" horizontal poster carousel via `getTrending`, "In Your Network" section via `getNetworkFilms`, "Find people to follow" link → UserSearch. Deferred load via `InteractionManager.runAfterInteractions()`, pull-to-refresh with `clearTmdbCache()`
+- `navigation/DiscoverStackNavigator.tsx` — native-stack navigator mirroring Feed/Profile pattern: registers DiscoverMain, ExternalProfile, NativeProfile, UserSearch, ReviewReader, QuotePreview, FilmCard, CreateTake, TakeDetail
+
+### Modified
+- `navigation/types.ts` — added `DiscoverStackParamList` (DiscoverMain + all shared routes), added `Discover` to `AppTabsParamList`
+- `navigation/AppTabs.tsx` — added `Discover` tab between Feed and Profile: compass-outline icon with bounce animation (`scales.Discover`, `DiscoverIcon`, `onDiscoverPress`), imported `DiscoverStackNavigator`
+
+### Design decisions
+- **Compass icon** — `compass-outline` from Ionicons. Distinct from Feed (custom icon) and Profile (avatar/person), conveys exploration
+- **Tab order: Feed | Discover | Profile | Settings** — Discover sits next to Feed (content consumption flow), Profile and Settings remain on the right (personal/config)
+- **Client-side film grouping** — `getNetworkFilms` fetches up to 200 recent takes and groups by `tmdb_id` in JS. Avoids a Supabase RPC for now; clean upgrade path if the query gets heavy
+- **Search is inline** — no separate SearchScreen. The search bar at the top of Discover replaces the browse content with TMDB search results. Clearing the query restores the browse view
+- **Deferred load** — `InteractionManager.runAfterInteractions()` ensures the tab transition animation completes before data fetching starts
+
+---
+
 ## Upcoming Phases
 
 | Phase | Feature | Status |
 |-------|---------|--------|
-| 4 | Discovery Tab | Planned |
 | 5 | Watchlist & Favorite Films | Planned |
 | 6 | Film-Anchored Clippings | Planned |
 
