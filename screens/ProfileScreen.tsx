@@ -13,6 +13,7 @@ import { useFocusEffect } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { Ionicons } from '@expo/vector-icons'
+import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import { useUser } from '@/hooks/useUser'
 import { useProfile } from '@/contexts/ProfileContext'
 import { useTabBar } from '@/contexts/TabBarContext'
@@ -21,13 +22,16 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import { getUserClippings } from '@/services/clippings'
-import type { Clipping } from '@/types/database'
+import { getUserTakes } from '@/services/takes'
+import type { Clipping, Take } from '@/types/database'
+import type { ProfileStackParamList } from '@/navigation/types'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import ProfileHeader from '@/components/profile/ProfileHeader'
 import ProfileSkeleton from '@/components/profile/ProfileSkeleton'
 import FollowingList from '@/components/profile/FollowingList'
 import ClippingCard from '@/components/profile/ClippingCard'
 import RepostCard from '@/components/feed/RepostCard'
+import TakeCard from '@/components/TakeCard'
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -42,6 +46,7 @@ export default function ProfileScreen() {
   const { user } = useUser()
   const { profile, isLoading, error } = useProfile()
   const { users: followedUsers, villageUsers } = useUserLists()
+  const navigation = useNavigation<NavigationProp<ProfileStackParamList>>()
   const { colors } = useTheme()
   const typography = useTypography()
   const { profileScrollTopRequested } = useTabBar()
@@ -63,13 +68,18 @@ export default function ProfileScreen() {
     setFollowingExpanded((prev) => !prev)
   }, [])
 
-  // Clippings state
+  // Clippings + Takes state
   const [clippings, setClippings] = useState<Clipping[]>([])
-  const [clippingsLoading, setClippingsLoading] = useState(true)
+  const [takes, setTakes] = useState<Take[]>([])
+  const [contentLoading, setContentLoading] = useState(true)
   const [clippingsError, setClippingsError] = useState(false)
 
   const handleClippingDeleted = useCallback((id: string) => {
     setClippings((prev) => prev.filter((c) => c.id !== id))
+  }, [])
+
+  const handleTakeDeleted = useCallback((id: string) => {
+    setTakes((prev) => prev.filter((t) => t.id !== id))
   }, [])
 
   useFocusEffect(
@@ -77,18 +87,18 @@ export default function ProfileScreen() {
       if (!user) return
 
       let cancelled = false
-      setClippingsLoading(true)
+      setContentLoading(true)
       setClippingsError(false)
 
-      getUserClippings(user.id)
-        .then((data) => {
-          if (!cancelled) setClippings(data)
-        })
-        .catch(() => {
-          if (!cancelled) setClippingsError(true)
+      Promise.allSettled([getUserClippings(user.id), getUserTakes(user.id)])
+        .then(([clippingsResult, takesResult]) => {
+          if (cancelled) return
+          if (clippingsResult.status === 'fulfilled') setClippings(clippingsResult.value)
+          else setClippingsError(true)
+          if (takesResult.status === 'fulfilled') setTakes(takesResult.value)
         })
         .finally(() => {
-          if (!cancelled) setClippingsLoading(false)
+          if (!cancelled) setContentLoading(false)
         })
 
       return () => { cancelled = true }
@@ -127,6 +137,33 @@ export default function ProfileScreen() {
         )}
         <View style={styles.divider} />
 
+        {/* Takes section */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionLabel}>Takes</Text>
+          <Pressable
+            onPress={() => navigation.navigate('CreateTake', undefined)}
+            hitSlop={8}
+            style={({ pressed }) => pressed && styles.pressed}
+          >
+            <Ionicons name="add-circle-outline" size={20} color={colors.teal} />
+          </Pressable>
+        </View>
+
+        {takes.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="chatbubble-outline" size={32} color={colors.border} />
+            <Text style={styles.emptyText}>
+              No takes yet.{'\n'}Share your thoughts on a film.
+            </Text>
+          </View>
+        ) : (
+          takes.map((take) => (
+            <TakeCard key={take.id} take={take} onDeleted={handleTakeDeleted} />
+          ))
+        )}
+
+        <View style={styles.divider} />
+
         {/* Clippings section label */}
         <Text style={styles.sectionLabel}>Clippings</Text>
 
@@ -146,7 +183,7 @@ export default function ProfileScreen() {
         )}
       </>
     )
-  }, [user, profile, followedUsers, villageUsers, colors, followingExpanded, toggleFollowing, clippingsLoading, clippingsError, clippings, styles])
+  }, [user, profile, followedUsers, villageUsers, colors, followingExpanded, toggleFollowing, contentLoading, clippingsError, clippings, takes, handleTakeDeleted, navigation, styles])
 
   const renderItem = useCallback(({ item }: { item: Clipping }) => {
     if (item.type === 'repost' && item.review_json) {
@@ -195,7 +232,7 @@ export default function ProfileScreen() {
 
       {error && <ErrorBanner message={error} />}
 
-      {isLoading || clippingsLoading ? (
+      {isLoading || contentLoading ? (
         <ProfileSkeleton variant="self" />
       ) : (
         <FlatList
@@ -264,6 +301,14 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
     followingSection: {
       paddingBottom: spacing.md,
     },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: HORIZONTAL_PAD,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.sm,
+    },
     sectionLabel: {
       fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
@@ -273,6 +318,9 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       paddingHorizontal: HORIZONTAL_PAD,
       paddingTop: spacing.lg,
       paddingBottom: spacing.sm,
+    },
+    pressed: {
+      opacity: 0.6,
     },
     emptyContainer: {
       alignItems: 'center',

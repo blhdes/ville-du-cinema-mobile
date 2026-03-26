@@ -13,6 +13,8 @@ import UserSearchScreen from '@/screens/UserSearchScreen'
 import ReviewReaderScreen from '@/screens/ReviewReaderScreen'
 import QuotePreviewScreen from '@/screens/QuotePreviewScreen'
 import FilmCardScreen from '@/screens/FilmCardScreen'
+import CreateTakeScreen from '@/screens/CreateTakeScreen'
+import TakeDetailScreen from '@/screens/TakeDetailScreen'
 import type { FeedStackParamList } from '@/navigation/types'
 import { fonts } from '@/theme'
 import { useTypography } from '@/hooks/useTypography'
@@ -108,6 +110,20 @@ export default function FeedStackNavigator() {
         options={({ route }) => ({
           headerTitle: route.params.movieTitle,
         })}
+      />
+      <Stack.Screen
+        name="CreateTake"
+        component={CreateTakeScreen}
+        options={{
+          headerTitle: 'New Take',
+          presentation: 'modal',
+          headerLeft: () => null,
+        }}
+      />
+      <Stack.Screen
+        name="TakeDetail"
+        component={TakeDetailScreen}
+        options={{ headerTitle: '' }}
       />
     </Stack.Navigator>
   )

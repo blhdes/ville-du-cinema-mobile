@@ -34,6 +34,24 @@ export type FilmCardParams = {
   movieTitle: string
 }
 
+export type CreateTakeParams = {
+  /** Pre-fill the film when creating a Take from a Film Card. */
+  tmdbId?: number
+  movieTitle?: string
+  posterPath?: string | null
+}
+
+export type TakeDetailParams = {
+  takeId: string
+  /** Author display info — already resolved by the card that navigated here. */
+  author?: {
+    avatarUrl?: string
+    displayName: string
+    userId?: string
+    username?: string
+  }
+}
+
 export type FeedStackParamList = {
   FeedDrawer: NavigatorScreenParams<FeedDrawerParamList> | undefined
   ExternalProfile: { username: string }
@@ -42,6 +60,8 @@ export type FeedStackParamList = {
   ReviewReader: ReviewReaderParams
   QuotePreview: QuotePreviewParams
   FilmCard: FilmCardParams
+  CreateTake: CreateTakeParams | undefined
+  TakeDetail: TakeDetailParams
 }
 
 export type ProfileStackParamList = {
@@ -53,6 +73,8 @@ export type ProfileStackParamList = {
   ReviewReader: ReviewReaderParams
   QuotePreview: QuotePreviewParams
   FilmCard: FilmCardParams
+  CreateTake: CreateTakeParams | undefined
+  TakeDetail: TakeDetailParams
 }
 
 export type AppTabsParamList = {

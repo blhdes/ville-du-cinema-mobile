@@ -30,13 +30,17 @@ import { useProfile } from '@/contexts/ProfileContext'
 import { useClippings } from '@/hooks/useClippings'
 import { fetchFeed, clearFeedCache, type FeedResult } from '@/services/feed'
 import { getVillageClippings } from '@/services/clippings'
-import type { Review, FeedItem, Clipping, RepostFeedItem } from '@/types/database'
+import { getVillageTakes } from '@/services/takes'
+import { getBatchLikeStatus, type LikeStatus } from '@/services/likes'
+import { getBatchCommentCounts } from '@/services/comments'
+import type { Review, FeedItem, Clipping, Take, RepostFeedItem, TakeFeedItem } from '@/types/database'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import ReviewCard from '@/components/ReviewCard'
 import ClippingCard from '@/components/profile/ClippingCard'
 import RepostCard from '@/components/feed/RepostCard'
+import TakeCard from '@/components/TakeCard'
 import ReviewCardSkeleton from '@/components/feed/ReviewCardSkeleton'
 import WatchNotification from '@/components/WatchNotification'
 import QuoteOfTheDay from '@/components/QuoteOfTheDay'
@@ -59,6 +63,7 @@ const SNAP_SPRING = { damping: 24, stiffness: 120, mass: 1.0, overshootClamping:
 const keyExtractor = (item: FeedItem): string => {
   if (item.kind === 'review') return `review-${item.data.id}`
   if (item.kind === 'repost') return `repost-${item.data.id}`
+  if (item.kind === 'take') return `take-${item.data.id}`
   return `clipping-${item.data.id}`
 }
 
@@ -221,25 +226,48 @@ export default function FeedScreen() {
 
   const flatListRef = useRef<Animated.FlatList<FeedItem>>(null)
   const [villageClippings, setVillageClippings] = useState<Clipping[]>([])
+  const [villageTakes, setVillageTakes] = useState<Take[]>([])
+  const [takeLikesMap, setTakeLikesMap] = useState<Map<string, LikeStatus>>(new Map())
+  const [takeCommentCounts, setTakeCommentCounts] = useState<Map<string, number>>(new Map())
 
-  // Fetch clippings from followed Village users whenever the follow list changes
+  // Fetch clippings + takes from followed Village users whenever the follow list changes
   useEffect(() => {
     if (villageUserIds.length === 0) {
       setVillageClippings([])
+      setVillageTakes([])
       return
     }
     getVillageClippings(villageUserIds)
       .then(setVillageClippings)
       .catch(() => {})
+    getVillageTakes(villageUserIds)
+      .then(setVillageTakes)
+      .catch(() => {})
   }, [villageUserIds])
 
-  const refetchVillageClippings = useCallback(() => {
+  // Batch-fetch like/comment data for all takes in the feed
+  useEffect(() => {
+    const takeIds = villageTakes.map((t) => t.id)
+    if (takeIds.length === 0) {
+      setTakeLikesMap(new Map())
+      setTakeCommentCounts(new Map())
+      return
+    }
+    getBatchLikeStatus(takeIds).then(setTakeLikesMap).catch(() => {})
+    getBatchCommentCounts(takeIds).then(setTakeCommentCounts).catch(() => {})
+  }, [villageTakes])
+
+  const refetchVillageContent = useCallback(() => {
     if (villageUserIds.length === 0) {
       setVillageClippings([])
+      setVillageTakes([])
       return
     }
     getVillageClippings(villageUserIds)
       .then(setVillageClippings)
+      .catch(() => {})
+    getVillageTakes(villageUserIds)
+      .then(setVillageTakes)
       .catch(() => {})
   }, [villageUserIds])
 
@@ -294,9 +322,9 @@ export default function FeedScreen() {
     setIsRefreshing(true)
     clearFeedCache()
     refetchClippings()
-    refetchVillageClippings()
+    refetchVillageContent()
     loadFeed(1)
-  }, [loadFeed, refetchClippings, refetchVillageClippings])
+  }, [loadFeed, refetchClippings, refetchVillageContent])
 
   // Smart tab press: scroll-to-top if scrolled down, refresh only if already at top
   useEffect(() => {
@@ -314,7 +342,7 @@ export default function FeedScreen() {
         setIsRefreshing(true)
         clearFeedCache()
         refetchClippings()
-        refetchVillageClippings()
+        refetchVillageContent()
         loadFeed(1, false, true)
       }
     }
@@ -416,15 +444,28 @@ export default function FeedScreen() {
       }
     })
 
-    return [...reviewItems, ...clippingItems, ...repostItems, ...villageClippingItems, ...villageRepostItems].sort((a, b) => b.sortKey - a.sortKey)
-  }, [reviews, clippings, villageClippings, villageUserMap, profile?.avatar_url, profile?.display_name, profile?.username])
+    const takeItems: FeedItem[] = villageTakes.map((t): TakeFeedItem => {
+      const owner = villageUserMap.get(t.user_id)
+      return {
+        kind: 'take',
+        sortKey: new Date(t.created_at).getTime(),
+        data: t,
+        ownerAvatarUrl: owner?.avatarUrl,
+        ownerDisplayName: owner?.displayName ?? 'Village User',
+        ownerUserId: t.user_id,
+        ownerUsername: owner?.username,
+      }
+    })
+
+    return [...reviewItems, ...clippingItems, ...repostItems, ...villageClippingItems, ...villageRepostItems, ...takeItems].sort((a, b) => b.sortKey - a.sortKey)
+  }, [reviews, clippings, villageClippings, villageTakes, villageUserMap, profile?.avatar_url, profile?.display_name, profile?.username])
 
   // Filter watch notifications — clippings are always shown regardless
   const filteredItems = useMemo(
     () => preferences.showWatchNotifications
       ? feedItems
       : feedItems.filter((item) => {
-          if (item.kind === 'clipping' || item.kind === 'repost') return true
+          if (item.kind === 'clipping' || item.kind === 'repost' || item.kind === 'take') return true
           return item.data.type !== 'watch'
         }),
     [feedItems, preferences.showWatchNotifications],
@@ -444,6 +485,24 @@ export default function FeedScreen() {
   }))
 
   const renderItem = useCallback(({ item }: { item: FeedItem }) => {
+    if (item.kind === 'take') {
+      const likeData = takeLikesMap.get(item.data.id)
+      return (
+        <TakeCard
+          take={item.data}
+          author={{
+            avatarUrl: item.ownerAvatarUrl,
+            displayName: item.ownerDisplayName,
+            userId: item.ownerUserId,
+            username: item.ownerUsername,
+          }}
+          initialLiked={likeData?.liked}
+          initialLikeCount={likeData?.count}
+          commentCount={takeCommentCounts.get(item.data.id) ?? 0}
+          readOnly
+        />
+      )
+    }
     if (item.kind === 'repost') {
       return (
         <RepostCard
@@ -466,7 +525,7 @@ export default function FeedScreen() {
       return <WatchNotification review={item.data} />
     }
     return <ReviewCard review={item.data} />
-  }, [removeClipping])
+  }, [removeClipping, takeLikesMap, takeCommentCounts])
 
   const renderEmpty = useCallback(() => {
     if (isLoading || isListLoading) return null

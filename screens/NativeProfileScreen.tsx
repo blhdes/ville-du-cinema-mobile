@@ -14,15 +14,17 @@ import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase/client'
 import { getUserClippings } from '@/services/clippings'
+import { getUserTakes } from '@/services/takes'
 import { useUserLists } from '@/hooks/useUserLists'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import type { FeedStackParamList } from '@/navigation/types'
-import type { Clipping, FollowedVillageUser, VillagePublicProfile } from '@/types/database'
+import type { Clipping, Take, FollowedVillageUser, VillagePublicProfile } from '@/types/database'
 import ProfileSkeleton from '@/components/profile/ProfileSkeleton'
 import ClippingCard from '@/components/profile/ClippingCard'
 import RepostCard from '@/components/feed/RepostCard'
+import TakeCard from '@/components/TakeCard'
 import ExpandableAvatar from '@/components/ui/ExpandableAvatar'
 import FollowButton from '@/components/ui/FollowButton'
 
@@ -47,19 +49,21 @@ export default function NativeProfileScreen() {
   const [profile, setProfile] = useState<VillagePublicProfile | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
   const [clippings, setClippings] = useState<Clipping[]>([])
-  const [clippingsLoading, setClippingsLoading] = useState(true)
+  const [takes, setTakes] = useState<Take[]>([])
+  const [contentLoading, setContentLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
 
     const task = InteractionManager.runAfterInteractions(async () => {
-      const [profileResult, clippingsResult] = await Promise.allSettled([
+      const [profileResult, clippingsResult, takesResult] = await Promise.allSettled([
         supabase
           .from('user_data')
           .select('user_id, username, display_name, avatar_url, bio, location, website_url, website_label, twitter_handle, letterboxd_username')
           .eq('user_id', userId)
           .single(),
         getUserClippings(userId),
+        getUserTakes(userId),
       ])
 
       if (profileResult.status === 'fulfilled') {
@@ -71,7 +75,10 @@ export default function NativeProfileScreen() {
       if (clippingsResult.status === 'fulfilled' && !cancelled) {
         setClippings(clippingsResult.value)
       }
-      if (!cancelled) setClippingsLoading(false)
+      if (takesResult.status === 'fulfilled' && !cancelled) {
+        setTakes(takesResult.value)
+      }
+      if (!cancelled) setContentLoading(false)
     })
 
     return () => { cancelled = true; task.cancel() }
@@ -130,13 +137,24 @@ export default function NativeProfileScreen() {
           {/* Metadata row — mirrors the 2-bone skeleton placeholder */}
           <View style={styles.metaRow}>
             <Text style={styles.metaCount}>
-              {clippingsLoading ? '—' : `${clippings.length} clippings`}
+              {contentLoading ? '—' : `${takes.length} takes · ${clippings.length} clippings`}
             </Text>
             <FollowButton isFollowing={isFollowing} onPress={handleFollowToggle} />
           </View>
         </View>
 
         <View style={styles.divider} />
+
+        {/* Takes section */}
+        {takes.length > 0 ? (
+          <>
+            <Text style={styles.sectionLabel}>Takes</Text>
+            {takes.map((take) => (
+              <TakeCard key={take.id} take={take} hideAuthor readOnly />
+            ))}
+            <View style={styles.divider} />
+          </>
+        ) : null}
 
         <Text style={styles.sectionLabel}>Clippings</Text>
 
@@ -148,7 +166,7 @@ export default function NativeProfileScreen() {
         )}
       </>
     )
-  }, [profile, clippingsLoading, clippings, isFollowing, handleFollowToggle, styles, colors])
+  }, [profile, contentLoading, clippings, takes, isFollowing, handleFollowToggle, styles, colors, userId])
 
   const renderItem = useCallback(({ item }: { item: Clipping }) => {
     if (item.type === 'repost' && item.review_json) {
@@ -179,7 +197,7 @@ export default function NativeProfileScreen() {
 
   return (
     <View style={styles.container}>
-      {profileLoading || clippingsLoading ? (
+      {profileLoading || contentLoading ? (
         <ProfileSkeleton variant="native" />
       ) : (
         <FlatList

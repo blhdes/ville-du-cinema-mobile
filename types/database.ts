@@ -105,6 +105,78 @@ export interface Database {
         }
         Relationships: []
       }
+      takes: {
+        Row: {
+          id: string
+          user_id: string
+          tmdb_id: number
+          movie_title: string
+          poster_path: string | null
+          content: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          tmdb_id: number
+          movie_title: string
+          poster_path?: string | null
+          content: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          tmdb_id?: number
+          movie_title?: string
+          poster_path?: string | null
+          content?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      take_likes: {
+        Row: {
+          user_id: string
+          take_id: string
+          created_at: string
+        }
+        Insert: {
+          user_id: string
+          take_id: string
+          created_at?: string
+        }
+        Update: {
+          user_id?: string
+          take_id?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      take_comments: {
+        Row: {
+          id: string
+          user_id: string
+          take_id: string
+          content: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          take_id: string
+          content: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          take_id?: string
+          content?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       user_clippings: {
         /** Full row returned by SELECT queries. */
         Row: {
@@ -251,6 +323,48 @@ export interface Clipping {
 }
 
 // ---------------------------------------------------------------------------
+// Takes types
+// ---------------------------------------------------------------------------
+
+/** A short-form post (280 chars) anchored to a TMDB film. */
+export interface Take {
+  id: string           // uuid
+  user_id: string      // uuid — FK to Supabase auth
+  tmdb_id: number
+  movie_title: string
+  poster_path: string | null
+  content: string
+  created_at: string   // ISO 8601 timestamp
+}
+
+/** A like on a Take. Composite key: one like per user per take. */
+export interface TakeLike {
+  user_id: string
+  take_id: string
+  created_at: string
+}
+
+/** A comment on a Take (280 chars, flat thread). */
+export interface TakeComment {
+  id: string
+  user_id: string
+  take_id: string
+  content: string
+  created_at: string
+}
+
+/** A comment joined with its author's display info (resolved from user_data). */
+export interface TakeCommentWithAuthor {
+  comment: TakeComment
+  author: {
+    userId: string
+    displayName: string
+    avatarUrl: string | undefined
+    username: string | undefined
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Feed types
 // ---------------------------------------------------------------------------
 
@@ -317,8 +431,24 @@ export interface RepostFeedItem {
   ownerUsername?: string
 }
 
+/** A Take entry in the unified Super-Feed. */
+export interface TakeFeedItem {
+  kind: 'take'
+  /** Milliseconds since epoch — derived from created_at once at mapping time. */
+  sortKey: number
+  data: Take
+  /** Avatar of the Take author. */
+  ownerAvatarUrl?: string
+  /** Display name of the Take author. */
+  ownerDisplayName: string
+  /** Supabase user ID — enables profile navigation. */
+  ownerUserId: string
+  /** Village username snapshot. */
+  ownerUsername?: string
+}
+
 /** Discriminated union used as the single item type in the Super-Feed FlatList. */
-export type FeedItem = ReviewFeedItem | ClippingFeedItem | RepostFeedItem
+export type FeedItem = ReviewFeedItem | ClippingFeedItem | RepostFeedItem | TakeFeedItem
 
 // ---------------------------------------------------------------------------
 // API request types — used to type request bodies in API route handlers.

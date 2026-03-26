@@ -11,16 +11,19 @@ import {
 } from 'react-native'
 import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
-import { useRoute, type RouteProp } from '@react-navigation/native'
+import { useRoute, type RouteProp, useNavigation, type NavigationProp } from '@react-navigation/native'
 import type { FeedStackParamList } from '@/navigation/types'
 import type { TmdbMovieDetail, TmdbCreditPerson, TmdbVideo } from '@/types/tmdb'
+import type { Take } from '@/types/database'
 import { getMovieDetail, posterUrl, backdropUrl, clearTmdbCache } from '@/services/tmdb'
+import { getFilmTakes } from '@/services/takes'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import Spinner from '@/components/ui/Spinner'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import LetterboxdDots from '@/components/ui/LetterboxdDots'
+import TakeCard from '@/components/TakeCard'
 
 type FilmCardRoute = RouteProp<FeedStackParamList, 'FilmCard'>
 
@@ -61,6 +64,7 @@ function getTrailer(videos: TmdbVideo[]): TmdbVideo | undefined {
 export default function FilmCardScreen() {
   const { params } = useRoute<FilmCardRoute>()
   const { tmdbId, movieTitle } = params
+  const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
 
   const { colors } = useTheme()
   const typography = useTypography()
@@ -71,6 +75,7 @@ export default function FilmCardScreen() {
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [synopsisExpanded, setSynopsisExpanded] = useState(false)
+  const [takes, setTakes] = useState<Take[]>([])
 
   const isMounted = useRef(true)
   useEffect(() => () => { isMounted.current = false }, [])
@@ -78,8 +83,13 @@ export default function FilmCardScreen() {
   const loadData = useCallback(async () => {
     setError(null)
     try {
-      const data = await getMovieDetail(tmdbId)
-      if (isMounted.current) setMovie(data)
+      const [movieData, filmTakes] = await Promise.allSettled([
+        getMovieDetail(tmdbId),
+        getFilmTakes(tmdbId),
+      ])
+      if (!isMounted.current) return
+      if (movieData.status === 'fulfilled') setMovie(movieData.value)
+      if (filmTakes.status === 'fulfilled') setTakes(filmTakes.value)
     } catch {
       if (isMounted.current) setError('Failed to load film details')
     }
@@ -229,6 +239,31 @@ export default function FilmCardScreen() {
             <Ionicons name="play-circle-outline" size={20} color={colors.teal} />
             <Text style={styles.actionLabel}>Watch Trailer</Text>
           </Pressable>
+        </View>
+      ) : null}
+
+      {/* ---- Write a Take ---- */}
+      <View style={styles.section}>
+        <Pressable
+          style={({ pressed }) => [styles.actionRow, pressed && styles.actionPressed]}
+          onPress={() => navigation.navigate('CreateTake', {
+            tmdbId: movie.id,
+            movieTitle: movie.title,
+            posterPath: movie.poster_path,
+          })}
+        >
+          <Ionicons name="chatbubble-outline" size={18} color={colors.teal} />
+          <Text style={styles.actionLabel}>Write a Take</Text>
+        </Pressable>
+      </View>
+
+      {/* ---- Takes about this film ---- */}
+      {takes.length > 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Takes</Text>
+          {takes.map((take) => (
+            <TakeCard key={take.id} take={take} readOnly />
+          ))}
         </View>
       ) : null}
 
