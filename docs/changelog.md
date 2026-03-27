@@ -168,3 +168,39 @@ TMDB is the free movie metadata backbone. Film Cards are the atomic unit of Vill
 | 6 | Film-Anchored Clippings | Planned |
 
 See `docs/village-social-layer.md` for the full vision and roadmap.
+
+---
+
+## TL;DR — Plain English Summary
+
+A phase-by-phase recap for anyone who doesn't want to read the technical details.
+
+---
+
+**Phase 0 — Cleaning the house**
+
+The original app was spying on Letterboxd's website — quietly scraping profile pages to grab user photos, bios, locations, and social links. Letterboxd's terms of service explicitly prohibit this. So Phase 0 was a cleanup: all that scraping code was deleted. The app now only uses Letterboxd's RSS feed, which they explicitly allow.
+
+**Phase 0.5 — Rebuilding what was lost**
+
+Because we deleted the scraped profile data, user profiles were now bare. This phase rebuilt it the right way: instead of secretly grabbing info from Letterboxd, the app now asks *you* to fill in your own location, website, X/Twitter, and Letterboxd username. That data is stored in Village's own database, so it belongs to the app and the user — not stolen from elsewhere.
+
+**Phase 1 — A free movie database as the backbone**
+
+Instead of depending on Letterboxd for movie info, we plugged into **TMDB** (The Movie Database) — a free, open API that any developer can use. Now when you tap on a film, the app fetches the poster, cast, director, trailer, synopsis, and rating directly from TMDB. This creates a "Film Card" — a rich movie page that lives inside Village itself. Everything else (takes, likes, comments) gets built on top of these film cards.
+
+**Phase 2 — Takes (Village's own posts)**
+
+This is where Village stops being a companion app and starts becoming a social network. A "Take" is a short post (up to 280 characters) tied to a specific film. You write one, it shows up in your followers' feeds. Think of it like a tweet, but every tweet is about a movie. Each Take shows the film title at the top, your avatar, and your text — no clutter. You can write a Take from a film's page, or from your profile.
+
+**Phase 3 — Likes & Comments**
+
+Takes can now be liked (a heart button) and replied to (a flat comment thread below the post). Likes and comments update instantly on screen without waiting for the server — if something goes wrong, it quietly rolls back. Comment threads are kept simple and flat: no nesting, no quote-replies, just a conversation under the Take.
+
+**Phase 4 — Discovery Tab**
+
+A new tab (the compass icon) that helps you find films and people. At the top, a search bar lets you look up any movie from TMDB. Below that, a carousel of films trending globally this week. And if you already follow people on Village, there's a "In Your Network" section showing which films those people have been posting about — so you can discover films through the people you trust, not an algorithm.
+
+---
+
+The through-line: **Village started as a Letterboxd companion. It's being rebuilt as a standalone social cinema layer — your own network, your own posts, centered on films.**
