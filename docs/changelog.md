@@ -160,12 +160,74 @@ TMDB is the free movie metadata backbone. Film Cards are the atomic unit of Vill
 
 ---
 
-## Upcoming Phases
+## Phase 5 — Watchlist & Favorite Films
 
-| Phase | Feature | Status |
-|-------|---------|--------|
-| 5 | Watchlist & Favorite Films | Planned |
-| 6 | Film-Anchored Clippings | Planned |
+**Commits:** (uncommitted — working tree)
+
+### Added
+- `supabase/migrations/20260327_create_saved_favorite_films.sql` — `saved_films` table (composite PK user_id+tmdb_id, status check 'want'|'seen', denormalized movie_title + poster_path, RLS TO authenticated) + `favorite_films` table (composite PK user_id+position, position check 1–4, unique index on user_id+tmdb_id to prevent duplicates, RLS TO authenticated)
+- `types/database.ts` — added `saved_films` + `favorite_films` table definitions to Database interface. Exported `SavedFilm` and `FavoriteFilm` type aliases
+- `services/savedFilms.ts` — `saveFilm` (upsert on user_id+tmdb_id), `unsaveFilm`, `getFilmSaveStatus`, `getUserSavedFilms(userId, statusFilter?)`
+- `services/favoriteFilms.ts` — `setFavoriteFilm` (upsert on user_id+position), `removeFavoriteFilm`, `getUserFavorites`
+- `hooks/useSavedFilm.ts` — optimistic toggle with haptic feedback. `toggleStatus('want'|'seen')`: tapping the active status unsaves, tapping the other swaps. Rollback on failure
+- `hooks/useFavoriteFilms.ts` — manages top-4 with optimistic add/remove. `setFavorite(position, tmdbId, title, poster)`, `removeFavorite(position)`, `refetch()`
+- `components/profile/FavoriteFilmsGrid.tsx` — 2×2 poster grid. Tapping a filled slot → FilmCard. Long-press (when editable) or tapping an empty "+" slot → `onEditSlot`. Read-only mode for other profiles
+- `screens/SavedFilmsScreen.tsx` — full watchlist: 3-column poster grid with status badges ("Want"/"Seen"), filter tabs (All / Want to watch / Seen), deferred load
+- `screens/FavoriteFilmPickerScreen.tsx` — modal with TMDB search (debounced 350ms), result rows with poster thumbnails, "Remove" button in header if slot is occupied
+
+### Modified
+- `screens/FilmCardScreen.tsx` — added watchlist toggle buttons ("Want to watch" + "Seen it") between Cast/Trailer and Write a Take. Uses `useSavedFilm` hook. Active state fills the button with teal
+- `screens/ProfileScreen.tsx` — added `FavoriteFilmsGrid` (editable, taps open FavoriteFilmPicker) and "Watchlist (N)" link below ProfileHeader. Fetches `getUserSavedFilms` alongside clippings/takes
+- `screens/NativeProfileScreen.tsx` — shows other user's `FavoriteFilmsGrid` (read-only) and "Watchlist (N)" link. Fetches `getUserFavorites` + `getUserSavedFilms` in parallel
+- `navigation/types.ts` — added `SavedFilmsParams`, `FavoriteFilmPickerParams`, `SavedFilms` route to Feed/Profile/Discover stacks, `FavoriteFilmPicker` route to Profile stack
+- `navigation/ProfileStackNavigator.tsx` — registered `SavedFilmsScreen` + `FavoriteFilmPickerScreen` (modal)
+- `navigation/FeedStackNavigator.tsx` — registered `SavedFilmsScreen`
+- `navigation/DiscoverStackNavigator.tsx` — registered `SavedFilmsScreen`
+
+### Design decisions
+- **Upsert for saves** — `saveFilm` uses Supabase upsert on (user_id, tmdb_id). Changing a film from "want" to "seen" is a single call, no delete-then-insert
+- **Upsert for favorites** — `setFavoriteFilm` upserts on (user_id, position). Swapping a slot is one call
+- **Denormalized titles/posters** — both tables store `movie_title` and `poster_path` to avoid TMDB round-trips when rendering grids and lists
+- **Unique index on favorites** — prevents the same film appearing in two different positions for the same user
+- **Toggle semantics** — tapping the active watchlist status ("Want to watch" when already "want") unsaves the film entirely. Tapping the other status swaps
+- **FavoriteFilmPicker as modal** — presented as a modal from ProfileStack only (own profile), not available from Feed/Discover stacks
+
+### Migrations
+```bash
+supabase migration up 20260327_create_saved_favorite_films
+```
+
+---
+
+## Phase 6 — Film-Anchored Clippings
+
+**Commits:** (uncommitted — working tree)
+
+### Added
+- `supabase/migrations/20260327_add_tmdb_id_to_clippings.sql` — `ALTER TABLE user_clippings ADD COLUMN tmdb_id integer` (nullable for backwards compat). Partial index on `(tmdb_id, created_at desc) WHERE tmdb_id IS NOT NULL`
+- `services/clippings.ts` — `getFilmClippings(tmdbId)`: fetches all clippings anchored to a specific TMDB film, newest first
+
+### Modified
+- `types/database.ts` — added `tmdb_id: number | null` to `user_clippings` Row/Insert/Update shapes and `Clipping` interface
+- `services/clippings.ts` — `saveClipping` payload now accepts optional `tmdb_id`. `saveRepost` now accepts optional `tmdbId` parameter. Both write `tmdb_id` into the row
+- `screens/ReviewReaderScreen.tsx` — when saving a clipping, does a best-effort `findMovieByTitle` lookup to resolve `tmdb_id` before inserting. Failure doesn't block the save
+- `components/ReviewCard.tsx` — when reposting, same best-effort TMDB lookup to anchor the repost to a film
+- `screens/FilmCardScreen.tsx` — fetches `getFilmClippings(tmdbId)` in parallel with movie details and takes. Renders a "Clippings" section below Takes showing all film-anchored clippings (read-only ClippingCards)
+
+### Design decisions
+- **Nullable tmdb_id** — backwards compatible. Old clippings without a `tmdb_id` still work in feeds and profiles, they just don't surface on Film Cards
+- **Best-effort matching** — TMDB lookup happens at save time via `findMovieByTitle`. If it fails (network error, no match), the clipping saves without a `tmdb_id`. No extra UI friction for the user
+- **Partial index** — `WHERE tmdb_id IS NOT NULL` keeps the index small and fast; unanchored clippings don't waste index space
+- **Film Card as aggregation hub** — each Film Card now shows Takes + Clippings about that movie, turning it into a true "everything about this film" page
+
+### Migrations
+```bash
+supabase migration up 20260327_add_tmdb_id_to_clippings
+```
+
+---
+
+## Upcoming Phases
 
 See `docs/village-social-layer.md` for the full vision and roadmap.
 
@@ -201,6 +263,14 @@ Takes can now be liked (a heart button) and replied to (a flat comment thread be
 
 A new tab (the compass icon) that helps you find films and people. At the top, a search bar lets you look up any movie from TMDB. Below that, a carousel of films trending globally this week. And if you already follow people on Village, there's a "In Your Network" section showing which films those people have been posting about — so you can discover films through the people you trust, not an algorithm.
 
+**Phase 5 — Watchlist & Favorite Films**
+
+Two new personal features. First, a **watchlist**: on any Film Card, you can mark a movie as "Want to watch" or "Seen it". Your saved films show up on your profile in a filterable poster grid. Second, **favorite films**: you can pick up to 4 movies as your all-time favorites, and they appear as a 2×2 poster grid on your profile — like a miniature showcase of your taste. Other people can see your favorites and watchlist when they visit your profile.
+
+**Phase 6 — Film-Anchored Clippings**
+
+Before this phase, clippings (quotes and reposts from reviews) floated free — they showed up in feeds and profiles, but weren't connected to specific films. Now, when you save a clipping or repost a review, Village automatically tries to match it to the right movie in the TMDB database. If it finds a match, the clipping is "anchored" to that film. This means when you visit a Film Card, you now see *everything* people have said about that movie: Takes, clippings, and reposts — all in one place.
+
 ---
 
-The through-line: **Village started as a Letterboxd companion. It's being rebuilt as a standalone social cinema layer — your own network, your own posts, centered on films.**
+The through-line: **Village started as a Letterboxd companion. It's being rebuilt as a standalone social cinema layer — your own network, your own posts, your watchlist, centered on films. Each Film Card is becoming the definitive page for everything your community thinks about a movie.**

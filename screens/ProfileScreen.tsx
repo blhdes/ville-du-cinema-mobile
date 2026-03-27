@@ -23,10 +23,13 @@ import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import { getUserClippings } from '@/services/clippings'
 import { getUserTakes } from '@/services/takes'
-import type { Clipping, Take } from '@/types/database'
+import { getUserSavedFilms } from '@/services/savedFilms'
+import type { Clipping, Take, SavedFilm } from '@/types/database'
 import type { ProfileStackParamList } from '@/navigation/types'
+import { useFavoriteFilms } from '@/hooks/useFavoriteFilms'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import ProfileHeader from '@/components/profile/ProfileHeader'
+import FavoriteFilmsGrid from '@/components/profile/FavoriteFilmsGrid'
 import ProfileSkeleton from '@/components/profile/ProfileSkeleton'
 import FollowingList from '@/components/profile/FollowingList'
 import ClippingCard from '@/components/profile/ClippingCard'
@@ -68,9 +71,13 @@ export default function ProfileScreen() {
     setFollowingExpanded((prev) => !prev)
   }, [])
 
-  // Clippings + Takes state
+  // Favorites
+  const { favorites, refetch: refetchFavorites } = useFavoriteFilms()
+
+  // Clippings + Takes + Saved Films state
   const [clippings, setClippings] = useState<Clipping[]>([])
   const [takes, setTakes] = useState<Take[]>([])
+  const [savedFilms, setSavedFilms] = useState<SavedFilm[]>([])
   const [contentLoading, setContentLoading] = useState(true)
   const [clippingsError, setClippingsError] = useState(false)
 
@@ -90,12 +97,14 @@ export default function ProfileScreen() {
       setContentLoading(true)
       setClippingsError(false)
 
-      Promise.allSettled([getUserClippings(user.id), getUserTakes(user.id)])
-        .then(([clippingsResult, takesResult]) => {
+      Promise.allSettled([getUserClippings(user.id), getUserTakes(user.id), getUserSavedFilms(user.id)])
+        .then(([clippingsResult, takesResult, savedResult]) => {
           if (cancelled) return
           if (clippingsResult.status === 'fulfilled') setClippings(clippingsResult.value)
           else setClippingsError(true)
           if (takesResult.status === 'fulfilled') setTakes(takesResult.value)
+          if (savedResult.status === 'fulfilled') setSavedFilms(savedResult.value)
+          refetchFavorites()
         })
         .finally(() => {
           if (!cancelled) setContentLoading(false)
@@ -115,6 +124,30 @@ export default function ProfileScreen() {
     return (
       <>
         {profile && <ProfileHeader profile={profile} email={user.email} showEdit />}
+
+        {/* Favorite Films grid */}
+        <FavoriteFilmsGrid
+          favorites={favorites}
+          editable
+          onEditSlot={(pos) => navigation.navigate('FavoriteFilmPicker', { position: pos })}
+        />
+
+        {/* Watchlist link */}
+        {savedFilms.length > 0 && (
+          <Pressable
+            style={({ pressed }) => [styles.watchlistLink, pressed && styles.pressed]}
+            onPress={() => navigation.navigate('SavedFilms', {
+              userId: user.id,
+              username: profile?.username ?? undefined,
+            })}
+          >
+            <Ionicons name="bookmark-outline" size={16} color={colors.teal} />
+            <Text style={styles.watchlistLinkText}>
+              Watchlist ({savedFilms.length})
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.secondaryText} />
+          </Pressable>
+        )}
 
         {/* Following accordion */}
         <View style={styles.divider} />
@@ -183,7 +216,7 @@ export default function ProfileScreen() {
         )}
       </>
     )
-  }, [user, profile, followedUsers, villageUsers, colors, followingExpanded, toggleFollowing, contentLoading, clippingsError, clippings, takes, handleTakeDeleted, navigation, styles])
+  }, [user, profile, followedUsers, villageUsers, colors, followingExpanded, toggleFollowing, contentLoading, clippingsError, clippings, takes, savedFilms, favorites, handleTakeDeleted, navigation, styles])
 
   const renderItem = useCallback(({ item }: { item: Clipping }) => {
     if (item.type === 'repost' && item.review_json) {
@@ -349,6 +382,19 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       lineHeight: typography.magazineTitle.lineHeight,
       color: colors.foreground,
       marginBottom: spacing.md,
+    },
+    watchlistLink: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingHorizontal: HORIZONTAL_PAD,
+      paddingVertical: spacing.md,
+    },
+    watchlistLinkText: {
+      flex: 1,
+      fontFamily: fonts.system,
+      fontSize: typography.callout.fontSize,
+      color: colors.teal,
     },
     guestText: {
       fontFamily: fonts.system,

@@ -24,6 +24,8 @@ interface SaveClippingPayload {
   movie_title: string
   author_name: string
   original_url: string
+  /** TMDB film ID — anchors this clipping to a Film Card. Nullable for backwards compat. */
+  tmdb_id?: number | null
 }
 
 /**
@@ -45,6 +47,7 @@ export async function saveClipping(payload: SaveClippingPayload): Promise<Clippi
       movie_title: payload.movie_title,
       author_name: payload.author_name,
       original_url: payload.original_url,
+      tmdb_id: payload.tmdb_id ?? null,
     })
     .select()
     .single()
@@ -101,7 +104,7 @@ export async function getVillageClippings(userIds: string[]): Promise<Clipping[]
  * Saves a full review as a repost in the user's clippings.
  * Stores the complete Review object in `review_json` for rich rendering.
  */
-export async function saveRepost(review: Review): Promise<Clipping> {
+export async function saveRepost(review: Review, tmdbId?: number | null): Promise<Clipping> {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
@@ -126,6 +129,7 @@ export async function saveRepost(review: Review): Promise<Clipping> {
       author_name: review.creator,
       original_url: review.link,
       review_json: JSON.parse(JSON.stringify(review)),
+      tmdb_id: tmdbId ?? null,
     })
     .select()
     .single()
@@ -136,6 +140,25 @@ export async function saveRepost(review: Review): Promise<Clipping> {
   }
 
   return toClipping(data)
+}
+
+/**
+ * Fetches all clippings anchored to a specific film (by TMDB ID), newest first.
+ * Used on Film Card screens to show what people have clipped about a movie.
+ */
+export async function getFilmClippings(tmdbId: number): Promise<Clipping[]> {
+  const { data, error } = await supabase
+    .from('user_clippings')
+    .select('*')
+    .eq('tmdb_id', tmdbId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('getFilmClippings error:', error.message)
+    return []
+  }
+
+  return (data ?? []).map(toClipping)
 }
 
 /**

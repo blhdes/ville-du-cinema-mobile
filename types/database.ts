@@ -177,6 +177,57 @@ export interface Database {
         }
         Relationships: []
       }
+      saved_films: {
+        Row: {
+          user_id: string
+          tmdb_id: number
+          movie_title: string
+          poster_path: string | null
+          status: 'want' | 'seen'
+          saved_at: string
+        }
+        Insert: {
+          user_id: string
+          tmdb_id: number
+          movie_title: string
+          poster_path?: string | null
+          status: 'want' | 'seen'
+          saved_at?: string
+        }
+        Update: {
+          user_id?: string
+          tmdb_id?: number
+          movie_title?: string
+          poster_path?: string | null
+          status?: 'want' | 'seen'
+          saved_at?: string
+        }
+        Relationships: []
+      }
+      favorite_films: {
+        Row: {
+          user_id: string
+          tmdb_id: number
+          movie_title: string
+          poster_path: string | null
+          position: number
+        }
+        Insert: {
+          user_id: string
+          tmdb_id: number
+          movie_title: string
+          poster_path?: string | null
+          position: number
+        }
+        Update: {
+          user_id?: string
+          tmdb_id?: number
+          movie_title?: string
+          poster_path?: string | null
+          position?: number
+        }
+        Relationships: []
+      }
       user_clippings: {
         /** Full row returned by SELECT queries. */
         Row: {
@@ -189,6 +240,7 @@ export interface Database {
           created_at: string
           type: string
           review_json: Json | null
+          tmdb_id: number | null
         }
         /** Shape accepted by INSERT statements. */
         Insert: {
@@ -201,6 +253,7 @@ export interface Database {
           created_at?: string
           type?: string
           review_json?: Json | null
+          tmdb_id?: number | null
         }
         /** Shape accepted by UPDATE statements (all fields optional). */
         Update: {
@@ -213,6 +266,7 @@ export interface Database {
           created_at?: string
           type?: string
           review_json?: Json | null
+          tmdb_id?: number | null
         }
         Relationships: []
       }
@@ -320,6 +374,7 @@ export interface Clipping {
   created_at: string // ISO 8601 timestamp
   type: 'quote' | 'repost'
   review_json: Review | null
+  tmdb_id: number | null // nullable — old clippings won't have this
 }
 
 // ---------------------------------------------------------------------------
@@ -352,6 +407,16 @@ export interface TakeComment {
   content: string
   created_at: string
 }
+
+// ---------------------------------------------------------------------------
+// Saved & Favorite Films types
+// ---------------------------------------------------------------------------
+
+/** A film saved to the user's watchlist with a "want to watch" or "seen" status. */
+export type SavedFilm = Database['public']['Tables']['saved_films']['Row']
+
+/** A film pinned as one of the user's top-4 favorites on their profile. */
+export type FavoriteFilm = Database['public']['Tables']['favorite_films']['Row']
 
 /** A comment joined with its author's display info (resolved from user_data). */
 export interface TakeCommentWithAuthor {

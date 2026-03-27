@@ -14,9 +14,10 @@ import { Ionicons } from '@expo/vector-icons'
 import { useRoute, type RouteProp, useNavigation, type NavigationProp } from '@react-navigation/native'
 import type { FeedStackParamList } from '@/navigation/types'
 import type { TmdbMovieDetail, TmdbCreditPerson, TmdbVideo } from '@/types/tmdb'
-import type { Take } from '@/types/database'
+import type { Take, Clipping } from '@/types/database'
 import { getMovieDetail, posterUrl, backdropUrl, clearTmdbCache } from '@/services/tmdb'
 import { getFilmTakes } from '@/services/takes'
+import { getFilmClippings } from '@/services/clippings'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
@@ -24,6 +25,8 @@ import Spinner from '@/components/ui/Spinner'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import LetterboxdDots from '@/components/ui/LetterboxdDots'
 import TakeCard from '@/components/TakeCard'
+import ClippingCard from '@/components/profile/ClippingCard'
+import { useSavedFilm } from '@/hooks/useSavedFilm'
 
 type FilmCardRoute = RouteProp<FeedStackParamList, 'FilmCard'>
 
@@ -76,20 +79,26 @@ export default function FilmCardScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [synopsisExpanded, setSynopsisExpanded] = useState(false)
   const [takes, setTakes] = useState<Take[]>([])
+  const [clippings, setClippings] = useState<Clipping[]>([])
 
   const isMounted = useRef(true)
   useEffect(() => () => { isMounted.current = false }, [])
 
+  // Watchlist state
+  const saved = useSavedFilm(tmdbId, movieTitle, movie?.poster_path ?? null)
+
   const loadData = useCallback(async () => {
     setError(null)
     try {
-      const [movieData, filmTakes] = await Promise.allSettled([
+      const [movieData, filmTakes, filmClippings] = await Promise.allSettled([
         getMovieDetail(tmdbId),
         getFilmTakes(tmdbId),
+        getFilmClippings(tmdbId),
       ])
       if (!isMounted.current) return
       if (movieData.status === 'fulfilled') setMovie(movieData.value)
       if (filmTakes.status === 'fulfilled') setTakes(filmTakes.value)
+      if (filmClippings.status === 'fulfilled') setClippings(filmClippings.value)
     } catch {
       if (isMounted.current) setError('Failed to load film details')
     }
@@ -242,6 +251,52 @@ export default function FilmCardScreen() {
         </View>
       ) : null}
 
+      {/* ---- Watchlist buttons ---- */}
+      <View style={styles.section}>
+        <View style={styles.watchlistRow}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.watchlistBtn,
+              saved.status === 'want' && styles.watchlistBtnActive,
+              pressed && styles.actionPressed,
+            ]}
+            onPress={() => saved.toggleStatus('want')}
+          >
+            <Ionicons
+              name={saved.status === 'want' ? 'bookmark' : 'bookmark-outline'}
+              size={16}
+              color={saved.status === 'want' ? '#fff' : colors.teal}
+            />
+            <Text style={[
+              styles.watchlistLabel,
+              saved.status === 'want' && styles.watchlistLabelActive,
+            ]}>
+              Want to watch
+            </Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [
+              styles.watchlistBtn,
+              saved.status === 'seen' && styles.watchlistBtnActive,
+              pressed && styles.actionPressed,
+            ]}
+            onPress={() => saved.toggleStatus('seen')}
+          >
+            <Ionicons
+              name={saved.status === 'seen' ? 'eye' : 'eye-outline'}
+              size={16}
+              color={saved.status === 'seen' ? '#fff' : colors.teal}
+            />
+            <Text style={[
+              styles.watchlistLabel,
+              saved.status === 'seen' && styles.watchlistLabelActive,
+            ]}>
+              Seen it
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+
       {/* ---- Write a Take ---- */}
       <View style={styles.section}>
         <Pressable
@@ -263,6 +318,21 @@ export default function FilmCardScreen() {
           <Text style={styles.sectionTitle}>Takes</Text>
           {takes.map((take) => (
             <TakeCard key={take.id} take={take} readOnly />
+          ))}
+        </View>
+      ) : null}
+
+      {/* ---- Clippings about this film ---- */}
+      {clippings.length > 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Clippings</Text>
+          {clippings.map((clipping) => (
+            <ClippingCard
+              key={clipping.id}
+              clipping={clipping}
+              onDeleted={() => setClippings((prev) => prev.filter((c) => c.id !== clipping.id))}
+              readOnly
+            />
           ))}
         </View>
       ) : null}
@@ -454,6 +524,36 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       fontSize: typography.callout.fontSize,
       lineHeight: typography.callout.lineHeight,
       color: colors.teal,
+    },
+
+    // ---- Watchlist ----
+    watchlistRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    watchlistBtn: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.xs,
+      paddingVertical: spacing.sm + 2,
+      borderRadius: 10,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.teal,
+    },
+    watchlistBtnActive: {
+      backgroundColor: colors.teal,
+      borderColor: colors.teal,
+    },
+    watchlistLabel: {
+      fontFamily: fonts.system,
+      fontWeight: '600' as const,
+      fontSize: typography.caption.fontSize,
+      color: colors.teal,
+    },
+    watchlistLabelActive: {
+      color: '#fff',
     },
 
     bottomSpacer: {

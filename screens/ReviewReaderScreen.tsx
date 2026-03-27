@@ -20,6 +20,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import { saveClipping } from '@/services/clippings'
+import { findMovieByTitle } from '@/services/tmdb'
 import type { FeedStackParamList } from '@/navigation/types'
 
 type RouteProps = RouteProp<FeedStackParamList, 'ReviewReader'>
@@ -208,11 +209,15 @@ export default function ReviewReaderScreen() {
     setSaveState('saving')
 
     try {
+      // Best-effort TMDB match — don't block the save if it fails
+      const match = await findMovieByTitle(params.movieTitle).catch(() => null)
+
       await saveClipping({
         quote_text: selectedText,
         movie_title: params.movieTitle,
         author_name: params.author,
         original_url: params.original_url,
+        tmdb_id: match?.id ?? null,
       })
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       setSaveState('saved')

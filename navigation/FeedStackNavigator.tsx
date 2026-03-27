@@ -15,6 +15,7 @@ import QuotePreviewScreen from '@/screens/QuotePreviewScreen'
 import FilmCardScreen from '@/screens/FilmCardScreen'
 import CreateTakeScreen from '@/screens/CreateTakeScreen'
 import TakeDetailScreen from '@/screens/TakeDetailScreen'
+import SavedFilmsScreen from '@/screens/SavedFilmsScreen'
 import type { FeedStackParamList } from '@/navigation/types'
 import { fonts } from '@/theme'
 import { useTypography } from '@/hooks/useTypography'
@@ -124,6 +125,13 @@ export default function FeedStackNavigator() {
         name="TakeDetail"
         component={TakeDetailScreen}
         options={{ headerTitle: '' }}
+      />
+      <Stack.Screen
+        name="SavedFilms"
+        component={SavedFilmsScreen}
+        options={({ route }) => ({
+          headerTitle: route.params.username ? `@${route.params.username}'s Watchlist` : 'Watchlist',
+        })}
       />
     </Stack.Navigator>
   )

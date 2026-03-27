@@ -62,6 +62,17 @@ export type FeedStackParamList = {
   FilmCard: FilmCardParams
   CreateTake: CreateTakeParams | undefined
   TakeDetail: TakeDetailParams
+  SavedFilms: SavedFilmsParams
+}
+
+export type SavedFilmsParams = {
+  userId: string
+  username?: string
+}
+
+export type FavoriteFilmPickerParams = {
+  /** Which slot (1–4) to fill. */
+  position: number
 }
 
 export type ProfileStackParamList = {
@@ -75,10 +86,26 @@ export type ProfileStackParamList = {
   FilmCard: FilmCardParams
   CreateTake: CreateTakeParams | undefined
   TakeDetail: TakeDetailParams
+  SavedFilms: SavedFilmsParams
+  FavoriteFilmPicker: FavoriteFilmPickerParams
+}
+
+export type DiscoverStackParamList = {
+  DiscoverMain: undefined
+  ExternalProfile: { username: string }
+  NativeProfile: { userId: string; username?: string }
+  UserSearch: undefined
+  ReviewReader: ReviewReaderParams
+  QuotePreview: QuotePreviewParams
+  FilmCard: FilmCardParams
+  CreateTake: CreateTakeParams | undefined
+  TakeDetail: TakeDetailParams
+  SavedFilms: SavedFilmsParams
 }
 
 export type AppTabsParamList = {
   Feed: NavigatorScreenParams<FeedStackParamList> | undefined
+  Discover: NavigatorScreenParams<DiscoverStackParamList> | undefined
   Profile: undefined
   Settings: undefined
 }

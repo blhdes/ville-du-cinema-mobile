@@ -126,6 +126,61 @@ export async function getVillageTakes(userIds: string[]): Promise<Take[]> {
 }
 
 /**
+ * A film that Village users in your network have been posting about.
+ * Grouped by tmdb_id with a take count and the most recent poster path.
+ */
+export interface NetworkFilm {
+  tmdbId: number
+  movieTitle: string
+  posterPath: string | null
+  takeCount: number
+}
+
+/**
+ * Fetches films that followed Village users have recently posted about.
+ * Groups takes by tmdb_id client-side and returns the top N films
+ * sorted by take count (most talked-about first).
+ */
+export async function getNetworkFilms(
+  userIds: string[],
+  limit = 10,
+): Promise<NetworkFilm[]> {
+  if (userIds.length === 0) return []
+
+  const { data, error } = await supabase
+    .from('takes')
+    .select('tmdb_id, movie_title, poster_path')
+    .in('user_id', userIds)
+    .order('created_at', { ascending: false })
+    .limit(200) // recent window — enough to surface active films
+
+  if (error) {
+    console.error('getNetworkFilms error:', error.message)
+    return []
+  }
+
+  // Group by tmdb_id, count takes, keep the first (most recent) poster
+  const filmMap = new Map<number, NetworkFilm>()
+  for (const row of data ?? []) {
+    const existing = filmMap.get(row.tmdb_id)
+    if (existing) {
+      existing.takeCount += 1
+    } else {
+      filmMap.set(row.tmdb_id, {
+        tmdbId: row.tmdb_id,
+        movieTitle: row.movie_title,
+        posterPath: row.poster_path,
+        takeCount: 1,
+      })
+    }
+  }
+
+  return [...filmMap.values()]
+    .sort((a, b) => b.takeCount - a.takeCount)
+    .slice(0, limit)
+}
+
+/**
  * Deletes a Take by its ID.
  */
 export async function deleteTake(id: string): Promise<void> {

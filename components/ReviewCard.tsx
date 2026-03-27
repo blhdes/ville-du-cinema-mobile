@@ -177,7 +177,9 @@ function ReviewCard({ review, hideAuthor = false, repostable = true, compact = f
 
   const handleRepost = useCallback(async () => {
     try {
-      await saveRepost(review)
+      // Best-effort TMDB match — don't block the repost if lookup fails
+      const match = await findMovieByTitle(review.movieTitle).catch(() => null)
+      await saveRepost(review, match?.id ?? null)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     } catch (error) {
       console.error('Failed to repost:', error)

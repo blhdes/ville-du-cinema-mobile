@@ -18,6 +18,7 @@ import { useCallback, useEffect } from 'react'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { AppTabsParamList } from '@/navigation/types'
 import FeedStackNavigator from '@/navigation/FeedStackNavigator'
+import DiscoverStackNavigator from '@/navigation/DiscoverStackNavigator'
 import ProfileStackNavigator from '@/navigation/ProfileStackNavigator'
 import SettingsScreen from '@/screens/SettingsScreen'
 import FeedTabIcon from '@/components/ui/FeedTabIcon'
@@ -34,6 +35,7 @@ const PROFILE_OUT_SPRING = { damping: 14, stiffness: 260, mass: 0.6 }
 // Module-level shared values — persist across remounts
 const scales = {
   Feed: makeMutable(1),
+  Discover: makeMutable(1),
   Profile: makeMutable(1),
   Settings: makeMutable(1),
 }
@@ -63,6 +65,15 @@ function FeedIcon({ color, size }: { color: string; size: number }) {
   return (
     <Animated.View style={style}>
       <FeedTabIcon fill={color} size={size} />
+    </Animated.View>
+  )
+}
+
+function DiscoverIcon({ color, size }: { color: string; size: number }) {
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: scales.Discover.value }] }))
+  return (
+    <Animated.View style={style}>
+      <Ionicons name="compass-outline" size={size} color={color} />
     </Animated.View>
   )
 }
@@ -142,6 +153,7 @@ function AppTabsInner() {
   const { colors } = useTheme()
   const { requestFeedRefresh, isFeedRefreshing, setTabBarVisible, requestProfileScrollTop } = useTabBar()
   const onFeedPress = useCallback(() => onTabFocus('Feed'), [])
+  const onDiscoverPress = useCallback(() => onTabFocus('Discover'), [])
   const onProfileBounce = useCallback(() => onTabFocus('Profile'), [])
   const onSettingsPress = useCallback(() => onTabFocus('Settings'), [])
 
@@ -217,6 +229,17 @@ function AppTabsInner() {
             setTabBarVisible(true)
           },
         })}
+      />
+      <Tab.Screen
+        name="Discover"
+        component={DiscoverStackNavigator}
+        options={{
+          tabBarIcon: ({ color, size }) => <DiscoverIcon color={color} size={size} />,
+        }}
+        listeners={{
+          tabPress: onDiscoverPress,
+          focus: () => setTabBarVisible(true),
+        }}
       />
       <Tab.Screen
         name="Profile"

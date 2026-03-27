@@ -3,8 +3,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { useNavigation } from '@react-navigation/native'
 import { useTheme } from '@/contexts/ThemeContext'
-import ProfileScreen from '@/screens/ProfileScreen'
-import EditProfileScreen from '@/screens/EditProfileScreen'
+import DiscoverScreen from '@/screens/DiscoverScreen'
 import ExternalProfileScreen from '@/screens/ExternalProfileScreen'
 import NativeProfileScreen from '@/screens/NativeProfileScreen'
 import UserSearchScreen from '@/screens/UserSearchScreen'
@@ -14,12 +13,11 @@ import FilmCardScreen from '@/screens/FilmCardScreen'
 import CreateTakeScreen from '@/screens/CreateTakeScreen'
 import TakeDetailScreen from '@/screens/TakeDetailScreen'
 import SavedFilmsScreen from '@/screens/SavedFilmsScreen'
-import FavoriteFilmPickerScreen from '@/screens/FavoriteFilmPickerScreen'
-import type { ProfileStackParamList } from '@/navigation/types'
+import type { DiscoverStackParamList } from '@/navigation/types'
 import { fonts } from '@/theme'
 import { useTypography } from '@/hooks/useTypography'
 
-const Stack = createNativeStackNavigator<ProfileStackParamList>()
+const Stack = createNativeStackNavigator<DiscoverStackParamList>()
 
 function BackButton() {
   const navigation = useNavigation()
@@ -31,7 +29,7 @@ function BackButton() {
   )
 }
 
-export default function ProfileStackNavigator() {
+export default function DiscoverStackNavigator() {
   const { colors } = useTheme()
   const typography = useTypography()
 
@@ -50,18 +48,9 @@ export default function ProfileStackNavigator() {
       }}
     >
       <Stack.Screen
-        name="ProfileMain"
-        component={ProfileScreen}
+        name="DiscoverMain"
+        component={DiscoverScreen}
         options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="EditProfile"
-        component={EditProfileScreen}
-        options={{
-          headerTitle: 'Edit Profile',
-          presentation: 'modal',
-          headerLeft: () => null,
-        }}
       />
       <Stack.Screen
         name="ExternalProfile"
@@ -127,15 +116,6 @@ export default function ProfileStackNavigator() {
         options={({ route }) => ({
           headerTitle: route.params.username ? `@${route.params.username}'s Watchlist` : 'Watchlist',
         })}
-      />
-      <Stack.Screen
-        name="FavoriteFilmPicker"
-        component={FavoriteFilmPickerScreen}
-        options={{
-          headerTitle: 'Pick a Favorite',
-          presentation: 'modal',
-          headerLeft: () => null,
-        }}
       />
     </Stack.Navigator>
   )

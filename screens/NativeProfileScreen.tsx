@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   FlatList,
   InteractionManager,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -15,18 +16,22 @@ import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase/client'
 import { getUserClippings } from '@/services/clippings'
 import { getUserTakes } from '@/services/takes'
+import { getUserSavedFilms } from '@/services/savedFilms'
+import { getUserFavorites } from '@/services/favoriteFilms'
 import { useUserLists } from '@/hooks/useUserLists'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
+import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import type { FeedStackParamList } from '@/navigation/types'
-import type { Clipping, Take, FollowedVillageUser, VillagePublicProfile } from '@/types/database'
+import type { Clipping, Take, SavedFilm, FavoriteFilm, FollowedVillageUser, VillagePublicProfile } from '@/types/database'
 import ProfileSkeleton from '@/components/profile/ProfileSkeleton'
 import ClippingCard from '@/components/profile/ClippingCard'
 import RepostCard from '@/components/feed/RepostCard'
 import TakeCard from '@/components/TakeCard'
 import ExpandableAvatar from '@/components/ui/ExpandableAvatar'
 import FollowButton from '@/components/ui/FollowButton'
+import FavoriteFilmsGrid from '@/components/profile/FavoriteFilmsGrid'
 
 const AVATAR_SIZE = 72
 const HORIZONTAL_PAD = 20
@@ -46,17 +51,21 @@ export default function NativeProfileScreen() {
 
   const isFollowing = villageUserIds.includes(userId)
 
+  const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
+
   const [profile, setProfile] = useState<VillagePublicProfile | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
   const [clippings, setClippings] = useState<Clipping[]>([])
   const [takes, setTakes] = useState<Take[]>([])
+  const [savedFilms, setSavedFilms] = useState<SavedFilm[]>([])
+  const [favorites, setFavorites] = useState<FavoriteFilm[]>([])
   const [contentLoading, setContentLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
 
     const task = InteractionManager.runAfterInteractions(async () => {
-      const [profileResult, clippingsResult, takesResult] = await Promise.allSettled([
+      const [profileResult, clippingsResult, takesResult, savedResult, favResult] = await Promise.allSettled([
         supabase
           .from('user_data')
           .select('user_id, username, display_name, avatar_url, bio, location, website_url, website_label, twitter_handle, letterboxd_username')
@@ -64,6 +73,8 @@ export default function NativeProfileScreen() {
           .single(),
         getUserClippings(userId),
         getUserTakes(userId),
+        getUserSavedFilms(userId),
+        getUserFavorites(userId),
       ])
 
       if (profileResult.status === 'fulfilled') {
@@ -77,6 +88,12 @@ export default function NativeProfileScreen() {
       }
       if (takesResult.status === 'fulfilled' && !cancelled) {
         setTakes(takesResult.value)
+      }
+      if (savedResult.status === 'fulfilled' && !cancelled) {
+        setSavedFilms(savedResult.value)
+      }
+      if (favResult.status === 'fulfilled' && !cancelled) {
+        setFavorites(favResult.value)
       }
       if (!cancelled) setContentLoading(false)
     })
@@ -143,6 +160,28 @@ export default function NativeProfileScreen() {
           </View>
         </View>
 
+        {/* Favorite Films grid (read-only) */}
+        {favorites.length > 0 && (
+          <FavoriteFilmsGrid favorites={favorites} />
+        )}
+
+        {/* Watchlist link */}
+        {savedFilms.length > 0 && (
+          <Pressable
+            style={({ pressed }) => [styles.watchlistLink, pressed && styles.pressed]}
+            onPress={() => navigation.navigate('SavedFilms', {
+              userId,
+              username: profile.username ?? undefined,
+            })}
+          >
+            <Ionicons name="bookmark-outline" size={16} color={colors.teal} />
+            <Text style={styles.watchlistLinkText}>
+              Watchlist ({savedFilms.length})
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.secondaryText} />
+          </Pressable>
+        )}
+
         <View style={styles.divider} />
 
         {/* Takes section */}
@@ -166,7 +205,7 @@ export default function NativeProfileScreen() {
         )}
       </>
     )
-  }, [profile, contentLoading, clippings, takes, isFollowing, handleFollowToggle, styles, colors, userId])
+  }, [profile, contentLoading, clippings, takes, savedFilms, favorites, isFollowing, handleFollowToggle, navigation, styles, colors, userId])
 
   const renderItem = useCallback(({ item }: { item: Clipping }) => {
     if (item.type === 'repost' && item.review_json) {
@@ -300,6 +339,22 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       lineHeight: typography.magazineBody.lineHeight,
       color: colors.secondaryText,
       textAlign: 'center',
+    },
+    pressed: {
+      opacity: 0.6,
+    },
+    watchlistLink: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingHorizontal: HORIZONTAL_PAD,
+      paddingVertical: spacing.md,
+    },
+    watchlistLinkText: {
+      flex: 1,
+      fontFamily: fonts.system,
+      fontSize: typography.callout.fontSize,
+      color: colors.teal,
     },
   })
 }
