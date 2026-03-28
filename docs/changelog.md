@@ -274,3 +274,17 @@ Before this phase, clippings (quotes and reposts from reviews) floated free — 
 ---
 
 The through-line: **Village started as a Letterboxd companion. It's being rebuilt as a standalone social cinema layer — your own network, your own posts, your watchlist, centered on films. Each Film Card is becoming the definitive page for everything your community thinks about a movie.**
+
+---
+
+## Remaining Items from the Social Layer Plan
+
+Features described in `/docs/village-social-layer.md` that haven't been built yet:
+
+| Feature | Plan Section | What's Missing |
+|---|---|---|
+| **"Because you saved X"** recommendations | Discovery Tab (§6) | A section on the Discover screen that uses TMDB's `/movie/{id}/recommendations` endpoint to suggest films based on the user's watchlist. |
+| **Unified search** (films + people) | Discovery Tab (§6) | The Discover search bar only searches TMDB movies. Village user search lives on a separate screen — the plan calls for both in one search bar. |
+| **RSS reviews on Film Cards** | Film Card (§1) | Film Cards show Takes and Clippings, but not RSS reviews from your network that match the same movie. |
+| **Take sharing as image** | Takes (§2) | Takes can't be shared as image cards yet. QuotePreview already does this for clippings — Takes need a similar `TakeExportCanvas` + share button on TakeDetail. |
+| **Feed visual lanes** | Evolved Feed (§7) | No visual distinction between RSS content (Letterboxd reviews) and Village content (Takes, Clippings, Reposts) in the feed. Plan marked this as "TBD on implementation". |
