@@ -23,6 +23,7 @@ import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import FilmCardSkeleton from '@/components/film/FilmCardSkeleton'
+import ImdbBadge from '@/components/ui/ImdbBadge'
 import LetterboxdDots from '@/components/ui/LetterboxdDots'
 import TakeCard from '@/components/TakeCard'
 import ClippingCard from '@/components/profile/ClippingCard'
@@ -328,10 +329,21 @@ export default function FilmCardScreen() {
       ) : null}
 
       {/* ---- External links ---- */}
+      {movie.imdb_id ? (
+        <View style={styles.section}>
+          <Pressable
+            style={({ pressed }) => [styles.actionRow, pressed && styles.actionPressed]}
+            onPress={() => WebBrowser.openBrowserAsync(`https://www.imdb.com/title/${movie.imdb_id}/`)}
+          >
+            <ImdbBadge size={16} />
+            <Text style={styles.actionLabel}>View on IMDb</Text>
+          </Pressable>
+        </View>
+      ) : null}
       <View style={styles.section}>
         <Pressable
           style={({ pressed }) => [styles.actionRow, pressed && styles.actionPressed]}
-          onPress={() => Linking.openURL(letterboxdSearchUrl)}
+          onPress={() => WebBrowser.openBrowserAsync(letterboxdSearchUrl)}
         >
           <LetterboxdDots size={16} />
           <Text style={styles.actionLabel}>View on Letterboxd</Text>

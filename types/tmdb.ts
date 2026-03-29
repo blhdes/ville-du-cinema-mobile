@@ -31,6 +31,7 @@ export interface TmdbVideo {
 /** The shape returned by GET /movie/{id} with append_to_response=credits,videos. */
 export interface TmdbMovieDetail {
   id: number
+  imdb_id: string | null
   title: string
   original_title: string
   overview: string | null
