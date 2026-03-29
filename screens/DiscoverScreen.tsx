@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native'
+import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTabBarInset } from '@/hooks/useTabBarInset'
@@ -17,7 +18,7 @@ import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import type { TmdbSearchResult } from '@/types/tmdb'
 import type { DiscoverStackParamList } from '@/navigation/types'
 import type { NetworkFilm } from '@/services/takes'
-import { getTrending, searchMovies, clearTmdbCache } from '@/services/tmdb'
+import { getTrending, searchMovies, posterUrl, clearTmdbCache } from '@/services/tmdb'
 import { getNetworkFilms } from '@/services/takes'
 import { useUserLists } from '@/hooks/useUserLists'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -116,12 +117,19 @@ export default function DiscoverScreen() {
 
   const renderSearchResult = useCallback(({ item }: { item: TmdbSearchResult }) => {
     const year = item.release_date?.slice(0, 4) ?? ''
+    const poster = posterUrl(item.poster_path, 'w154')
     return (
       <Pressable
         onPress={() => handleSearchResultPress(item)}
         style={({ pressed }) => [styles.searchRow, pressed && styles.pressed]}
       >
-        <Ionicons name="film-outline" size={18} color={colors.secondaryText} />
+        {poster ? (
+          <Image source={poster} style={styles.searchPoster} cachePolicy="memory-disk" />
+        ) : (
+          <View style={[styles.searchPoster, styles.searchPosterPlaceholder]}>
+            <Ionicons name="film-outline" size={14} color={colors.secondaryText} />
+          </View>
+        )}
         <View style={styles.searchInfo}>
           <Text style={styles.searchTitle} numberOfLines={1}>{item.title}</Text>
           {year ? <Text style={styles.searchYear}>{year}</Text> : null}
@@ -328,6 +336,16 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       paddingHorizontal: HORIZONTAL_PAD,
       paddingVertical: spacing.sm + 4,
       gap: spacing.md,
+    },
+    searchPoster: {
+      width: 36,
+      height: 54,
+      borderRadius: 4,
+    },
+    searchPosterPlaceholder: {
+      backgroundColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     searchInfo: {
       flex: 1,

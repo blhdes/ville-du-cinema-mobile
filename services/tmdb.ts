@@ -70,6 +70,27 @@ async function tmdbFetch<T>(path: string, params: Record<string, string> = {}): 
 }
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * TMDB occasionally stores titles with surrounding quotation marks as part of
+ * the official title (e.g. `"Wuthering Heights"`). Strip them so the UI never
+ * shows bare quote characters around a film title.
+ */
+function cleanTitle(title: string): string {
+  return title.replace(/^["'"']+|["'"']+$/gu, '').trim()
+}
+
+function cleanSearchResult(r: TmdbSearchResult): TmdbSearchResult {
+  return { ...r, title: cleanTitle(r.title) }
+}
+
+function cleanMovieDetail(d: TmdbMovieDetail): TmdbMovieDetail {
+  return { ...d, title: cleanTitle(d.title) }
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -85,8 +106,9 @@ export async function getMovieDetail(tmdbId: number): Promise<TmdbMovieDetail> {
     append_to_response: 'credits,videos',
   })
 
-  detailCache.set(tmdbId, { data, fetchedAt: Date.now() })
-  return data
+  const clean = cleanMovieDetail(data)
+  detailCache.set(tmdbId, { data: clean, fetchedAt: Date.now() })
+  return clean
 }
 
 /**
@@ -106,7 +128,8 @@ export async function searchMovies(
     page: String(page),
   })
 
-  searchCache.set(cacheKey, { data, fetchedAt: Date.now() })
+  const clean = { ...data, results: data.results.map(cleanSearchResult) }
+  searchCache.set(cacheKey, { data: clean, fetchedAt: Date.now() })
   return data
 }
 
@@ -116,7 +139,8 @@ export async function searchMovies(
 export async function getTrending(
   window: 'day' | 'week' = 'week',
 ): Promise<TmdbPaginatedResponse<TmdbSearchResult>> {
-  return tmdbFetch<TmdbPaginatedResponse<TmdbSearchResult>>(`/trending/movie/${window}`)
+  const data = await tmdbFetch<TmdbPaginatedResponse<TmdbSearchResult>>(`/trending/movie/${window}`)
+  return { ...data, results: data.results.map(cleanSearchResult) }
 }
 
 /**

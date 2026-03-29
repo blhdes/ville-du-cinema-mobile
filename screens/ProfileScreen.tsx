@@ -150,7 +150,6 @@ export default function ProfileScreen() {
         )}
 
         {/* Following accordion */}
-        <View style={styles.divider} />
         <Pressable onPress={toggleFollowing} style={styles.accordionToggle}>
           <Text style={styles.accordionLabel}>Following</Text>
           <View style={styles.countPill}>

@@ -231,18 +231,28 @@ export default function FeedScreen() {
 
   // Fetch clippings + takes from followed Village users whenever the follow list changes
   useEffect(() => {
-    if (villageUserIds.length === 0) {
+    // Include the current user's ID so their own Takes appear in the feed.
+    // Clippings intentionally exclude self — only followed users' clippings show.
+    const takeUserIds = profile?.user_id
+      ? [...new Set([...villageUserIds, profile.user_id])]
+      : villageUserIds
+
+    if (villageUserIds.length === 0 && !profile?.user_id) {
       setVillageClippings([])
       setVillageTakes([])
       return
     }
-    getVillageClippings(villageUserIds)
-      .then(setVillageClippings)
-      .catch(() => {})
-    getVillageTakes(villageUserIds)
-      .then(setVillageTakes)
-      .catch(() => {})
-  }, [villageUserIds])
+    if (villageUserIds.length > 0) {
+      getVillageClippings(villageUserIds)
+        .then(setVillageClippings)
+        .catch(() => {})
+    }
+    if (takeUserIds.length > 0) {
+      getVillageTakes(takeUserIds)
+        .then(setVillageTakes)
+        .catch(() => {})
+    }
+  }, [villageUserIds, profile?.user_id])
 
   // Batch-fetch like/comment data for all takes in the feed
   const refetchSocialData = useCallback(() => {
@@ -263,18 +273,25 @@ export default function FeedScreen() {
   useFocusEffect(useCallback(() => { refetchSocialData() }, [refetchSocialData]))
 
   const refetchVillageContent = useCallback(() => {
-    if (villageUserIds.length === 0) {
+    const takeUserIds = profile?.user_id
+      ? [...new Set([...villageUserIds, profile.user_id])]
+      : villageUserIds
+
+    if (villageUserIds.length > 0) {
+      getVillageClippings(villageUserIds)
+        .then(setVillageClippings)
+        .catch(() => {})
+    } else {
       setVillageClippings([])
-      setVillageTakes([])
-      return
     }
-    getVillageClippings(villageUserIds)
-      .then(setVillageClippings)
-      .catch(() => {})
-    getVillageTakes(villageUserIds)
-      .then(setVillageTakes)
-      .catch(() => {})
-  }, [villageUserIds])
+    if (takeUserIds.length > 0) {
+      getVillageTakes(takeUserIds)
+        .then(setVillageTakes)
+        .catch(() => {})
+    } else {
+      setVillageTakes([])
+    }
+  }, [villageUserIds, profile?.user_id])
 
   const loadFeed = useCallback(async (pageNum: number, append = false, keepContent = false) => {
     if (usernames.length === 0) {
@@ -377,7 +394,7 @@ export default function FeedScreen() {
     headerTranslateY.value = withTiming(0, { duration: 200 })
   }, [layoutKey, translateY, headerTranslateY])
 
-  // Lookup map: Village user_id → display info (built from the followed-users list)
+  // Lookup map: Village user_id → display info (built from followed users + self)
   const villageUserMap = useMemo(() => {
     const map = new Map<string, { displayName: string; avatarUrl: string | undefined; username: string | undefined }>()
     for (const u of villageUsers) {
@@ -387,8 +404,16 @@ export default function FeedScreen() {
         username: u.username ?? undefined,
       })
     }
+    // Add self so own takes render with the correct name/avatar
+    if (profile?.user_id) {
+      map.set(profile.user_id, {
+        displayName: profile.display_name ?? profile.username ?? 'Me',
+        avatarUrl: profile.avatar_url ?? undefined,
+        username: profile.username ?? undefined,
+      })
+    }
     return map
-  }, [villageUsers])
+  }, [villageUsers, profile?.user_id, profile?.display_name, profile?.username, profile?.avatar_url])
 
   // Merge RSS reviews + own clippings + followed Village clippings into one chronological feed
   const feedItems = useMemo((): FeedItem[] => {

@@ -180,8 +180,6 @@ export default function NativeProfileScreen() {
           </Pressable>
         )}
 
-        <View style={styles.divider} />
-
         {/* Takes section */}
         {takes.length > 0 ? (
           <>
