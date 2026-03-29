@@ -83,7 +83,7 @@ export default function FilmCardScreen() {
   const [synopsisExpanded, setSynopsisExpanded] = useState(false)
   const [takes, setTakes] = useState<Take[]>([])
   const [clippings, setClippings] = useState<Clipping[]>([])
-  const [takesExpanded, setTakesExpanded] = useState(false)
+  const [reactionsExpanded, setReactionsExpanded] = useState(false)
   const [posterOpen, setPosterOpen] = useState(false)
   const { width } = useWindowDimensions()
 
@@ -316,41 +316,47 @@ export default function FilmCardScreen() {
         </Pressable>
       </View>
 
-      {/* ---- Takes about this film ---- */}
-      {takes.length > 0 ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Takes</Text>
-          {takes.slice(0, takesExpanded ? 15 : 3).map((take) => (
-            <TakeCard key={take.id} take={take} readOnly />
-          ))}
-          {!takesExpanded && takes.length > 3 ? (
-            <Pressable
-              onPress={() => setTakesExpanded(true)}
-              style={({ pressed }) => [styles.showMoreRow, pressed && styles.actionPressed]}
-            >
-              <Text style={styles.showMoreLabel}>Show more</Text>
-            </Pressable>
-          ) : null}
-          {takesExpanded && takes.length > 15 ? (
-            <Text style={styles.cappedLabel}>Showing 15 of {takes.length} takes</Text>
-          ) : null}
-        </View>
-      ) : null}
+      {/* ---- Village Reactions (takes + clippings, merged chronologically) ---- */}
+      {(() => {
+        const reactions: ({ kind: 'take'; item: Take } | { kind: 'clipping'; item: Clipping })[] = [
+          ...takes.map((item) => ({ kind: 'take' as const, item })),
+          ...clippings.map((item) => ({ kind: 'clipping' as const, item })),
+        ].sort((a, b) => new Date(b.item.created_at).getTime() - new Date(a.item.created_at).getTime())
 
-      {/* ---- Clippings about this film ---- */}
-      {clippings.length > 0 ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Clippings</Text>
-          {clippings.map((clipping) => (
-            <ClippingCard
-              key={clipping.id}
-              clipping={clipping}
-              onDeleted={() => setClippings((prev) => prev.filter((c) => c.id !== clipping.id))}
-              readOnly
-            />
-          ))}
-        </View>
-      ) : null}
+        if (reactions.length === 0) return null
+
+        const visible = reactions.slice(0, reactionsExpanded ? 15 : 3)
+        const total = reactions.length
+
+        return (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>From the Village</Text>
+            {visible.map((r) =>
+              r.kind === 'take' ? (
+                <TakeCard key={r.item.id} take={r.item} readOnly />
+              ) : (
+                <ClippingCard
+                  key={r.item.id}
+                  clipping={r.item}
+                  onDeleted={() => setClippings((prev) => prev.filter((c) => c.id !== r.item.id))}
+                  readOnly
+                />
+              )
+            )}
+            {!reactionsExpanded && total > 3 ? (
+              <Pressable
+                onPress={() => setReactionsExpanded(true)}
+                style={({ pressed }) => [styles.showMoreRow, pressed && styles.actionPressed]}
+              >
+                <Text style={styles.showMoreLabel}>Show more</Text>
+              </Pressable>
+            ) : null}
+            {reactionsExpanded && total > 15 ? (
+              <Text style={styles.cappedLabel}>Showing 15 of {total}</Text>
+            ) : null}
+          </View>
+        )
+      })()}
 
       {/* ---- External links ---- */}
       {movie.imdb_id ? (
