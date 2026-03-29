@@ -26,6 +26,7 @@ import LetterboxdDots from '@/components/ui/LetterboxdDots'
 import TakeCard from '@/components/TakeCard'
 import ClippingCard from '@/components/profile/ClippingCard'
 import { useSavedFilm } from '@/hooks/useSavedFilm'
+import { useTabBarInset } from '@/hooks/useTabBarInset'
 
 type FilmCardRoute = RouteProp<FeedStackParamList, 'FilmCard'>
 
@@ -83,6 +84,7 @@ export default function FilmCardScreen() {
   useEffect(() => () => { isMounted.current = false }, [])
 
   // Watchlist state
+  const tabBarInset = useTabBarInset()
   const saved = useSavedFilm(tmdbId, movieTitle, movie?.poster_path ?? null)
 
   const loadData = useCallback(async () => {
@@ -140,7 +142,7 @@ export default function FilmCardScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: tabBarInset + spacing.lg }]}
     >
       {/* ---- Backdrop ---- */}
       {backdrop ? (
@@ -328,8 +330,6 @@ export default function FilmCardScreen() {
         </Pressable>
       </View>
 
-      {/* Bottom spacing */}
-      <View style={styles.bottomSpacer} />
     </ScrollView>
   )
 }
@@ -352,9 +352,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       justifyContent: 'center',
       alignItems: 'center',
     },
-    content: {
-      paddingBottom: spacing.xxl,
-    },
+    content: {},
 
     // ---- Backdrop ----
     backdropWrapper: {
@@ -529,8 +527,5 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       color: '#fff',
     },
 
-    bottomSpacer: {
-      height: spacing.xl,
-    },
   })
 }
