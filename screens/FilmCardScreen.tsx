@@ -81,6 +81,7 @@ export default function FilmCardScreen() {
   const [synopsisExpanded, setSynopsisExpanded] = useState(false)
   const [takes, setTakes] = useState<Take[]>([])
   const [clippings, setClippings] = useState<Clipping[]>([])
+  const [takesExpanded, setTakesExpanded] = useState(false)
 
   const isMounted = useRef(true)
   useEffect(() => () => { isMounted.current = false }, [])
@@ -313,9 +314,20 @@ export default function FilmCardScreen() {
       {takes.length > 0 ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Takes</Text>
-          {takes.map((take) => (
+          {takes.slice(0, takesExpanded ? 15 : 3).map((take) => (
             <TakeCard key={take.id} take={take} readOnly />
           ))}
+          {!takesExpanded && takes.length > 3 ? (
+            <Pressable
+              onPress={() => setTakesExpanded(true)}
+              style={({ pressed }) => [styles.showMoreRow, pressed && styles.actionPressed]}
+            >
+              <Text style={styles.showMoreLabel}>Show more</Text>
+            </Pressable>
+          ) : null}
+          {takesExpanded && takes.length > 15 ? (
+            <Text style={styles.cappedLabel}>Showing 15 of {takes.length} takes</Text>
+          ) : null}
         </View>
       ) : null}
 
@@ -474,6 +486,22 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       fontSize: typography.magazineBody.fontSize,
       lineHeight: typography.magazineBody.lineHeight,
       color: colors.foreground,
+    },
+    showMoreRow: {
+      paddingVertical: spacing.sm,
+    },
+    showMoreLabel: {
+      fontFamily: fonts.system,
+      fontWeight: '600' as const,
+      fontSize: typography.callout.fontSize,
+      color: colors.teal,
+    },
+    cappedLabel: {
+      fontFamily: fonts.system,
+      fontStyle: 'italic' as const,
+      fontSize: typography.caption.fontSize,
+      color: colors.secondaryText,
+      marginTop: spacing.xs,
     },
     readMore: {
       fontFamily: fonts.system,
