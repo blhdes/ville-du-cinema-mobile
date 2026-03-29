@@ -13,7 +13,7 @@ import SwipeableRow from '@/components/ui/SwipeableRow'
 
 interface ClippingCardProps {
   clipping: Clipping
-  onDeleted: (id: string) => void
+  onDeleted?: (id: string) => void
   /** Optional social header — avatar URL + display name shown above the quote */
   user?: { avatarUrl?: string; displayName: string; userId?: string; username?: string }
   /** Disables swipe-to-delete. Use on read-only views (e.g. another user's profile). */
@@ -37,7 +37,7 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false }: ClippingC
 
   const handleDelete = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
-    onDeleted(clipping.id)
+    onDeleted?.(clipping.id)
     deleteClipping(clipping.id).catch((error) => {
       console.error('Failed to delete clipping:', error)
     })

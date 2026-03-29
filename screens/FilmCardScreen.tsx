@@ -338,7 +338,6 @@ export default function FilmCardScreen() {
                 <ClippingCard
                   key={r.item.id}
                   clipping={r.item}
-                  onDeleted={() => setClippings((prev) => prev.filter((c) => c.id !== r.item.id))}
                   readOnly
                 />
               )
