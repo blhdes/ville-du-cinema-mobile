@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   InteractionManager,
   Linking,
@@ -89,6 +89,30 @@ export default function FilmCardScreen() {
 
   const isMounted = useRef(true)
   useEffect(() => () => { isMounted.current = false }, [])
+
+  const movieRef = useRef(movie)
+  movieRef.current = movie
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <Pressable
+          onPress={() => {
+            const m = movieRef.current
+            navigation.navigate('CreateTake', {
+              tmdbId,
+              movieTitle,
+              posterPath: m?.poster_path ?? null,
+            })
+          }}
+          hitSlop={8}
+          style={{ marginRight: 4 }}
+        >
+          <Ionicons name="create-outline" size={22} color={colors.teal} />
+        </Pressable>
+      ),
+    })
+  }, [navigation, tmdbId, movieTitle, colors.teal])
 
   // Watchlist state
   const tabBarInset = useTabBarInset()
@@ -299,21 +323,6 @@ export default function FilmCardScreen() {
             </Text>
           </Pressable>
         </View>
-      </View>
-
-      {/* ---- Write a Take ---- */}
-      <View style={styles.section}>
-        <Pressable
-          style={({ pressed }) => [styles.actionRow, pressed && styles.actionPressed]}
-          onPress={() => navigation.navigate('CreateTake', {
-            tmdbId: movie.id,
-            movieTitle: movie.title,
-            posterPath: movie.poster_path,
-          })}
-        >
-          <Ionicons name="chatbubble-outline" size={18} color={colors.teal} />
-          <Text style={styles.actionLabel}>Write a Take</Text>
-        </Pressable>
       </View>
 
       {/* ---- Village Reactions (takes + clippings, merged chronologically) ---- */}
