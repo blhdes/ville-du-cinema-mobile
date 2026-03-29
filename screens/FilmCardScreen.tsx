@@ -14,6 +14,7 @@ import { useRoute, type RouteProp, useNavigation, type NavigationProp } from '@r
 import type { FeedStackParamList } from '@/navigation/types'
 import type { TmdbMovieDetail, TmdbCreditPerson, TmdbVideo } from '@/types/tmdb'
 import type { Take, Clipping } from '@/types/database'
+import * as WebBrowser from 'expo-web-browser'
 import { getMovieDetail, posterUrl, backdropUrl } from '@/services/tmdb'
 import { getFilmTakes } from '@/services/takes'
 import { getFilmClippings } from '@/services/clippings'
@@ -162,7 +163,14 @@ export default function FilmCardScreen() {
           </View>
         )}
         <View style={styles.headerText}>
-          <Text style={styles.title}>{movie.title}</Text>
+          <Pressable
+            onPress={() => WebBrowser.openBrowserAsync(
+              `https://www.google.com/search?q=${encodeURIComponent(movie.title + ' film')}`
+            )}
+            style={({ pressed }) => pressed && styles.actionPressed}
+          >
+            <Text style={styles.title}>{movie.title}</Text>
+          </Pressable>
           <Text style={styles.meta}>
             {[year, runtime, formatScore(movie.vote_average)]
               .filter(Boolean)
