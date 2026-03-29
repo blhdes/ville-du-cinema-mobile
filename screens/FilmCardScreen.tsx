@@ -21,8 +21,8 @@ import { getFilmClippings } from '@/services/clippings'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
-import Spinner from '@/components/ui/Spinner'
 import ErrorBanner from '@/components/ui/ErrorBanner'
+import FilmCardSkeleton from '@/components/film/FilmCardSkeleton'
 import LetterboxdDots from '@/components/ui/LetterboxdDots'
 import TakeCard from '@/components/TakeCard'
 import ClippingCard from '@/components/profile/ClippingCard'
@@ -123,11 +123,7 @@ export default function FilmCardScreen() {
 
   // -- Loading state --
   if (isLoading) {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <Spinner size={24} />
-      </View>
-    )
+    return <FilmCardSkeleton />
   }
 
   // -- Error state --
