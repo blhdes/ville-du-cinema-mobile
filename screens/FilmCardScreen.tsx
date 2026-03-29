@@ -220,10 +220,16 @@ export default function FilmCardScreen() {
           <Text style={styles.sectionTitle}>Cast</Text>
           <View style={styles.castGrid}>
             {topCast.map((person) => (
-              <View key={person.id} style={styles.castItem}>
+              <Pressable
+                key={person.id}
+                style={({ pressed }) => [styles.castItem, pressed && styles.actionPressed]}
+                onPress={() => WebBrowser.openBrowserAsync(
+                  `https://www.google.com/search?q=${encodeURIComponent(person.name + ' actor')}`
+                )}
+              >
                 <Text style={styles.castName} numberOfLines={1}>{person.name}</Text>
                 <Text style={styles.castRole} numberOfLines={1}>{person.character}</Text>
-              </View>
+              </Pressable>
             ))}
           </View>
         </View>
