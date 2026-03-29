@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useTabBarInset } from '@/hooks/useTabBarInset'
 import { useUser } from '@/hooks/useUser'
 import { useGuestMode } from '@/contexts/GuestModeContext'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
@@ -12,6 +13,7 @@ import SettingsSkeleton from '@/components/settings/SettingsSkeleton'
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets()
+  const tabBarInset = useTabBarInset()
   const { user, isLoading: isAuthLoading, signOut } = useUser()
   const { isGuest, exitGuestMode } = useGuestMode()
   const { colors } = useTheme()
@@ -35,8 +37,8 @@ export default function SettingsScreen() {
   }, [user, isGuest, signOut, exitGuestMode])
 
   const scrollContentStyle = useMemo(
-    () => [styles.content, { paddingBottom: insets.bottom + 49 + 20 }],
-    [styles, insets.bottom],
+    () => [styles.content, { paddingBottom: tabBarInset + 20 }],
+    [styles, tabBarInset],
   )
 
   return (

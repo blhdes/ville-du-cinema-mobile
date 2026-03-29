@@ -11,7 +11,7 @@ import * as Haptics from 'expo-haptics'
 import { Image } from 'expo-image'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useTabBarInset } from '@/hooks/useTabBarInset'
 import { DISCOVERY_USERS } from '@/constants/discoveryUsers'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
@@ -147,8 +147,8 @@ export default function UserListPanel({
   onRemoveVillageUser,
 }: UserListPanelProps) {
   const navigation = useNavigation<NativeStackNavigationProp<FeedStackParamList>>()
-  const insets = useSafeAreaInsets()
-  const bottomPadding = insets.bottom + 49 + 20
+  const tabBarInset = useTabBarInset()
+  const bottomPadding = tabBarInset + 20
   const { colors } = useTheme()
   const typography = useTypography()
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])

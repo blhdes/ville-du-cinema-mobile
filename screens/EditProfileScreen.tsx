@@ -10,7 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useTabBarInset } from '@/hooks/useTabBarInset'
 import { useNavigation } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
@@ -29,7 +29,7 @@ const USERNAME_MIN_LENGTH = 4
 type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'short'
 
 export default function EditProfileScreen() {
-  const insets = useSafeAreaInsets()
+  const tabBarInset = useTabBarInset()
   const navigation = useNavigation()
   const { colors } = useTheme()
   const typography = useTypography()
@@ -190,7 +190,7 @@ export default function EditProfileScreen() {
   }, [navigation, isSaving, isSaveDisabled, handleSave])
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+    <View style={[styles.container, { paddingBottom: tabBarInset }]}>
       {error ? <ErrorBanner message={error} /> : null}
 
       <KeyboardAvoidingView

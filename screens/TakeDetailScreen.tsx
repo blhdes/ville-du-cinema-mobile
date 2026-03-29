@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import {
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   LayoutAnimation,
@@ -12,11 +13,11 @@ import {
 } from 'react-native'
 import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRoute, type RouteProp, useNavigation, type NavigationProp } from '@react-navigation/native'
 import type { FeedStackParamList } from '@/navigation/types'
 import type { TakeCommentWithAuthor, Take } from '@/types/database'
 import { getTakeById } from '@/services/takes'
+import { useTabBarInset } from '@/hooks/useTabBarInset'
 import { useLike } from '@/hooks/useLike'
 import { useComments } from '@/hooks/useComments'
 import { useUser } from '@/hooks/useUser'
@@ -35,7 +36,7 @@ export default function TakeDetailScreen() {
   const { params } = useRoute<TakeDetailRoute>()
   const { takeId, author } = params
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
-  const insets = useSafeAreaInsets()
+  const tabBarInset = useTabBarInset()
   const { user } = useUser()
   const { colors } = useTheme()
   const typography = useTypography()
@@ -71,6 +72,9 @@ export default function TakeDetailScreen() {
       await addComment(commentText.trim())
       setCommentText('')
       inputRef.current?.blur()
+    } catch (error) {
+      console.error('Comment post failed:', error)
+      Alert.alert('Error', 'Failed to post comment. Please try again.')
     } finally {
       setIsPosting(false)
     }
@@ -232,19 +236,17 @@ export default function TakeDetailScreen() {
       keyboardVerticalOffset={100}
     >
       <FlatList
+        style={styles.list}
         data={commentsLoading ? [] : comments}
         keyExtractor={(item) => item.comment.id}
         renderItem={renderComment}
         ListHeaderComponent={listHeader}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: 80 + insets.bottom },
-        ]}
+        contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />
 
       {/* Sticky comment input bar */}
-      <View style={[styles.inputBar, { paddingBottom: insets.bottom + spacing.sm }]}>
+      <View style={[styles.inputBar, { paddingBottom: tabBarInset + spacing.sm }]}>
         <TextInput
           ref={inputRef}
           style={styles.input}
@@ -288,6 +290,9 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
     container: {
       flex: 1,
       backgroundColor: colors.background,
+    },
+    list: {
+      flex: 1,
     },
     listContent: {
       paddingTop: spacing.sm,

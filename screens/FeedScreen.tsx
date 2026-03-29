@@ -16,7 +16,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
+import { useTabBarInset } from '@/hooks/useTabBarInset'
 import { useNavigation, useFocusEffect, DrawerActions } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Ionicons } from '@expo/vector-icons'
@@ -69,8 +69,7 @@ const keyExtractor = (item: FeedItem): string => {
 
 export default function FeedScreen() {
   const insets = useSafeAreaInsets()
-  const tabBarHeight = useBottomTabBarHeight()
-  const tabBarMax = tabBarHeight + insets.bottom
+  const tabBarInset = useTabBarInset()
   const navigation = useNavigation<NativeStackNavigationProp<FeedStackParamList>>()
   const { usernames, villageUsers, villageUserIds, isLoading: isListLoading, error: listError, clearError } = useUserLists()
   const { preferences } = useDisplayPreferences()
@@ -125,7 +124,7 @@ export default function FeedScreen() {
 
     if (lastScrollDirection.value > 0) {
       // Was scrolling DOWN → snap fully hidden.
-      translateY.value = withSpring(tabBarMax, SNAP_SPRING)
+      translateY.value = withSpring(tabBarInset, SNAP_SPRING)
       headerTranslateY.value = withSpring(-headerHeight, SNAP_SPRING)
     } else {
       // Was scrolling UP → only lock visible if the user scrolled hard enough
@@ -134,7 +133,7 @@ export default function FeedScreen() {
         translateY.value = withSpring(0, SNAP_SPRING)
         headerTranslateY.value = withSpring(0, SNAP_SPRING)
       } else {
-        translateY.value = withSpring(tabBarMax, SNAP_SPRING)
+        translateY.value = withSpring(tabBarInset, SNAP_SPRING)
         headerTranslateY.value = withSpring(-headerHeight, SNAP_SPRING)
       }
     }
@@ -179,7 +178,7 @@ export default function FeedScreen() {
           Math.min(0, headerTranslateY.value - delta),
         )
         translateY.value = Math.min(
-          tabBarMax,
+          tabBarInset,
           Math.max(0, translateY.value + delta),
         )
       } else if (delta < 0) {
@@ -190,7 +189,7 @@ export default function FeedScreen() {
           Math.min(0, headerTranslateY.value - delta),
         )
         translateY.value = Math.min(
-          tabBarMax,
+          tabBarInset,
           Math.max(0, translateY.value + delta),
         )
       }
@@ -246,7 +245,7 @@ export default function FeedScreen() {
   }, [villageUserIds])
 
   // Batch-fetch like/comment data for all takes in the feed
-  useEffect(() => {
+  const refetchSocialData = useCallback(() => {
     const takeIds = villageTakes.map((t) => t.id)
     if (takeIds.length === 0) {
       setTakeLikesMap(new Map())
@@ -256,6 +255,12 @@ export default function FeedScreen() {
     getBatchLikeStatus(takeIds).then(setTakeLikesMap).catch(() => {})
     getBatchCommentCounts(takeIds).then(setTakeCommentCounts).catch(() => {})
   }, [villageTakes])
+
+  // Initial fetch when takes change
+  useEffect(() => { refetchSocialData() }, [refetchSocialData])
+
+  // Re-fetch likes & comment counts when returning from TakeDetail
+  useFocusEffect(useCallback(() => { refetchSocialData() }, [refetchSocialData]))
 
   const refetchVillageContent = useCallback(() => {
     if (villageUserIds.length === 0) {
@@ -591,9 +596,9 @@ export default function FeedScreen() {
   const listContentStyle = useMemo(
     () => [
       !hasItems && !isInitialLoad ? styles.emptyList : styles.list,
-      { paddingTop: headerHeight + spacing.md, paddingBottom: tabBarHeight + 20 },
+      { paddingTop: headerHeight + spacing.md, paddingBottom: tabBarInset + 20 },
     ],
-    [hasItems, isInitialLoad, styles, headerHeight, tabBarHeight],
+    [hasItems, isInitialLoad, styles, headerHeight, tabBarInset],
   )
 
   return (

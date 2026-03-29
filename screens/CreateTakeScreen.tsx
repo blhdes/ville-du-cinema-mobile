@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native'
 import { Image } from 'expo-image'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useTabBarInset } from '@/hooks/useTabBarInset'
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
@@ -28,7 +28,7 @@ type CreateTakeRoute = RouteProp<FeedStackParamList, 'CreateTake'>
 const MAX_LENGTH = 280
 
 export default function CreateTakeScreen() {
-  const insets = useSafeAreaInsets()
+  const tabBarInset = useTabBarInset()
   const navigation = useNavigation()
   const route = useRoute<CreateTakeRoute>()
   const { colors } = useTheme()
@@ -70,7 +70,7 @@ export default function CreateTakeScreen() {
       ),
       headerRight: () => (
         <Pressable
-          onPress={handlePost}
+          onPress={() => handlePostRef.current()}
           disabled={isPostDisabled}
           hitSlop={8}
         >
@@ -80,7 +80,7 @@ export default function CreateTakeScreen() {
         </Pressable>
       ),
     })
-  }, [navigation, isPostDisabled, styles]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [navigation, isPostDisabled, styles])
 
   // Debounced film search
   useEffect(() => {
@@ -142,6 +142,10 @@ export default function CreateTakeScreen() {
     }
   }, [isPostDisabled, selectedFilm, content, navigation])
 
+  // Ref always points to the latest handlePost — avoids stale closure in the header button.
+  const handlePostRef = useRef(handlePost)
+  handlePostRef.current = handlePost
+
   const renderSearchResult = useCallback(({ item }: { item: TmdbSearchResult }) => {
     const poster = posterUrl(item.poster_path, 'w154')
     const year = item.release_date?.slice(0, 4) ?? ''
@@ -171,7 +175,7 @@ export default function CreateTakeScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={100}
     >
-      <View style={[styles.inner, { paddingBottom: insets.bottom + spacing.md }]}>
+      <View style={[styles.inner, { paddingBottom: tabBarInset + spacing.md }]}>
         {/* Film selector */}
         {selectedFilm ? (
           <View style={styles.selectedFilm}>

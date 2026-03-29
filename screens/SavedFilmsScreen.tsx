@@ -9,7 +9,7 @@ import {
 } from 'react-native'
 import { Image } from 'expo-image'
 import { useNavigation, useRoute, type NavigationProp, type RouteProp } from '@react-navigation/native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useTabBarInset } from '@/hooks/useTabBarInset'
 import type { SavedFilm } from '@/types/database'
 import type { ProfileStackParamList } from '@/navigation/types'
 import { getUserSavedFilms } from '@/services/savedFilms'
@@ -24,7 +24,7 @@ type Filter = 'all' | 'want' | 'seen'
 export default function SavedFilmsScreen() {
   const navigation = useNavigation<NavigationProp<ProfileStackParamList>>()
   const route = useRoute<RouteProp<ProfileStackParamList, 'SavedFilms'>>()
-  const insets = useSafeAreaInsets()
+  const tabBarInset = useTabBarInset()
   const { colors } = useTheme()
   const typography = useTypography()
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
@@ -107,7 +107,7 @@ export default function SavedFilmsScreen() {
         renderItem={renderFilm}
         numColumns={3}
         columnWrapperStyle={styles.gridRow}
-        contentContainerStyle={{ paddingBottom: 100 + insets.bottom, paddingHorizontal: 20 }}
+        contentContainerStyle={{ paddingBottom: tabBarInset + 20, paddingHorizontal: 20 }}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.center}>

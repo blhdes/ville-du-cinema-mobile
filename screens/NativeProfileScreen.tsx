@@ -8,8 +8,7 @@ import {
   View,
 } from 'react-native'
 import { useRoute, type RouteProp } from '@react-navigation/native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
+import { useTabBarInset } from '@/hooks/useTabBarInset'
 import * as Haptics from 'expo-haptics'
 import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
@@ -42,8 +41,7 @@ const NOOP = (_id: string) => {}
 export default function NativeProfileScreen() {
   const route = useRoute<RouteProp<FeedStackParamList, 'NativeProfile'>>()
   const { userId } = route.params
-  const insets = useSafeAreaInsets()
-  const tabBarHeight = useBottomTabBarHeight()
+  const tabBarInset = useTabBarInset()
   const { colors } = useTheme()
   const typography = useTypography()
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
@@ -247,7 +245,7 @@ export default function NativeProfileScreen() {
           initialNumToRender={6}
           maxToRenderPerBatch={4}
           windowSize={9}
-          contentContainerStyle={{ paddingBottom: tabBarHeight + insets.bottom + 20 }}
+          contentContainerStyle={{ paddingBottom: tabBarInset + 20 }}
           showsVerticalScrollIndicator={false}
         />
       )}

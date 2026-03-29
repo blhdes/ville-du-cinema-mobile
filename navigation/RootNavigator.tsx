@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native'
+import {
+  NavigationContainer,
+  DefaultTheme,
+  DarkTheme,
+  type NavigationState,
+} from '@react-navigation/native'
 import * as SplashScreen from 'expo-splash-screen'
 import { useUser } from '@/hooks/useUser'
 import { useGuestMode } from '@/contexts/GuestModeContext'
@@ -61,6 +66,26 @@ export default function RootNavigator() {
     }
   }, [])
 
+  // ---------------------------------------------------------------------------
+  // Navigation logger — logs the active screen on every navigation change.
+  // Useful for on-device debugging via Xcode console or `npx react-native log-ios`.
+  // ---------------------------------------------------------------------------
+  const getActiveScreen = useCallback((state: NavigationState | undefined): string => {
+    if (!state) return 'Unknown'
+    const route = state.routes[state.index]
+    // Recurse into nested navigators (tabs → stack → screen)
+    if (route.state) return getActiveScreen(route.state as NavigationState)
+    return route.name
+  }, [])
+
+  const onNavStateChange = useCallback(
+    (state: NavigationState | undefined) => {
+      const screen = getActiveScreen(state)
+      console.log(`[NAV] 📍 ${screen}`)
+    },
+    [getActiveScreen],
+  )
+
   if (isAuthLoading || isGuestLoading) {
     return (
       <View style={[styles.loading, { backgroundColor: colors.background }]} />
@@ -79,7 +104,7 @@ export default function RootNavigator() {
   const needsSetup = user && !isGuest && !profile?.username
 
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer theme={navTheme} onStateChange={onNavStateChange}>
       {needsSetup ? (
         <View style={styles.authWrapper} onLayout={onSetupLayout}>
           <ProfileSetupScreen />

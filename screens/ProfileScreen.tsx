@@ -11,7 +11,7 @@ import {
 } from 'react-native'
 import { useFocusEffect } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
+import { useTabBarInset } from '@/hooks/useTabBarInset'
 import { Ionicons } from '@expo/vector-icons'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import { useUser } from '@/hooks/useUser'
@@ -45,7 +45,7 @@ const HORIZONTAL_PAD = 20
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets()
-  const tabBarHeight = useBottomTabBarHeight()
+  const tabBarInset = useTabBarInset()
   const { user } = useUser()
   const { profile, isLoading, error } = useProfile()
   const { users: followedUsers, villageUsers } = useUserLists()
@@ -277,7 +277,7 @@ export default function ProfileScreen() {
           initialNumToRender={6}
           maxToRenderPerBatch={4}
           windowSize={9}
-          contentContainerStyle={{ paddingBottom: tabBarHeight + insets.bottom + 20 }}
+          contentContainerStyle={{ paddingBottom: tabBarInset + 20 }}
           showsVerticalScrollIndicator={false}
         />
       )}

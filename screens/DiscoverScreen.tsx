@@ -12,6 +12,7 @@ import {
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useTabBarInset } from '@/hooks/useTabBarInset'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import type { TmdbSearchResult } from '@/types/tmdb'
 import type { DiscoverStackParamList } from '@/navigation/types'
@@ -32,6 +33,7 @@ const SEARCH_DEBOUNCE = 350
 export default function DiscoverScreen() {
   const navigation = useNavigation<NavigationProp<DiscoverStackParamList>>()
   const insets = useSafeAreaInsets()
+  const tabBarInset = useTabBarInset()
   const { colors } = useTheme()
   const typography = useTypography()
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
@@ -141,7 +143,7 @@ export default function DiscoverScreen() {
     return (
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 + insets.bottom }}
+        contentContainerStyle={{ paddingBottom: tabBarInset + 20 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -219,7 +221,7 @@ export default function DiscoverScreen() {
           data={searchResults}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderSearchResult}
-          contentContainerStyle={{ paddingBottom: 100 + insets.bottom }}
+          contentContainerStyle={{ paddingBottom: tabBarInset + 20 }}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
             isSearching ? (
