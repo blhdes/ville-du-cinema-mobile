@@ -2,11 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   InteractionManager,
   Linking,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native'
 import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
@@ -82,6 +84,8 @@ export default function FilmCardScreen() {
   const [takes, setTakes] = useState<Take[]>([])
   const [clippings, setClippings] = useState<Clipping[]>([])
   const [takesExpanded, setTakesExpanded] = useState(false)
+  const [posterOpen, setPosterOpen] = useState(false)
+  const { width } = useWindowDimensions()
 
   const isMounted = useRef(true)
   useEffect(() => () => { isMounted.current = false }, [])
@@ -158,7 +162,9 @@ export default function FilmCardScreen() {
       {/* ---- Poster + Title block ---- */}
       <View style={[styles.headerRow, !backdrop && styles.headerRowNoBd]}>
         {poster ? (
-          <Image source={poster} style={styles.poster} cachePolicy="memory-disk" />
+          <Pressable onPress={() => setPosterOpen(true)}>
+            <Image source={poster} style={styles.poster} cachePolicy="memory-disk" />
+          </Pressable>
         ) : (
           <View style={[styles.poster, styles.posterPlaceholder]}>
             <Ionicons name="film-outline" size={32} color={colors.secondaryText} />
@@ -369,6 +375,23 @@ export default function FilmCardScreen() {
       </View>
 
     </ScrollView>
+
+    {poster ? (
+      <Modal
+        visible={posterOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPosterOpen(false)}
+      >
+        <Pressable style={styles.posterOverlay} onPress={() => setPosterOpen(false)}>
+          <Image
+            source={posterUrl(movie.poster_path, 'w500')}
+            style={{ width: width * 0.75, height: width * 0.75 * 1.5, borderRadius: 10 }}
+            cachePolicy="memory-disk"
+          />
+        </Pressable>
+      </Modal>
+    ) : null}
   )
 }
 
@@ -495,6 +518,12 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       fontWeight: '600' as const,
       fontSize: typography.callout.fontSize,
       color: colors.teal,
+    },
+    posterOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.88)',
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     cappedLabel: {
       fontFamily: fonts.system,
