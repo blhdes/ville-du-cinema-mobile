@@ -51,11 +51,9 @@ export default function FilmCardSkeleton() {
           </View>
         </View>
 
-        {/* ---- Genre chips ---- */}
+        {/* ---- Genre labels ---- */}
         <View style={styles.genreRow}>
-          <View style={[styles.chip, { width: 72, backgroundColor: b }]} />
-          <View style={[styles.chip, { width: 56, backgroundColor: b }]} />
-          <View style={[styles.chip, { width: 88, backgroundColor: b }]} />
+          <View style={[styles.bone, { width: 200, height: 11, borderRadius: 3, backgroundColor: b }]} />
         </View>
 
         {/* ---- Synopsis ---- */}
@@ -131,14 +129,8 @@ const styles = StyleSheet.create({
     paddingTop: 44,
   },
   genreRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
     paddingHorizontal: HORIZONTAL_PAD,
-    marginTop: spacing.lg,
-  },
-  chip: {
-    height: 26,
-    borderRadius: 14,
+    marginTop: spacing.md,
   },
   section: {
     paddingHorizontal: HORIZONTAL_PAD,

@@ -3,7 +3,6 @@ import {
   InteractionManager,
   Linking,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,7 +14,7 @@ import { useRoute, type RouteProp, useNavigation, type NavigationProp } from '@r
 import type { FeedStackParamList } from '@/navigation/types'
 import type { TmdbMovieDetail, TmdbCreditPerson, TmdbVideo } from '@/types/tmdb'
 import type { Take, Clipping } from '@/types/database'
-import { getMovieDetail, posterUrl, backdropUrl, clearTmdbCache } from '@/services/tmdb'
+import { getMovieDetail, posterUrl, backdropUrl } from '@/services/tmdb'
 import { getFilmTakes } from '@/services/takes'
 import { getFilmClippings } from '@/services/clippings'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -76,7 +75,6 @@ export default function FilmCardScreen() {
   const [movie, setMovie] = useState<TmdbMovieDetail | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [refreshing, setRefreshing] = useState(false)
   const [synopsisExpanded, setSynopsisExpanded] = useState(false)
   const [takes, setTakes] = useState<Take[]>([])
   const [clippings, setClippings] = useState<Clipping[]>([])
@@ -114,13 +112,6 @@ export default function FilmCardScreen() {
     return () => task.cancel()
   }, [loadData])
 
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true)
-    clearTmdbCache()
-    await loadData()
-    setRefreshing(false)
-  }, [loadData])
-
   // -- Loading state --
   if (isLoading) {
     return <FilmCardSkeleton />
@@ -150,13 +141,6 @@ export default function FilmCardScreen() {
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          tintColor={colors.secondaryText}
-        />
-      }
     >
       {/* ---- Backdrop ---- */}
       {backdrop ? (
@@ -193,10 +177,10 @@ export default function FilmCardScreen() {
       {/* ---- Genre tags ---- */}
       {movie.genres.length > 0 ? (
         <View style={styles.genreRow}>
-          {movie.genres.map((g) => (
-            <View key={g.id} style={styles.genreChip}>
-              <Text style={styles.genreLabel}>{g.name}</Text>
-            </View>
+          {movie.genres.map((g, i) => (
+            <Text key={g.id} style={styles.genreLabel}>
+              {g.name}{i < movie.genres.length - 1 ? '  ·  ' : ''}
+            </Text>
           ))}
         </View>
       ) : null}
@@ -438,19 +422,12 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
     genreRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: spacing.sm,
       paddingHorizontal: HORIZONTAL_PAD,
-      marginTop: spacing.lg,
-    },
-    genreChip: {
-      paddingHorizontal: spacing.sm + 2,
-      paddingVertical: spacing.xs,
-      borderRadius: 14,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.border,
+      marginTop: spacing.md,
     },
     genreLabel: {
       fontFamily: fonts.system,
+      fontWeight: '700' as const,
       fontSize: typography.caption.fontSize,
       lineHeight: typography.caption.lineHeight,
       color: colors.secondaryText,
