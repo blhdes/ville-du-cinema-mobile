@@ -18,6 +18,7 @@ import { useUserLists } from '@/hooks/useUserLists'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
+import { useTabBarInset } from '@/hooks/useTabBarInset'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import Spinner from '@/components/ui/Spinner'
 import ExternalProfileHeader from '@/components/profile/ExternalProfileHeader'
@@ -38,6 +39,7 @@ export default function ExternalProfileScreen() {
   const isFollowing = usernames.includes(username)
   const { colors } = useTheme()
   const typography = useTypography()
+  const tabBarInset = useTabBarInset()
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
   const [reviews, setReviews] = useState<Review[]>([])
@@ -172,9 +174,10 @@ export default function ExternalProfileScreen() {
             tintColor="transparent"
           />
         }
-        contentContainerStyle={
-          filteredReviews.length === 0 ? styles.emptyList : styles.list
-        }
+        contentContainerStyle={[
+          filteredReviews.length === 0 ? styles.emptyList : styles.list,
+          { paddingBottom: tabBarInset + spacing.lg },
+        ]}
       />
     </View>
   )
@@ -190,12 +193,9 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       alignItems: 'center',
       paddingVertical: spacing.md,
     },
-    list: {
-      paddingBottom: 100,
-    },
+    list: {},
     emptyList: {
       flexGrow: 1,
-      paddingBottom: 100,
     },
     emptyContainer: {
       alignItems: 'center',
