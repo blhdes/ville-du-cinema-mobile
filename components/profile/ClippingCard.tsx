@@ -177,8 +177,8 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
     },
     quote: {
       fontFamily: fonts.body,
-      fontSize: typography.title3.fontSize,
-      lineHeight: typography.title3.lineHeight,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
       color: colors.foreground,
     },
 
@@ -189,8 +189,8 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
     },
     movieTitle: {
       fontFamily: fonts.heading,
-      fontSize: typography.callout.fontSize,
-      lineHeight: typography.callout.lineHeight,
+      fontSize: typography.magazineTitle.fontSize,
+      lineHeight: typography.magazineTitle.lineHeight,
       color: colors.foreground,
     },
     authorMeta: {
