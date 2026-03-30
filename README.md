@@ -1,91 +1,59 @@
-# Village du Cinéma
+# Village du Cinema
 
 **A social app for cinema lovers, built with React Native.**
 
-Village is a social cinema layer — a place where film lovers build their own voice, share thoughts about movies, and connect with others who care about film as culture. It aggregates Letterboxd criticism through sanctioned RSS feeds, and extends it with a native social layer powered by TMDB and Supabase.
-
----
-
-## Branch: `feature/tos-compliant-rebuild`
-
-This branch represents a full rethinking of Village's identity, prompted by a Letterboxd Terms of Service audit (see `docs/letterboxd-compliance-audit.md`).
-
-### What changed
-
-**Removed — HTML scraping (ToS violation)**
-All data previously extracted from Letterboxd HTML pages has been removed:
-- `services/externalProfile.ts` — bio, location, favorite films, display name from `<title>`
-- `services/avatarCache.ts` — scraped avatar persistence layer
-- Avatar scraping from `services/feed.ts` and all call sites
-- Letterboxd user avatars now fall back to initials placeholders throughout
-
-**What remains compliant**
-- RSS feeds (`letterboxd.com/{user}/rss/`) — explicitly sanctioned by Letterboxd
-- Display names via `dc:creator` field in RSS items
-- "View on Letterboxd" deep links for anything Village can't show natively
-
-**Added — Profile metadata fields**
-Village users can now add to their own profiles (user-entered, never scraped):
-- Location, Website, X / Twitter, Letterboxd username
-- Displayed on `ProfileScreen` and `NativeProfileScreen` with tappable links
-- Configurable via `EditProfileScreen`
-- Supabase migration: `supabase/migrations/20260323_add_profile_metadata_fields.sql`
-
-### Direction
-
-Village is no longer a Letterboxd companion. It's building its own identity:
-
-- **RSS stays** — Letterboxd reviews are the editorial backbone and remain 100% legal
-- **TMDB becomes the movie data layer** — posters, cast, trailers, recommendations, trending
-- **Village profiles become native** — users build their own identity here, not a mirror of Letterboxd
-- **A social layer is being built** — Takes (short posts about films), Likes, Comments, Watchlist, Favorite Films, Discovery
-
-See `docs/village-social-layer.md` for the full roadmap.
+Village is a social cinema layer where film lovers build their own voice, share thoughts about movies, and connect with others who care about film as culture. It aggregates Letterboxd criticism through sanctioned RSS feeds, and extends it with a native social layer powered by TMDB and Supabase.
 
 ---
 
 ## Features
 
 ### Feed
-- **Letterboxd RSS integration** — follow any Letterboxd user by username and see their reviews, ratings, and watch activity in a unified timeline
-- **Merged social feed** — Letterboxd reviews, saved quotes, and reposts from followed Village members appear in one chronological stream
+- **Merged social feed** — Letterboxd reviews, Takes (short posts), Clippings (saved quotes), and Reposts from followed members in one chronological stream
+- **Letterboxd RSS integration** — follow any Letterboxd user by username
 - **Drawer filter** — swipe or tap to filter the feed by specific users
-- **Pull-to-refresh** with animated spinner and skeleton loading states
+- **Pull-to-refresh** with skeleton loading states
+
+### Film Cards (TMDB)
+- **Rich film detail pages** — poster (expandable), backdrop, genres, synopsis, cast, trailer
+- **Tappable credits** — tap title, director, or cast names to search in in-app browser
+- **External links** — IMDb and Letterboxd badge links inline with genres
+- **Village Reactions** — Takes and Clippings about a film, merged chronologically (3 default, show more up to 15)
+- **Watchlist** — "Want to watch" / "Seen it" with optimistic toggle
+- **Write a Take** — compose button in the nav header
 
 ### Social
-- **Village profiles** — create an account with avatar, display name, bio, location, website, X, and Letterboxd link
-- **Dual follow system** — follow Letterboxd users (via RSS) and native Village members
-- **User search** — find Village members by name or look up any Letterboxd username
+- **Takes** — short-form posts (280 chars) anchored to a TMDB film, with likes and comments
+- **Village profiles** — avatar, display name, bio, location, website, X, Letterboxd link
+- **Dual follow system** — follow Letterboxd users (RSS) and native Village members
+- **User search** — find Village members or look up any Letterboxd username
 - **Repost reviews** — share a Letterboxd review to your Village feed with one swipe
-- **External profiles** — tap any Letterboxd username to see their RSS feed and a link to their full Letterboxd profile
+- **Favorite Films** — pin up to 4 films on your profile (poster grid, TMDB-powered)
+- **Saved Films** — personal watchlist with "want" / "seen" filters
+
+### Discovery
+- **Trending This Week** — horizontal poster carousel from TMDB
+- **In Your Network** — films your followed users are talking about
+- **Film search** — search TMDB with poster thumbnails in results
 
 ### Reading & Sharing
-- **Immersive Review Reader** — full-screen reading experience with editorial typography
-- **Long-press to clip** — press and hold a passage in any review to save it as a quote clipping
-- **Quote export** — generate shareable 9:16 story cards with film metadata, styled for Instagram/social
+- **Immersive Review Reader** — full-screen editorial reading experience
+- **Long-press to clip** — save a passage from any review as a quote clipping
+- **Quote export** — generate shareable 9:16 story cards with film metadata
 - **Clippings scrapbook** — all saved quotes live in your profile tab
 
 ### Design
-- **Editorial typography** — EB Garamond body text paired with Playfair Display headings, inspired by Cahiers du Cinéma
-- **Dynamic font scaling** — adjustable text size across the entire app
+- **Editorial typography** — EB Garamond body text paired with Playfair Display headings
+- **Dynamic font scaling** — adjustable text size across the entire app (unified scaling via `useTypography`)
 - **Dark mode** — full light/dark theme with system-aware switching
-- **60 FPS animations** — gesture-driven tab bar hide/show, spring-based transitions, and native stack navigation via Reanimated
+- **Skeleton loading** — layout-accurate pulsing skeletons for profiles and film cards
+- **60 FPS animations** — gesture-driven tab bar hide/show, spring-based transitions
 
 ### Auth & Access
-- **Google OAuth** — one-tap sign in with branded button and automatic avatar import
+- **Google OAuth** — one-tap sign in with branded button
 - **Email/password** — traditional auth with validation
-- **Guest mode** — full browse and follow experience without creating an account, persisted to local storage
-- **Profile setup flow** — guided onboarding after sign-up with avatar picker and validation
-
----
-
-## Roadmap (in `docs/`)
-
-| Doc | Description |
-|---|---|
-| `letterboxd-compliance-audit.md` | Full ToS audit — what's legal, what was removed, and why |
-| `village-social-layer.md` | Vision for Takes, Film Cards (TMDB), Likes, Comments, Discovery tab |
-| `profile-metadata-fields.md` | Implementation spec for user-entered profile metadata (✅ done) |
+- **Guest mode** — full browse and follow experience without an account
+- **Profile setup flow** — guided onboarding after sign-up
 
 ---
 
@@ -96,7 +64,7 @@ See `docs/village-social-layer.md` for the full roadmap.
 | Framework | React Native 0.83 / Expo SDK 55 |
 | Language | TypeScript 5.9 (strict) |
 | Backend | Supabase (Auth, Database, Storage) |
-| Movie data | TMDB API (planned) |
+| Movie data | TMDB API |
 | Navigation | React Navigation 7 (native-stack, bottom-tabs, drawer) |
 | Animations | React Native Reanimated 4 |
 | Gestures | React Native Gesture Handler |
@@ -110,34 +78,53 @@ See `docs/village-social-layer.md` for the full roadmap.
 
 ```
 village/
-├── screens/                    # 13 screens
+├── screens/                    # 19 screens
 │   ├── FeedScreen              # Main timeline with scroll-driven header/tab bar
+│   ├── DiscoverScreen          # Trending, network films, TMDB search
+│   ├── FilmCardScreen          # TMDB film detail with takes, clippings, watchlist
+│   ├── CreateTakeScreen        # Compose a Take anchored to a film
+│   ├── TakeDetailScreen        # Take thread with comments
 │   ├── ReviewReaderScreen      # Immersive full-screen review reading
 │   ├── QuotePreviewScreen      # Quote export with shareable card generation
 │   ├── UserSearchScreen        # Dual search: Village members + Letterboxd users
-│   ├── ExternalProfileScreen   # Letterboxd user profile via RSS + deep link
+│   ├── ExternalProfileScreen   # Letterboxd user profile via RSS
 │   ├── NativeProfileScreen     # Village member public profile
-│   ├── ProfileScreen           # Own profile with clippings scrapbook
+│   ├── ProfileScreen           # Own profile with clippings, takes, compose FAB
 │   ├── EditProfileScreen       # Avatar, display name, bio, location, website, socials
-│   ├── ProfileSetupScreen      # Post-signup onboarding flow
+│   ├── SavedFilmsScreen        # Personal watchlist (want/seen)
+│   ├── FavoriteFilmPickerScreen# Search and pin top-4 favorite films
 │   ├── SettingsScreen          # Theme, font scaling, display preferences
-│   ├── WelcomeScreen           # Landing page with animated logo and filmmaker quote
-│   ├── LoginScreen             # Email + Google OAuth sign in
+│   ├── ProfileSetupScreen      # Post-signup onboarding
+│   ├── WelcomeScreen           # Landing page
+│   ├── LoginScreen             # Email + Google OAuth
 │   └── SignupScreen            # Account creation
 ├── components/
-│   ├── ui/                     # Primitives (Spinner, SwipeableRow, FollowButton, etc.)
-│   ├── feed/                   # FeedEmptyState, RepostCard, DrawerTrigger, skeletons
-│   ├── profile/                # ClippingCard, ProfileHeader, ExternalProfileHeader, FollowingList
+│   ├── ui/                     # Primitives (Spinner, SwipeableRow, ExpandableAvatar, ImdbBadge, etc.)
+│   ├── feed/                   # RepostCard, DrawerTrigger, skeletons
+│   ├── film/                   # FilmCardSkeleton
+│   ├── discover/               # TrendingPosterCard, NetworkFilmRow
+│   ├── profile/                # ClippingCard, ProfileHeader, FavoriteFilmsGrid, FollowingList
 │   └── quote/                  # ExportCanvas (9:16 story card renderer)
 ├── contexts/                   # 7 providers (Auth, Theme, GuestMode, TabBar, Profile, etc.)
-├── hooks/                      # 7 custom hooks (useUser, useClippings, useTypography, etc.)
+├── hooks/                      # 13 custom hooks (useTypography, useTabBarInset, useLike, etc.)
 ├── navigation/                 # Stack, tab, and drawer navigators with type-safe params
-├── services/                   # Feed fetching (RSS), clippings, TMDB (planned)
+├── services/                   # Feed (RSS), TMDB, Takes, Likes, Comments, Clippings, SavedFilms
 ├── supabase/migrations/        # SQL migration files
 ├── theme/                      # Design tokens, color palettes, font registry
-├── docs/                       # Planning docs and audit trail
-└── types/                      # Shared TypeScript definitions
+├── docs/                       # Changelog, compliance audit, planning docs
+└── types/                      # Shared TypeScript definitions (database, TMDB)
 ```
+
+---
+
+## Compliance
+
+Village respects Letterboxd's Terms of Service:
+- **RSS feeds** (`letterboxd.com/{user}/rss/`) — explicitly sanctioned
+- **No HTML scraping** — all profile data is user-entered or sourced from TMDB
+- **Deep links** — "View on Letterboxd" for anything Village can't show natively
+
+See `docs/letterboxd-compliance-audit.md` for the full audit.
 
 ---
 
@@ -162,6 +149,7 @@ Create a `.env` file:
 ```env
 EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+EXPO_PUBLIC_TMDB_API_KEY=your-tmdb-api-key
 ```
 
 > Without these, the app runs in **guest mode** — no backend required to explore the UI.
