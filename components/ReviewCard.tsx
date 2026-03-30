@@ -11,7 +11,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { useTabBar } from '@/contexts/TabBarContext'
 import { saveRepost } from '@/services/clippings'
 import { findMovieByTitle } from '@/services/tmdb'
-import { fonts, spacing, getScaledTypography, type ThemeColors } from '@/theme'
+import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import SwipeableRow from '@/components/ui/SwipeableRow'
 
@@ -84,7 +84,6 @@ function ReviewCard({ review, hideAuthor = false, repostable = true, compact = f
   const { setTabBarVisible } = useTabBar()
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
   const contentWidth = width - HORIZONTAL_PAD * 2
-  const scaled = useMemo(() => getScaledTypography(preferences.fontMultiplier), [preferences.fontMultiplier])
   const handleLongPress = useCallback(() => {
     if (review.review) {
       setTabBarVisible(false)
@@ -118,8 +117,8 @@ function ReviewCard({ review, hideAuthor = false, repostable = true, compact = f
   const tagsStyles = useMemo(() => ({
     body: {
       fontFamily: fonts.body,
-      fontSize: scaled.body.fontSize,
-      lineHeight: scaled.body.lineHeight,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
       color: colors.foreground,
     },
     p: {
@@ -153,7 +152,7 @@ function ReviewCard({ review, hideAuthor = false, repostable = true, compact = f
       marginTop: spacing.sm,
       marginBottom: spacing.sm,
     },
-  }), [scaled, colors])
+  }), [typography, colors])
 
   /** Extract the first letter for native drop cap rendering. */
   const dropCapData = useMemo(() => {
@@ -168,7 +167,7 @@ function ReviewCard({ review, hideAuthor = false, repostable = true, compact = f
     }
   }, [preferences.useDropCap, displayHtml])
 
-  const dropCapSize = scaled.title.fontSize * 3
+  const dropCapSize = typography.title2.fontSize * 3
   const dropCapDynamicStyle = useMemo(() => ({
     fontSize: dropCapSize,
     lineHeight: dropCapSize * 1.15,
@@ -273,7 +272,7 @@ function ReviewCard({ review, hideAuthor = false, repostable = true, compact = f
             />
           )}
           {isLong && !expanded && (
-            <Text style={[styles.expandToggle, { fontSize: scaled.caption.fontSize }]}>
+            <Text style={[styles.expandToggle, { fontSize: typography.caption.fontSize }]}>
               Read more
             </Text>
           )}

@@ -6,9 +6,8 @@ import type { Clipping } from '@/types/database'
 import type { FeedStackParamList } from '@/navigation/types'
 import { deleteClipping } from '@/services/clippings'
 import { useTheme } from '@/contexts/ThemeContext'
-import { fonts, spacing, getScaledTypography, type ThemeColors } from '@/theme'
+import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
-import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
 import SwipeableRow from '@/components/ui/SwipeableRow'
 
 interface ClippingCardProps {
@@ -24,8 +23,6 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false }: ClippingC
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const { colors } = useTheme()
   const typography = useTypography()
-  const { preferences } = useDisplayPreferences()
-  const scaled = useMemo(() => getScaledTypography(preferences.fontMultiplier), [preferences.fontMultiplier])
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
   const [isExpanded, setIsExpanded] = useState(false)
 
@@ -77,7 +74,7 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false }: ClippingC
 
           {/* ── Quote text ── */}
           <Text
-            style={[styles.quote, { fontSize: scaled.body.fontSize, lineHeight: scaled.body.lineHeight }]}
+            style={styles.quote}
             numberOfLines={isExpanded ? undefined : 6}
           >
             {clipping.quote_text}
