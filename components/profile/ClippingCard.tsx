@@ -9,6 +9,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import SwipeableRow from '@/components/ui/SwipeableRow'
+import FeedDivider from '@/components/ui/FeedDivider'
 
 interface ClippingCardProps {
   clipping: Clipping
@@ -95,8 +96,7 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false }: ClippingC
           </Pressable>
         </Pressable>
 
-        {/* ── Hairline divider ── */}
-        <View style={styles.divider} />
+        <FeedDivider />
       </View>
   )
 
@@ -198,11 +198,5 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       color: colors.secondaryText,
     },
 
-    // ── Divider ──
-    divider: {
-      height: StyleSheet.hairlineWidth,
-      backgroundColor: colors.border,
-      marginHorizontal: 20,
-    },
   })
 }

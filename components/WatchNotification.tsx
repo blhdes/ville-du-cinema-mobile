@@ -1,5 +1,6 @@
 import { memo, useCallback, useMemo, useState } from 'react'
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
+import FeedDivider from '@/components/ui/FeedDivider'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import { findMovieByTitle } from '@/services/tmdb'
 import type { FeedStackParamList } from '@/navigation/types'
@@ -31,38 +32,41 @@ function WatchNotification({ review, hideAuthor = false }: WatchNotificationProp
   }, [review.movieTitle, navigation])
 
   return (
-    <Pressable
-      style={({ pressed }) => [styles.container, pressed && styles.pressed]}
-      onPress={() => Linking.openURL(review.link)}
-    >
-      <EyeIcon size={14} color={colors.secondaryText} />
-      <View style={styles.content}>
-        {!hideAuthor && (
+    <View>
+      <Pressable
+        style={({ pressed }) => [styles.container, pressed && styles.pressed]}
+        onPress={() => Linking.openURL(review.link)}
+      >
+        <EyeIcon size={14} color={colors.secondaryText} />
+        <View style={styles.content}>
+          {!hideAuthor && (
+            <Text
+              style={styles.author}
+              onPress={() => navigation.navigate('ExternalProfile', { username: review.username })}
+              suppressHighlighting
+              numberOfLines={1}
+            >
+              {review.creator}
+            </Text>
+          )}
+          <Text style={styles.watchedLabel} numberOfLines={1}>Watched</Text>
           <Text
-            style={styles.author}
-            onPress={() => navigation.navigate('ExternalProfile', { username: review.username })}
+            style={[styles.movie, titlePressed && styles.moviePressed]}
+            onPressIn={() => setTitlePressed(true)}
+            onPressOut={() => setTitlePressed(false)}
+            onPress={handleTitlePress}
             suppressHighlighting
             numberOfLines={1}
           >
-            {review.creator}
+            {review.movieTitle}
           </Text>
-        )}
-        <Text style={styles.watchedLabel} numberOfLines={1}>Watched</Text>
-        <Text
-          style={[styles.movie, titlePressed && styles.moviePressed]}
-          onPressIn={() => setTitlePressed(true)}
-          onPressOut={() => setTitlePressed(false)}
-          onPress={handleTitlePress}
-          suppressHighlighting
-          numberOfLines={1}
-        >
-          {review.movieTitle}
-        </Text>
-      </View>
-      {review.rating && preferences.showRatings ? (
-        <Text style={styles.rating}>{review.rating}</Text>
-      ) : null}
-    </Pressable>
+        </View>
+        {review.rating && preferences.showRatings ? (
+          <Text style={styles.rating}>{review.rating}</Text>
+        ) : null}
+      </Pressable>
+      <FeedDivider />
+    </View>
   )
 }
 
@@ -76,8 +80,6 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.md,
       gap: spacing.sm,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.border,
     },
     pressed: {
       opacity: 0.6,

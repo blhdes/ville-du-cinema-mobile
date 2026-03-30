@@ -327,8 +327,8 @@ export default function FilmCardScreen() {
           >
             <Ionicons
               name={saved.status === 'want' ? 'bookmark' : 'bookmark-outline'}
-              size={16}
-              color={saved.status === 'want' ? colors.background : colors.teal}
+              size={15}
+              color={saved.status === 'want' ? colors.background : colors.secondaryText}
             />
             <Text style={[
               styles.watchlistLabel,
@@ -347,8 +347,8 @@ export default function FilmCardScreen() {
           >
             <Ionicons
               name={saved.status === 'seen' ? 'eye' : 'eye-outline'}
-              size={16}
-              color={saved.status === 'seen' ? colors.background : colors.teal}
+              size={15}
+              color={saved.status === 'seen' ? colors.background : colors.secondaryText}
             />
             <Text style={[
               styles.watchlistLabel,
@@ -646,21 +646,18 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: spacing.xs,
-      paddingVertical: spacing.sm + 2,
-      borderRadius: 10,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.teal,
+      gap: 6,
+      paddingVertical: spacing.sm + 4,
+      borderRadius: 8,
+      backgroundColor: colors.backgroundSecondary,
     },
     watchlistBtnActive: {
-      backgroundColor: colors.teal,
-      borderColor: colors.teal,
+      backgroundColor: colors.foreground,
     },
     watchlistLabel: {
-      fontFamily: fonts.system,
-      fontWeight: '600' as const,
-      fontSize: typography.caption.fontSize,
-      color: colors.teal,
+      fontFamily: fonts.body,
+      fontSize: typography.callout.fontSize,
+      color: colors.secondaryText,
     },
     watchlistLabelActive: {
       color: colors.background,

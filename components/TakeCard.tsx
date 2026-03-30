@@ -11,6 +11,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import SwipeableRow from '@/components/ui/SwipeableRow'
+import FeedDivider from '@/components/ui/FeedDivider'
 
 const HORIZONTAL_PAD = 20
 
@@ -159,9 +160,8 @@ function TakeCard({
         </Pressable>
       </View>
 
-      {/* Hairline separator */}
-      <View style={styles.divider} />
-    </View>
+      </View>
+    <FeedDivider />
     </Pressable>
   )
 
@@ -190,7 +190,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
     article: {
       paddingHorizontal: HORIZONTAL_PAD,
       paddingTop: spacing.xl,
-      paddingBottom: spacing.xs,
+      paddingBottom: spacing.lg,
     },
     titlePressed: {
       opacity: 0.6,
@@ -263,10 +263,5 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       color: colors.secondaryText,
     },
 
-    divider: {
-      height: StyleSheet.hairlineWidth,
-      backgroundColor: colors.border,
-      marginTop: spacing.lg,
-    },
   })
 }

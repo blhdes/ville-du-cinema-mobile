@@ -14,6 +14,7 @@ import { findMovieByTitle } from '@/services/tmdb'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import SwipeableRow from '@/components/ui/SwipeableRow'
+import FeedDivider from '@/components/ui/FeedDivider'
 
 interface ReviewCardProps {
   review: Review
@@ -291,9 +292,8 @@ function ReviewCard({ review, hideAuthor = false, repostable = true, compact = f
         )}
       </Pressable>
 
-      {/* Hairline separator */}
-      <View style={styles.divider} />
     </View>
+    <FeedDivider />
     </Pressable>
   )
 
@@ -318,7 +318,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
     article: {
       paddingHorizontal: HORIZONTAL_PAD,
       paddingTop: spacing.xl,
-      paddingBottom: spacing.xs,
+      paddingBottom: spacing.lg,
     },
     articleCompact: {
       paddingTop: spacing.sm,
@@ -394,11 +394,6 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
     dropCapBody: {
       flex: 1,
       paddingTop: spacing.xs,
-    },
-    divider: {
-      height: StyleSheet.hairlineWidth,
-      backgroundColor: colors.border,
-      marginTop: spacing.lg,
     },
   })
 }
