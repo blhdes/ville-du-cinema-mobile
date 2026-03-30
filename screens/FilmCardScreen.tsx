@@ -171,6 +171,7 @@ export default function FilmCardScreen() {
   const letterboxdSearchUrl = `https://letterboxd.com/search/${encodeURIComponent(movie.title)}/`
 
   return (
+    <>
     <ScrollView
       style={styles.container}
       contentContainerStyle={[styles.content, { paddingBottom: tabBarInset + spacing.lg }]}
@@ -406,6 +407,7 @@ export default function FilmCardScreen() {
         </Pressable>
       </Modal>
     ) : null}
+    </>
   )
 }
 
