@@ -81,6 +81,7 @@ export default function ProfileScreen() {
   const [savedFilms, setSavedFilms] = useState<SavedFilm[]>([])
   const [contentLoading, setContentLoading] = useState(true)
   const [clippingsError, setClippingsError] = useState(false)
+  const hasLoadedOnce = useRef(false)
 
   const handleClippingDeleted = useCallback((id: string) => {
     setClippings((prev) => prev.filter((c) => c.id !== id))
@@ -95,7 +96,10 @@ export default function ProfileScreen() {
       if (!user) return
 
       let cancelled = false
-      setContentLoading(true)
+      // Only show skeleton on first load — subsequent focuses refresh silently
+      if (!hasLoadedOnce.current) {
+        setContentLoading(true)
+      }
       setClippingsError(false)
 
       Promise.allSettled([getUserClippings(user.id), getUserTakes(user.id), getUserSavedFilms(user.id)])
@@ -108,7 +112,10 @@ export default function ProfileScreen() {
           refetchFavorites()
         })
         .finally(() => {
-          if (!cancelled) setContentLoading(false)
+          if (!cancelled) {
+            setContentLoading(false)
+            hasLoadedOnce.current = true
+          }
         })
 
       return () => { cancelled = true }

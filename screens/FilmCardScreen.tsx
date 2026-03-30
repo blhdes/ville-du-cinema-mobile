@@ -29,6 +29,7 @@ import ImdbBadge from '@/components/ui/ImdbBadge'
 import LetterboxdDots from '@/components/ui/LetterboxdDots'
 import TakeCard from '@/components/TakeCard'
 import ClippingCard from '@/components/profile/ClippingCard'
+import LogoIcon from '@/components/ui/LogoIcon'
 import { useSavedFilm } from '@/hooks/useSavedFilm'
 import { useTabBarInset } from '@/hooks/useTabBarInset'
 
@@ -373,7 +374,10 @@ export default function FilmCardScreen() {
 
         return (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>From the Village</Text>
+            <View style={styles.villageTitleRow}>
+              <LogoIcon size={typography.title3.fontSize} fill={colors.foreground} />
+              <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>From the Village</Text>
+            </View>
             {visible.map((r) =>
               r.kind === 'take' ? (
                 <TakeCard key={r.item.id} take={r.item} readOnly />
@@ -548,6 +552,12 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       fontSize: typography.title3.fontSize,
       lineHeight: typography.title3.lineHeight,
       color: colors.foreground,
+      marginBottom: spacing.sm,
+    },
+    villageTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
       marginBottom: spacing.sm,
     },
     synopsis: {

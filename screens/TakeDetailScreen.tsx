@@ -60,6 +60,7 @@ export default function TakeDetailScreen() {
 
   const [commentText, setCommentText] = useState('')
   const [isPosting, setIsPosting] = useState(false)
+  const [inputHeight, setInputHeight] = useState(36)
   const inputRef = useRef<TextInput>(null)
 
   const remaining = MAX_COMMENT_LENGTH - commentText.length
@@ -249,11 +250,12 @@ export default function TakeDetailScreen() {
       <View style={[styles.inputBar, { paddingBottom: tabBarInset + spacing.sm }]}>
         <TextInput
           ref={inputRef}
-          style={styles.input}
+          style={[styles.input, { height: Math.min(inputHeight, 100) }]}
           placeholder="Add a comment..."
           placeholderTextColor={colors.secondaryText}
           value={commentText}
           onChangeText={setCommentText}
+          onContentSizeChange={(e) => setInputHeight(e.nativeEvent.contentSize.height)}
           maxLength={MAX_COMMENT_LENGTH}
           multiline
           textAlignVertical="top"
@@ -449,7 +451,6 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       fontFamily: fonts.system,
       fontSize: typography.body.fontSize,
       color: colors.foreground,
-      maxHeight: 100,
       paddingVertical: Platform.OS === 'ios' ? spacing.sm : 0,
     },
     inputActions: {
