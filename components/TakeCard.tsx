@@ -7,6 +7,7 @@ import type { Take } from '@/types/database'
 import type { FeedStackParamList } from '@/navigation/types'
 import { deleteTake } from '@/services/takes'
 import { useLike } from '@/hooks/useLike'
+import { useCommentCount } from '@/hooks/useCommentCount'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
@@ -35,7 +36,7 @@ interface TakeCardProps {
   /** Pre-resolved like count from batch fetch. */
   initialLikeCount?: number
   /** Pre-resolved comment count from batch fetch. */
-  commentCount?: number
+  initialCommentCount?: number
 }
 
 function TakeCard({
@@ -46,7 +47,7 @@ function TakeCard({
   readOnly = false,
   initialLiked,
   initialLikeCount,
-  commentCount,
+  initialCommentCount,
 }: TakeCardProps) {
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const { colors } = useTheme()
@@ -58,6 +59,7 @@ function TakeCard({
     initialLiked,
     initialLikeCount,
   )
+  const commentCount = useCommentCount(take.id, initialCommentCount)
 
   const handleDelete = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)

@@ -528,7 +528,7 @@ export default function FeedScreen() {
           }}
           initialLiked={likeData?.liked}
           initialLikeCount={likeData?.count}
-          commentCount={takeCommentCounts.get(item.data.id) ?? 0}
+          initialCommentCount={takeCommentCounts.get(item.data.id) ?? 0}
           readOnly
         />
       )

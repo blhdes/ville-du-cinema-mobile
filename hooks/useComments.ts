@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase/client'
 import { getComments, createComment, deleteComment } from '@/services/comments'
 import { useUser } from '@/hooks/useUser'
 import { useProfile } from '@/contexts/ProfileContext'
+import { publishCommentCount } from '@/hooks/useCommentCount'
 import type { TakeComment, TakeCommentWithAuthor } from '@/types/database'
 
 export interface UseCommentsReturn {
@@ -24,8 +25,13 @@ export function useComments(takeId: string): UseCommentsReturn {
   const [comments, setComments] = useState<TakeCommentWithAuthor[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const isMounted = useRef(true)
+  const countRef = useRef(0)
 
   useEffect(() => () => { isMounted.current = false }, [])
+
+  // Keep countRef in sync so addComment/removeComment can publish without
+  // reading count inside a state updater (which would cause setState-in-render)
+  useEffect(() => { countRef.current = comments.length }, [comments])
 
   const fetchAndResolve = useCallback(async () => {
     setIsLoading(true)
@@ -95,6 +101,7 @@ export function useComments(takeId: string): UseCommentsReturn {
     }
 
     setComments((prev) => [...prev, optimistic])
+    publishCommentCount(takeId, countRef.current + 1)
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
 
     try {
@@ -110,6 +117,7 @@ export function useComments(takeId: string): UseCommentsReturn {
       // Roll back
       if (isMounted.current) {
         setComments((prev) => prev.filter((c) => c.comment.id !== optimisticId))
+        publishCommentCount(takeId, countRef.current - 1)
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
     }
@@ -117,10 +125,11 @@ export function useComments(takeId: string): UseCommentsReturn {
 
   const removeComment = useCallback((commentId: string) => {
     setComments((prev) => prev.filter((c) => c.comment.id !== commentId))
+    publishCommentCount(takeId, countRef.current - 1)
     deleteComment(commentId).catch((error) => {
       console.error('Failed to delete comment:', error)
     })
-  }, [])
+  }, [takeId])
 
   return { comments, isLoading, addComment, removeComment, refetch: fetchAndResolve }
 }

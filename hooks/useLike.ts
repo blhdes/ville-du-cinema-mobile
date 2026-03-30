@@ -9,17 +9,31 @@ export interface UseLikeReturn {
   toggle: () => void
 }
 
-/**
- * Module-level cache so every useLike instance for the same takeId
- * shares the latest optimistic state instantly — no network round-trip.
- */
-const likesCache = new Map<string, { liked: boolean; count: number }>()
+// ---------------------------------------------------------------------------
+// Module-level pub/sub store
+// Any useLike instance that calls toggle() broadcasts to all other instances
+// watching the same takeId — no network round-trip needed.
+// ---------------------------------------------------------------------------
+type LikeStatus = { liked: boolean; count: number }
+type Subscriber = (status: LikeStatus) => void
 
-/**
- * Manages like state for a single Take with optimistic updates + haptic feedback.
- * When `initialLiked` and `initialCount` are provided (batch pre-fetch), skips the
- * initial network call.
- */
+const likesCache = new Map<string, LikeStatus>()
+const subscribers = new Map<string, Set<Subscriber>>()
+
+function publish(takeId: string, status: LikeStatus) {
+  likesCache.set(takeId, status)
+  subscribers.get(takeId)?.forEach((cb) => cb(status))
+}
+
+function subscribe(takeId: string, cb: Subscriber) {
+  if (!subscribers.has(takeId)) subscribers.set(takeId, new Set())
+  subscribers.get(takeId)!.add(cb)
+  return () => { subscribers.get(takeId)?.delete(cb) }
+}
+
+// ---------------------------------------------------------------------------
+// Hook
+// ---------------------------------------------------------------------------
 export function useLike(
   takeId: string,
   initialLiked?: boolean,
@@ -35,6 +49,16 @@ export function useLike(
 
   useEffect(() => () => { isMounted.current = false }, [])
 
+  // Subscribe to broadcasts from other instances (e.g. TakeDetail → TakeCard)
+  useEffect(() => {
+    return subscribe(takeId, (status) => {
+      if (isMounted.current) {
+        setLiked(status.liked)
+        setCount(status.count)
+      }
+    })
+  }, [takeId])
+
   // Hydrate from server if no initial values and no cache
   useEffect(() => {
     if (hasInitial || cached) return
@@ -43,9 +67,7 @@ export function useLike(
     getLikeStatus(takeId)
       .then((status) => {
         if (!cancelled && isMounted.current) {
-          setLiked(status.liked)
-          setCount(status.count)
-          likesCache.set(takeId, { liked: status.liked, count: status.count })
+          publish(takeId, { liked: status.liked, count: status.count })
         }
       })
       .finally(() => {
@@ -55,14 +77,11 @@ export function useLike(
     return () => { cancelled = true }
   }, [takeId, hasInitial, cached])
 
-  // Sync from parent when batch data changes — but cache wins if fresher
+  // Sync from parent batch refetch — cache/broadcast win if already fresher
   useEffect(() => {
     if (initialLiked === undefined) return
     const c = likesCache.get(takeId)
-    if (c) {
-      setLiked(c.liked)
-      setCount(c.count)
-    } else {
+    if (!c) {
       setLiked(initialLiked)
     }
   }, [initialLiked, takeId])
@@ -70,32 +89,22 @@ export function useLike(
   useEffect(() => {
     if (initialCount === undefined) return
     const c = likesCache.get(takeId)
-    if (c) {
-      setCount(c.count)
-    } else {
+    if (!c) {
       setCount(initialCount)
     }
   }, [initialCount, takeId])
 
   const toggle = useCallback(() => {
-    // Optimistic update
     const wasLiked = liked
     const prevCount = count
     const newLiked = !wasLiked
     const newCount = wasLiked ? prevCount - 1 : prevCount + 1
 
-    setLiked(newLiked)
-    setCount(newCount)
-    likesCache.set(takeId, { liked: newLiked, count: newCount })
+    publish(takeId, { liked: newLiked, count: newCount })
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
 
     toggleLike(takeId).catch(() => {
-      // Roll back on failure
-      if (isMounted.current) {
-        setLiked(wasLiked)
-        setCount(prevCount)
-      }
-      likesCache.set(takeId, { liked: wasLiked, count: prevCount })
+      publish(takeId, { liked: wasLiked, count: prevCount })
     })
   }, [takeId, liked, count])
 

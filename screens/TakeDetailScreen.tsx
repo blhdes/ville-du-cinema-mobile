@@ -1,11 +1,12 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
-  LayoutAnimation,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -25,6 +26,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import SwipeableRow from '@/components/ui/SwipeableRow'
+import FeedDivider from '@/components/ui/FeedDivider'
 import Spinner from '@/components/ui/Spinner'
 
 type TakeDetailRoute = RouteProp<FeedStackParamList, 'TakeDetail'>
@@ -37,6 +39,10 @@ export default function TakeDetailScreen() {
   const { takeId, author } = params
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const tabBarInset = useTabBarInset()
+  const [keyboardVisible, setKeyboardVisible] = useState(false)
+  // When keyboard is hidden: padding clears the tab bar.
+  // When keyboard is shown: drop to spacing.sm so the input sits flush above the keyboard.
+  const inputBarPaddingBottom = keyboardVisible ? spacing.sm : tabBarInset + spacing.sm
   const { user } = useUser()
   const { colors } = useTheme()
   const typography = useTypography()
@@ -60,8 +66,15 @@ export default function TakeDetailScreen() {
 
   const [commentText, setCommentText] = useState('')
   const [isPosting, setIsPosting] = useState(false)
-  const [inputHeight, setInputHeight] = useState(36)
+  const maxInputHeight = 7 * typography.body.lineHeight + (Platform.OS === 'ios' ? spacing.sm * 2 : 0)
   const inputRef = useRef<TextInput>(null)
+  const inputScrollRef = useRef<ScrollView>(null)
+
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardWillShow', () => setKeyboardVisible(true))
+    const hide = Keyboard.addListener('keyboardWillHide', () => setKeyboardVisible(false))
+    return () => { show.remove(); hide.remove() }
+  }, [])
 
   const remaining = MAX_COMMENT_LENGTH - commentText.length
   const isPostDisabled = isPosting || commentText.trim().length === 0
@@ -82,7 +95,6 @@ export default function TakeDetailScreen() {
   }, [isPostDisabled, commentText, addComment])
 
   const handleDeleteComment = useCallback((commentId: string) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
     removeComment(commentId)
   }, [removeComment])
 
@@ -163,25 +175,11 @@ export default function TakeDetailScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.divider} />
+        <FeedDivider />
 
-        {/* Comments label */}
-        <Text style={styles.commentsLabel}>
-          {commentsLoading ? 'Comments' : `Comments (${comments.length})`}
-        </Text>
-
-        {commentsLoading && (
-          <View style={styles.commentsLoading}>
-            <Spinner size={16} />
-          </View>
-        )}
-
-        {!commentsLoading && comments.length === 0 && (
-          <Text style={styles.emptyText}>No comments yet. Start the conversation.</Text>
-        )}
       </View>
     )
-  }, [take, takeLoading, author, dateStr, liked, likeCount, toggleLike, comments, commentsLoading, navigation, colors, styles])
+  }, [take, takeLoading, author, dateStr, liked, likeCount, toggleLike, navigation, colors, styles])
 
   const renderComment = useCallback(({ item }: { item: TakeCommentWithAuthor }) => {
     const isOwn = user?.id === item.comment.user_id
@@ -238,34 +236,60 @@ export default function TakeDetailScreen() {
     >
       <FlatList
         style={styles.list}
-        data={commentsLoading ? [] : comments}
+        data={comments}
         keyExtractor={(item) => item.comment.id}
         renderItem={renderComment}
-        ListHeaderComponent={listHeader}
+        ListHeaderComponent={
+          <>
+            {listHeader}
+            <Text style={styles.commentsLabel}>
+              {commentsLoading ? 'Comments' : `Comments (${comments.length})`}
+            </Text>
+            {commentsLoading && (
+              <View style={styles.commentsLoading}>
+                <Spinner size={16} />
+              </View>
+            )}
+            {!commentsLoading && comments.length === 0 && (
+              <Text style={styles.emptyText}>No comments yet. Start the conversation.</Text>
+            )}
+          </>
+        }
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />
 
       {/* Sticky comment input bar */}
-      <View style={[styles.inputBar, { paddingBottom: tabBarInset + spacing.sm }]}>
-        <TextInput
-          ref={inputRef}
-          style={[styles.input, { height: Math.min(inputHeight, 100) }]}
-          placeholder="Add a comment..."
-          placeholderTextColor={colors.secondaryText}
-          value={commentText}
-          onChangeText={setCommentText}
-          onContentSizeChange={(e) => setInputHeight(e.nativeEvent.contentSize.height)}
-          maxLength={MAX_COMMENT_LENGTH}
-          multiline
-          textAlignVertical="top"
-        />
+      <View style={[styles.inputBar, { paddingBottom: inputBarPaddingBottom }]}>
+        <ScrollView
+          ref={inputScrollRef}
+          style={[styles.inputScroll, { maxHeight: maxInputHeight }]}
+          onContentSizeChange={() => inputScrollRef.current?.scrollToEnd({ animated: false })}
+          bounces={false}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <TextInput
+            ref={inputRef}
+            style={styles.input}
+            placeholder="Add a comment..."
+            placeholderTextColor={colors.secondaryText}
+            value={commentText}
+            onChangeText={setCommentText}
+            maxLength={MAX_COMMENT_LENGTH}
+            multiline
+            textAlignVertical="top"
+            scrollEnabled={false}
+          />
+        </ScrollView>
         <View style={styles.inputActions}>
-          {commentText.length > 0 && (
-            <Text style={[styles.charCount, remaining < 20 && styles.charCountWarn]}>
-              {remaining}
-            </Text>
-          )}
+          <Text style={[
+            styles.charCount,
+            remaining < 20 && styles.charCountWarn,
+            commentText.length === 0 && styles.charCountHidden,
+          ]}>
+            {remaining}
+          </Text>
           <Pressable
             onPress={handlePost}
             disabled={isPostDisabled}
@@ -368,16 +392,13 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       fontSize: typography.callout.fontSize,
       color: colors.secondaryText,
     },
-    divider: {
-      height: StyleSheet.hairlineWidth,
-      backgroundColor: colors.border,
-    },
     commentsLabel: {
       fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,
       color: colors.secondaryText,
+      paddingHorizontal: HORIZONTAL_PAD,
       paddingTop: spacing.lg,
       paddingBottom: spacing.sm,
     },
@@ -391,6 +412,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       fontSize: typography.magazineBody.fontSize,
       lineHeight: typography.magazineBody.lineHeight,
       color: colors.secondaryText,
+      paddingHorizontal: HORIZONTAL_PAD,
       paddingVertical: spacing.lg,
     },
 
@@ -446,12 +468,20 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       borderTopColor: colors.border,
       backgroundColor: colors.background,
     },
+    inputScroll: {
+      flexGrow: 1,
+      flexShrink: 1,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 18,
+    },
     input: {
-      flex: 1,
       fontFamily: fonts.system,
       fontSize: typography.body.fontSize,
       color: colors.foreground,
       paddingVertical: Platform.OS === 'ios' ? spacing.sm : 0,
+      paddingHorizontal: spacing.sm,
+      minHeight: 36,
     },
     inputActions: {
       flexDirection: 'row',
@@ -464,9 +494,14 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       fontFamily: fonts.system,
       fontSize: typography.caption.fontSize,
       color: colors.secondaryText,
+      width: 28,
+      textAlign: 'right',
     },
     charCountWarn: {
       color: colors.yellow,
+    },
+    charCountHidden: {
+      opacity: 0,
     },
   })
 }
