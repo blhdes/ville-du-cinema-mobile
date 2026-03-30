@@ -217,16 +217,36 @@ export default function FilmCardScreen() {
         </View>
       </View>
 
-      {/* ---- Genre tags ---- */}
-      {movie.genres.length > 0 ? (
-        <View style={styles.genreRow}>
-          {movie.genres.map((g, i) => (
-            <Text key={g.id} style={styles.genreLabel}>
-              {g.name}{i < movie.genres.length - 1 ? '  ·  ' : ''}
-            </Text>
-          ))}
+      {/* ---- Genre tags + external badges ---- */}
+      <View style={styles.metaRow}>
+        {movie.genres.length > 0 ? (
+          <View style={styles.genreRow}>
+            {movie.genres.map((g, i) => (
+              <Text key={g.id} style={styles.genreLabel}>
+                {g.name}{i < movie.genres.length - 1 ? '  ·  ' : ''}
+              </Text>
+            ))}
+          </View>
+        ) : null}
+        <View style={styles.badgeRow}>
+          {movie.imdb_id ? (
+            <Pressable
+              onPress={() => WebBrowser.openBrowserAsync(`https://www.imdb.com/title/${movie.imdb_id}/`)}
+              style={({ pressed }) => pressed && styles.actionPressed}
+              hitSlop={8}
+            >
+              <ImdbBadge size={28} />
+            </Pressable>
+          ) : null}
+          <Pressable
+            onPress={() => WebBrowser.openBrowserAsync(letterboxdSearchUrl)}
+            style={({ pressed }) => pressed && styles.actionPressed}
+            hitSlop={8}
+          >
+            <LetterboxdDots size={28} />
+          </Pressable>
         </View>
-      ) : null}
+      </View>
 
       {/* ---- Synopsis ---- */}
       {movie.overview ? (
@@ -367,27 +387,6 @@ export default function FilmCardScreen() {
         )
       })()}
 
-      {/* ---- External links ---- */}
-      {movie.imdb_id ? (
-        <View style={styles.section}>
-          <Pressable
-            style={({ pressed }) => [styles.actionRow, pressed && styles.actionPressed]}
-            onPress={() => WebBrowser.openBrowserAsync(`https://www.imdb.com/title/${movie.imdb_id}/`)}
-          >
-            <ImdbBadge size={16} />
-            <Text style={styles.actionLabel}>View on IMDb</Text>
-          </Pressable>
-        </View>
-      ) : null}
-      <View style={styles.section}>
-        <Pressable
-          style={({ pressed }) => [styles.actionRow, pressed && styles.actionPressed]}
-          onPress={() => WebBrowser.openBrowserAsync(letterboxdSearchUrl)}
-        >
-          <LetterboxdDots size={16} />
-          <Text style={styles.actionLabel}>View on Letterboxd</Text>
-        </Pressable>
-      </View>
 
     </ScrollView>
 
@@ -493,12 +492,19 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       marginTop: spacing.xs,
     },
 
-    // ---- Genre tags ----
+    // ---- Genre tags + badges ----
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: HORIZONTAL_PAD,
+      marginTop: spacing.md,
+      gap: spacing.md,
+    },
     genreRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      paddingHorizontal: HORIZONTAL_PAD,
-      marginTop: spacing.md,
+      flex: 1,
     },
     genreLabel: {
       fontFamily: fonts.system,
@@ -506,6 +512,11 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       fontSize: typography.caption.fontSize,
       lineHeight: typography.caption.lineHeight,
       color: colors.secondaryText,
+    },
+    badgeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
     },
 
     // ---- Sections ----
