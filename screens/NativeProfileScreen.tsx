@@ -34,7 +34,6 @@ import FavoriteFilmsGrid from '@/components/profile/FavoriteFilmsGrid'
 
 const AVATAR_SIZE = 72
 const HORIZONTAL_PAD = 20
-const FAB_SIZE = 52
 
 export default function NativeProfileScreen() {
   const route = useRoute<RouteProp<FeedStackParamList, 'NativeProfile'>>()
@@ -245,13 +244,6 @@ export default function NativeProfileScreen() {
         />
       )}
 
-      {/* ---- Compose FAB ---- */}
-      <Pressable
-        onPress={() => navigation.navigate('CreateTake', undefined)}
-        style={({ pressed }) => [styles.fab, { bottom: tabBarInset + spacing.md }, pressed && styles.fabPressed]}
-      >
-        <Ionicons name="create-outline" size={24} color="#fff" />
-      </Pressable>
     </View>
   )
 }
@@ -265,24 +257,6 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
     container: {
       flex: 1,
       backgroundColor: colors.background,
-    },
-    fab: {
-      position: 'absolute',
-      right: HORIZONTAL_PAD,
-      width: FAB_SIZE,
-      height: FAB_SIZE,
-      borderRadius: FAB_SIZE / 2,
-      backgroundColor: colors.teal,
-      alignItems: 'center',
-      justifyContent: 'center',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.25,
-      shadowRadius: 4,
-      elevation: 5,
-    },
-    fabPressed: {
-      opacity: 0.75,
     },
 
     // Centered profile header — mirrors ExternalHeaderBones spatially
