@@ -123,7 +123,7 @@ export const typography = {
   title1: { fontSize: 28, lineHeight: 34 },
   title2: { fontSize: 22, lineHeight: 28 },
   title3: { fontSize: 20, lineHeight: 25 },
-  body: { fontSize: 16, lineHeight: 24 },
+  body: { fontSize: 18, lineHeight: 26 },
   callout: { fontSize: 15, lineHeight: 21 },
   caption: { fontSize: 13, lineHeight: 18 },
 
