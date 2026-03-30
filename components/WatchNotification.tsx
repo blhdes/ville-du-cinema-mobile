@@ -1,7 +1,7 @@
-import { memo, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
-import * as WebBrowser from 'expo-web-browser'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
+import { findMovieByTitle } from '@/services/tmdb'
 import type { FeedStackParamList } from '@/navigation/types'
 import type { Review } from '@/types/database'
 import { useDisplayPreferences } from '@/hooks/useDisplayPreferences'
@@ -22,6 +22,13 @@ function WatchNotification({ review, hideAuthor = false }: WatchNotificationProp
   const { colors } = useTheme()
   const typography = useTypography()
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
+
+  const handleTitlePress = useCallback(async () => {
+    const match = await findMovieByTitle(review.movieTitle)
+    if (match) {
+      navigation.navigate('FilmCard', { tmdbId: match.id, movieTitle: match.title })
+    }
+  }, [review.movieTitle, navigation])
 
   return (
     <Pressable
@@ -45,10 +52,7 @@ function WatchNotification({ review, hideAuthor = false }: WatchNotificationProp
           style={[styles.movie, titlePressed && styles.moviePressed]}
           onPressIn={() => setTitlePressed(true)}
           onPressOut={() => setTitlePressed(false)}
-          onPress={() => {
-            const query = encodeURIComponent(`${review.movieTitle} film`)
-            WebBrowser.openBrowserAsync(`https://www.google.com/search?q=${query}`)
-          }}
+          onPress={handleTitlePress}
           suppressHighlighting
           numberOfLines={1}
         >
