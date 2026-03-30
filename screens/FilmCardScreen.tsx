@@ -327,7 +327,7 @@ export default function FilmCardScreen() {
             <Ionicons
               name={saved.status === 'want' ? 'bookmark' : 'bookmark-outline'}
               size={16}
-              color={saved.status === 'want' ? '#fff' : colors.teal}
+              color={saved.status === 'want' ? colors.background : colors.teal}
             />
             <Text style={[
               styles.watchlistLabel,
@@ -347,7 +347,7 @@ export default function FilmCardScreen() {
             <Ionicons
               name={saved.status === 'seen' ? 'eye' : 'eye-outline'}
               size={16}
-              color={saved.status === 'seen' ? '#fff' : colors.teal}
+              color={saved.status === 'seen' ? colors.background : colors.teal}
             />
             <Text style={[
               styles.watchlistLabel,
@@ -653,7 +653,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       color: colors.teal,
     },
     watchlistLabelActive: {
-      color: '#fff',
+      color: colors.background,
     },
 
   })

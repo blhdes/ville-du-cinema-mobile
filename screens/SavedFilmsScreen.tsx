@@ -158,7 +158,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       color: colors.secondaryText,
     },
     filterTextActive: {
-      color: '#fff',
+      color: colors.background,
       fontWeight: '600',
     },
 

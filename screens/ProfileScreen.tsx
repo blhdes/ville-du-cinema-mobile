@@ -288,7 +288,7 @@ export default function ProfileScreen() {
           onPress={() => navigation.navigate('CreateTake', undefined)}
           style={({ pressed }) => [styles.fab, { bottom: tabBarInset + spacing.md }, pressed && styles.fabPressed]}
         >
-          <Ionicons name="create-outline" size={24} color="#fff" />
+          <Ionicons name="create-outline" size={24} color={colors.background} />
         </Pressable>
       ) : null}
     </View>

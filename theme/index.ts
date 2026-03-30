@@ -42,10 +42,10 @@ export const lightColors: ThemeColors = {
   secondaryText: '#8E8E93',
   border: '#C6C6C8',
   accent: '#FF2D55',
-  blue: '#2E86AB',
+  blue: '#111111',
   white: '#FFFFFF',
 
-  teal: '#2E86AB',
+  teal: '#111111',
   red: '#D7263D',
   yellow: '#F2C14E',
 
@@ -67,10 +67,10 @@ export const darkColors: ThemeColors = {
   secondaryText: '#9A9A9F',
   border: '#2C2C2E',
   accent: '#FF2D55',
-  blue: '#3DA5CC',
+  blue: '#F0F0F0',
   white: '#FFFFFF',
 
-  teal: '#3DA5CC',
+  teal: '#F0F0F0',
   red: '#E5475D',
   yellow: '#F2C14E',
 
