@@ -211,7 +211,20 @@ export default function FilmCardScreen() {
           </Text>
           {directors.length > 0 ? (
             <Text style={styles.directors}>
-              Directed by {directors.map((d) => d.name).join(', ')}
+              {'Directed by '}
+              {directors.map((d, i) => (
+                <Text key={d.id}>
+                  <Text
+                    style={styles.directorLink}
+                    onPress={() => WebBrowser.openBrowserAsync(
+                      `https://www.google.com/search?q=${encodeURIComponent(d.name + ' director')}`
+                    )}
+                  >
+                    {d.name}
+                  </Text>
+                  {i < directors.length - 1 ? ', ' : ''}
+                </Text>
+              ))}
             </Text>
           ) : null}
         </View>
@@ -489,6 +502,12 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       fontSize: typography.callout.fontSize,
       lineHeight: typography.callout.lineHeight,
       color: colors.secondaryText,
+    },
+    directorLink: {
+      fontFamily: fonts.bodyItalic,
+      fontSize: typography.callout.fontSize,
+      lineHeight: typography.callout.lineHeight,
+      color: colors.teal,
       marginTop: spacing.xs,
     },
 
