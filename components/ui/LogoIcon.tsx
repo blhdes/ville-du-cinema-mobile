@@ -7,7 +7,7 @@ interface LogoIconProps {
 
 export default function LogoIcon({ size = 24, fill = '#1C1C1E' }: LogoIconProps) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 200 200">
+    <Svg width={size} height={size} viewBox="32 32 118 118">
       {/* Square outline */}
       <Rect x="37" y="37" width="108" height="108" fill="none" stroke={fill} strokeWidth="5" />
 

@@ -180,7 +180,7 @@ export default function DiscoverScreen() {
         {villageUserIds.length > 0 && (
           <>
             <View style={styles.networkTitleRow}>
-              <LogoIcon size={typography.title3.fontSize} fill={colors.foreground} />
+              <LogoIcon size={typography.title3.lineHeight} fill={colors.foreground} />
               <Text style={[styles.sectionTitle, { marginTop: 0, marginBottom: 0 }]}>In Your Network</Text>
             </View>
             {networkFilms.length > 0 ? (
