@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics'
 import LetterboxdDots from '@/components/ui/LetterboxdDots'
 import ExpandableAvatar from '@/components/ui/ExpandableAvatar'
 import FollowButton from '@/components/ui/FollowButton'
+import FeedDivider from '@/components/ui/FeedDivider'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
@@ -77,8 +78,9 @@ export default function ExternalProfileHeader({
         style={styles.followButtonMargin}
       />
 
-      {/* Bottom hairline divider */}
-      <View style={styles.divider} />
+      <View style={{ marginTop: spacing.xl }}>
+        <FeedDivider />
+      </View>
     </View>
   )
 }
@@ -128,12 +130,6 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
     },
     followButtonMargin: {
       marginTop: spacing.md,
-    },
-    divider: {
-      height: StyleSheet.hairlineWidth,
-      backgroundColor: colors.border,
-      alignSelf: 'stretch',
-      marginTop: spacing.xl,
     },
   })
 }

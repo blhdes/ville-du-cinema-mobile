@@ -28,6 +28,7 @@ import ProfileSkeleton from '@/components/profile/ProfileSkeleton'
 import ClippingCard from '@/components/profile/ClippingCard'
 import RepostCard from '@/components/feed/RepostCard'
 import TakeCard from '@/components/TakeCard'
+import FeedDivider from '@/components/ui/FeedDivider'
 import ExpandableAvatar from '@/components/ui/ExpandableAvatar'
 import FollowButton from '@/components/ui/FollowButton'
 import FavoriteFilmsGrid from '@/components/profile/FavoriteFilmsGrid'
@@ -184,7 +185,7 @@ export default function NativeProfileScreen() {
             {takes.map((take) => (
               <TakeCard key={take.id} take={take} hideAuthor readOnly />
             ))}
-            <View style={styles.divider} />
+            <FeedDivider />
           </>
         ) : null}
 
@@ -303,11 +304,6 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       fontSize: typography.magazineMeta.fontSize,
       letterSpacing: typography.magazineMeta.letterSpacing,
       color: colors.secondaryText,
-    },
-    divider: {
-      height: StyleSheet.hairlineWidth,
-      backgroundColor: colors.border,
-      marginHorizontal: HORIZONTAL_PAD,
     },
     sectionLabel: {
       fontFamily: fonts.system,

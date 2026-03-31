@@ -35,6 +35,7 @@ import FollowingList from '@/components/profile/FollowingList'
 import ClippingCard from '@/components/profile/ClippingCard'
 import RepostCard from '@/components/feed/RepostCard'
 import TakeCard from '@/components/TakeCard'
+import FeedDivider from '@/components/ui/FeedDivider'
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -175,7 +176,7 @@ export default function ProfileScreen() {
             <FollowingList letterboxdUsers={followedUsers} villageUsers={villageUsers} />
           </View>
         )}
-        <View style={styles.divider} />
+        <FeedDivider />
 
         {/* Takes section */}
         <View style={styles.sectionHeader}>
@@ -202,7 +203,7 @@ export default function ProfileScreen() {
           ))
         )}
 
-        <View style={styles.divider} />
+        <FeedDivider />
 
         {/* Clippings section label */}
         <Text style={styles.sectionLabel}>Clippings</Text>
@@ -334,11 +335,6 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       fontFamily: fonts.heading,
       fontSize: typography.title3.fontSize,
       color: colors.foreground,
-    },
-    divider: {
-      height: StyleSheet.hairlineWidth,
-      backgroundColor: colors.border,
-      marginHorizontal: HORIZONTAL_PAD,
     },
     accordionToggle: {
       flexDirection: 'row',

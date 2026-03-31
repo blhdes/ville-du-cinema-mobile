@@ -9,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { useTheme } from '@/contexts/ThemeContext'
 import { spacing } from '@/theme'
+import FeedDivider from '@/components/ui/FeedDivider'
 
 const HORIZONTAL_PAD = 20
 
@@ -52,8 +53,7 @@ export default function ReviewCardSkeleton() {
         <View style={[styles.bodyLineLast, { width: '45%', backgroundColor: bone }]} />
       </Animated.View>
 
-      {/* Divider */}
-      <View style={[styles.divider, { backgroundColor: colors.border }]} />
+      <FeedDivider />
     </View>
   )
 }
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   article: {
     paddingHorizontal: HORIZONTAL_PAD,
     paddingTop: spacing.xl,
-    paddingBottom: spacing.xs,
+    paddingBottom: spacing.lg,
   },
   titleBone: {
     height: 22,
@@ -100,9 +100,5 @@ const styles = StyleSheet.create({
   bodyLineLast: {
     height: 12,
     borderRadius: 3,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    marginTop: spacing.lg,
   },
 })

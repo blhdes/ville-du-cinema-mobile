@@ -66,6 +66,7 @@ export default function TakeDetailScreen() {
 
   const [commentText, setCommentText] = useState('')
   const [isPosting, setIsPosting] = useState(false)
+  const [inputKey, setInputKey] = useState(0)
   const maxInputHeight = 7 * typography.body.lineHeight + (Platform.OS === 'ios' ? spacing.sm * 2 : 0)
   const inputRef = useRef<TextInput>(null)
   const inputScrollRef = useRef<ScrollView>(null)
@@ -85,6 +86,7 @@ export default function TakeDetailScreen() {
     try {
       await addComment(commentText.trim())
       setCommentText('')
+      setInputKey((k) => k + 1)
       inputRef.current?.blur()
     } catch (error) {
       console.error('Comment post failed:', error)
@@ -270,6 +272,7 @@ export default function TakeDetailScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <TextInput
+            key={inputKey}
             ref={inputRef}
             style={styles.input}
             placeholder="Add a comment..."
