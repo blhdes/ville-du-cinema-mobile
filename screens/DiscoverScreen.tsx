@@ -27,6 +27,7 @@ import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import TrendingPosterCard from '@/components/discover/TrendingPosterCard'
 import NetworkFilmRow from '@/components/discover/NetworkFilmRow'
 import Spinner from '@/components/ui/Spinner'
+import LogoIcon from '@/components/ui/LogoIcon'
 
 const HORIZONTAL_PAD = 20
 const SEARCH_DEBOUNCE = 350
@@ -178,7 +179,10 @@ export default function DiscoverScreen() {
         {/* In your network */}
         {villageUserIds.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>In Your Network</Text>
+            <View style={styles.networkTitleRow}>
+              <LogoIcon size={typography.title3.fontSize} fill={colors.foreground} />
+              <Text style={[styles.sectionTitle, { marginTop: 0, marginBottom: 0 }]}>In Your Network</Text>
+            </View>
             {networkFilms.length > 0 ? (
               networkFilms.map((film) => (
                 <NetworkFilmRow key={film.tmdbId} film={film} />
@@ -292,6 +296,14 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
     },
 
     // Sections
+    networkTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingHorizontal: HORIZONTAL_PAD,
+      marginTop: spacing.lg,
+      marginBottom: spacing.md,
+    },
     sectionTitle: {
       fontFamily: fonts.heading,
       fontSize: typography.title3.fontSize,
