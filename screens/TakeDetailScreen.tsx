@@ -118,6 +118,7 @@ export default function TakeDetailScreen() {
     }
 
     return (
+      <>
       <View style={styles.takeSection}>
         {/* Film title */}
         <Pressable
@@ -177,9 +178,9 @@ export default function TakeDetailScreen() {
           </Pressable>
         </View>
 
-        <FeedDivider />
-
       </View>
+      <FeedDivider />
+      </>
     )
   }, [take, takeLoading, author, dateStr, liked, likeCount, toggleLike, navigation, colors, styles])
 
