@@ -118,7 +118,6 @@ export default function TakeDetailScreen() {
     }
 
     return (
-      <>
       <View style={styles.takeSection}>
         {/* Film title */}
         <Pressable
@@ -179,8 +178,6 @@ export default function TakeDetailScreen() {
         </View>
 
       </View>
-      <FeedDivider />
-      </>
     )
   }, [take, takeLoading, author, dateStr, liked, likeCount, toggleLike, navigation, colors, styles])
 
@@ -243,8 +240,9 @@ export default function TakeDetailScreen() {
         keyExtractor={(item) => item.comment.id}
         renderItem={renderComment}
         ListHeaderComponent={
-          <>
+          <View>
             {listHeader}
+            <FeedDivider />
             <Text style={styles.commentsLabel}>
               {commentsLoading ? 'Comments' : `Comments (${comments.length})`}
             </Text>
@@ -256,7 +254,7 @@ export default function TakeDetailScreen() {
             {!commentsLoading && comments.length === 0 && (
               <Text style={styles.emptyText}>No comments yet. Start the conversation.</Text>
             )}
-          </>
+          </View>
         }
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
