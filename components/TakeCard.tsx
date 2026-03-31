@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo } from 'react'
-import { LayoutAnimation, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Alert, LayoutAnimation, Pressable, StyleSheet, Text, View } from 'react-native'
 import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
@@ -62,11 +62,20 @@ function TakeCard({
   const commentCount = useCommentCount(take.id, initialCommentCount)
 
   const handleDelete = useCallback(() => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
-    onDeleted?.(take.id)
-    deleteTake(take.id).catch((error) => {
-      console.error('Failed to delete take:', error)
-    })
+    Alert.alert('Delete take', 'Are you sure you want to delete this take?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+          onDeleted?.(take.id)
+          deleteTake(take.id).catch((error) => {
+            console.error('Failed to delete take:', error)
+          })
+        },
+      },
+    ])
   }, [take.id, onDeleted])
 
   const handleFilmPress = useCallback(() => {

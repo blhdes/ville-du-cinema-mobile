@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo, useState } from 'react'
-import { LayoutAnimation, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Alert, LayoutAnimation, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import { Image } from 'expo-image'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import type { Clipping } from '@/types/database'
@@ -34,11 +34,20 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false }: ClippingC
   }, [isExpanded])
 
   const handleDelete = useCallback(() => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
-    onDeleted?.(clipping.id)
-    deleteClipping(clipping.id).catch((error) => {
-      console.error('Failed to delete clipping:', error)
-    })
+    Alert.alert('Delete clipping', 'Are you sure you want to delete this clipping?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+          onDeleted?.(clipping.id)
+          deleteClipping(clipping.id).catch((error) => {
+            console.error('Failed to delete clipping:', error)
+          })
+        },
+      },
+    ])
   }, [clipping.id, onDeleted])
 
   const cardContent = (

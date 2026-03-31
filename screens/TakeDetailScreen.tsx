@@ -97,7 +97,10 @@ export default function TakeDetailScreen() {
   }, [isPostDisabled, commentText, addComment])
 
   const handleDeleteComment = useCallback((commentId: string) => {
-    removeComment(commentId)
+    Alert.alert('Delete comment', 'Are you sure you want to delete this comment?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => removeComment(commentId) },
+    ])
   }, [removeComment])
 
   const dateStr = take

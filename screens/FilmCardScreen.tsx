@@ -264,7 +264,10 @@ export default function FilmCardScreen() {
 
       {/* ---- Synopsis ---- */}
       {movie.overview ? (
-        <View style={styles.section}>
+        <Pressable
+          style={styles.section}
+          onPress={() => !synopsisExpanded && movie.overview.length > 200 && setSynopsisExpanded(true)}
+        >
           <Text style={styles.sectionTitle}>Synopsis</Text>
           <Text
             style={styles.synopsis}
@@ -273,11 +276,9 @@ export default function FilmCardScreen() {
             {movie.overview}
           </Text>
           {!synopsisExpanded && movie.overview.length > 200 ? (
-            <Pressable onPress={() => setSynopsisExpanded(true)}>
-              <Text style={styles.readMore}>Read more</Text>
-            </Pressable>
+            <Text style={styles.readMore}>Read more</Text>
           ) : null}
-        </View>
+        </Pressable>
       ) : null}
 
       {/* ---- Cast ---- */}
@@ -373,7 +374,7 @@ export default function FilmCardScreen() {
         const total = reactions.length
 
         return (
-          <View style={styles.section}>
+          <View style={styles.villageSection}>
             <View style={styles.villageTitleRow}>
               <LogoIcon size={22} fill={colors.foreground} />
               <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>From the Village</Text>
@@ -554,7 +555,11 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       color: colors.foreground,
       marginBottom: spacing.sm,
     },
+    villageSection: {
+      marginTop: spacing.lg,
+    },
     villageTitleRow: {
+      paddingHorizontal: HORIZONTAL_PAD,
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.xs,
@@ -567,6 +572,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       color: colors.foreground,
     },
     showMoreRow: {
+      paddingHorizontal: HORIZONTAL_PAD,
       paddingVertical: spacing.sm,
     },
     showMoreLabel: {
@@ -582,6 +588,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       justifyContent: 'center',
     },
     cappedLabel: {
+      paddingHorizontal: HORIZONTAL_PAD,
       fontFamily: fonts.system,
       fontStyle: 'italic' as const,
       fontSize: typography.caption.fontSize,

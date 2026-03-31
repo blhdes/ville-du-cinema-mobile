@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native'
 import { Image } from 'expo-image'
-import { useTabBarInset } from '@/hooks/useTabBarInset'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
@@ -28,7 +28,7 @@ type CreateTakeRoute = RouteProp<FeedStackParamList, 'CreateTake'>
 const MAX_LENGTH = 280
 
 export default function CreateTakeScreen() {
-  const tabBarInset = useTabBarInset()
+  const { bottom: safeBottom } = useSafeAreaInsets()
   const navigation = useNavigation()
   const route = useRoute<CreateTakeRoute>()
   const { colors } = useTheme()
@@ -175,7 +175,7 @@ export default function CreateTakeScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={100}
     >
-      <View style={[styles.inner, { paddingBottom: tabBarInset + spacing.md }]}>
+      <View style={[styles.inner, { paddingBottom: safeBottom + spacing.md }]}>
         {/* Film selector */}
         {selectedFilm ? (
           <View style={styles.selectedFilm}>
