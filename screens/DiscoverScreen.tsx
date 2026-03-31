@@ -181,7 +181,7 @@ export default function DiscoverScreen() {
           <>
             <View style={styles.networkTitleRow}>
               <LogoIcon size={22} fill={colors.foreground} />
-              <Text style={[styles.sectionTitle, { marginTop: 0, marginBottom: 0 }]}>In Your Network</Text>
+              <Text style={[styles.sectionTitle, { marginTop: 0, marginBottom: 0, paddingHorizontal: 0 }]}>In Your Network</Text>
             </View>
             {networkFilms.length > 0 ? (
               networkFilms.map((film) => (
