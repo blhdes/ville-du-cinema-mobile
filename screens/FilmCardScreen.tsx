@@ -375,7 +375,7 @@ export default function FilmCardScreen() {
         return (
           <View style={styles.section}>
             <View style={styles.villageTitleRow}>
-              <LogoIcon size={36} fill={colors.foreground} />
+              <LogoIcon size={22} fill={colors.foreground} />
               <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>From the Village</Text>
             </View>
             {visible.map((r) =>
@@ -557,7 +557,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
     villageTitleRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: spacing.sm,
+      gap: spacing.xs,
       marginBottom: spacing.sm,
     },
     synopsis: {

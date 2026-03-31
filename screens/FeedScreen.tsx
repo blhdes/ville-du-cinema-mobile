@@ -674,7 +674,7 @@ export default function FeedScreen() {
             }}
             hitSlop={8}
           >
-            <LogoIcon size={48} fill={colors.foreground} />
+            <LogoIcon size={28} fill={colors.foreground} />
           </Pressable>
           <Pressable
             onPress={() => navigation.navigate('UserSearch')}
