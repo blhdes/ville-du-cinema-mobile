@@ -1,13 +1,12 @@
 import { memo, useMemo, useCallback } from 'react'
 import { LayoutAnimation, Pressable, StyleSheet, Text, View } from 'react-native'
-import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import type { FeedStackParamList } from '@/navigation/types'
 import type { Clipping, Review } from '@/types/database'
 import { deleteClipping } from '@/services/clippings'
 import { useTheme } from '@/contexts/ThemeContext'
-import { fonts, spacing, type ThemeColors } from '@/theme'
+import { spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import ReviewCard from '@/components/ReviewCard'
 import SwipeableRow from '@/components/ui/SwipeableRow'
@@ -55,15 +54,6 @@ function RepostCard({ clipping, owner, onDeleted }: RepostCardProps) {
         disabled={!owner.userId}
       >
         <Ionicons name="repeat-outline" size={16} color={colors.teal} style={styles.icon} />
-        {owner.avatarUrl ? (
-          <Image source={{ uri: owner.avatarUrl }} style={styles.avatar} cachePolicy="memory-disk" />
-        ) : (
-          <View style={[styles.avatar, styles.avatarFallback]}>
-            <Text style={styles.avatarInitial}>
-              {owner.displayName.charAt(0).toUpperCase()}
-            </Text>
-          </View>
-        )}
         <Text style={styles.repostLabel} numberOfLines={1}>
           Reposted by {owner.displayName}
         </Text>
@@ -106,22 +96,6 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
     },
     icon: {
       marginRight: spacing.xs,
-    },
-    avatar: {
-      width: 20,
-      height: 20,
-      borderRadius: 10,
-      marginRight: spacing.xs,
-    },
-    avatarFallback: {
-      backgroundColor: colors.border,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    avatarInitial: {
-      fontFamily: fonts.system,
-      fontSize: 8,
-      color: colors.secondaryText,
     },
     repostLabel: {
       fontFamily: fonts.system,
