@@ -36,6 +36,10 @@ import FavoriteFilmsGrid from '@/components/profile/FavoriteFilmsGrid'
 const AVATAR_SIZE = 72
 const HORIZONTAL_PAD = 20
 
+type FeedItem =
+  | { kind: 'take'; item: Take }
+  | { kind: 'clipping'; item: Clipping }
+
 export default function NativeProfileScreen() {
   const route = useRoute<RouteProp<FeedStackParamList, 'NativeProfile'>>()
   const { userId } = route.params
@@ -56,6 +60,7 @@ export default function NativeProfileScreen() {
   const [savedFilms, setSavedFilms] = useState<SavedFilm[]>([])
   const [favorites, setFavorites] = useState<FavoriteFilm[]>([])
   const [contentLoading, setContentLoading] = useState(true)
+  const [filter, setFilter] = useState<'all' | 'takes' | 'clippings'>('all')
 
   useEffect(() => {
     let cancelled = false
@@ -118,6 +123,23 @@ export default function NativeProfileScreen() {
   // List header + renderItem — memoized to prevent unnecessary FlatList remounts
   // ---------------------------------------------------------------------------
 
+  const toggleFilter = useCallback((f: 'takes' | 'clippings') => {
+    setFilter((prev) => (prev === f ? 'all' : f))
+  }, [])
+
+  const feedItems = useMemo(() => {
+    const items: FeedItem[] = [
+      ...takes.map((t) => ({ kind: 'take' as const, item: t })),
+      ...clippings.map((c) => ({ kind: 'clipping' as const, item: c })),
+    ]
+    items.sort((a, b) =>
+      new Date(b.item.created_at).getTime() - new Date(a.item.created_at).getTime()
+    )
+    if (filter === 'takes') return items.filter((i) => i.kind === 'take')
+    if (filter === 'clippings') return items.filter((i) => i.kind === 'clipping')
+    return items
+  }, [takes, clippings, filter])
+
   const clippingUser = useMemo(() => profile ? {
     avatarUrl: profile.avatar_url ?? undefined,
     displayName: profile.display_name ?? profile.username ?? 'Village User',
@@ -147,11 +169,21 @@ export default function NativeProfileScreen() {
             <Text style={styles.bio}>{profile.bio}</Text>
           ) : null}
 
-          {/* Metadata row — mirrors the 2-bone skeleton placeholder */}
+          {/* Metadata row — tappable filters */}
           <View style={styles.metaRow}>
-            <Text style={styles.metaCount}>
-              {contentLoading ? '—' : `${takes.length} takes · ${clippings.length} clippings`}
-            </Text>
+            <View style={styles.filterRow}>
+              <Pressable onPress={() => toggleFilter('takes')} hitSlop={4}>
+                <Text style={[styles.metaCount, filter === 'takes' && styles.filterActive]}>
+                  {contentLoading ? '—' : `${takes.length} takes`}
+                </Text>
+              </Pressable>
+              <Text style={styles.metaDot}>·</Text>
+              <Pressable onPress={() => toggleFilter('clippings')} hitSlop={4}>
+                <Text style={[styles.metaCount, filter === 'clippings' && styles.filterActive]}>
+                  {contentLoading ? '—' : `${clippings.length} clippings`}
+                </Text>
+              </Pressable>
+            </View>
             <FollowButton isFollowing={isFollowing} onPress={handleFollowToggle} />
           </View>
         </View>
@@ -178,34 +210,20 @@ export default function NativeProfileScreen() {
           </Pressable>
         )}
 
-        {/* Takes section */}
-        {takes.length > 0 ? (
-          <>
-            <Text style={styles.sectionLabel}>Takes</Text>
-            {takes.map((take) => (
-              <TakeCard key={take.id} take={take} hideAuthor readOnly />
-            ))}
-            <FeedDivider />
-          </>
-        ) : null}
-
-        <Text style={styles.sectionLabel}>Clippings</Text>
-
-        {clippings.length === 0 && (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="bookmark-outline" size={32} color={colors.border} />
-            <Text style={styles.emptyText}>No clippings saved yet.</Text>
-          </View>
-        )}
+        <FeedDivider />
       </>
     )
-  }, [profile, contentLoading, clippings, takes, savedFilms, favorites, isFollowing, handleFollowToggle, navigation, styles, colors, userId])
+  }, [profile, contentLoading, clippings, takes, savedFilms, favorites, filter, isFollowing, handleFollowToggle, toggleFilter, navigation, styles, colors, userId])
 
-  const renderItem = useCallback(({ item }: { item: Clipping }) => {
-    if (item.type === 'repost' && item.review_json) {
+  const renderFeedItem = useCallback(({ item }: { item: FeedItem }) => {
+    if (item.kind === 'take') {
+      return <TakeCard take={item.item} hideAuthor readOnly />
+    }
+    const clipping = item.item
+    if (clipping.type === 'repost' && clipping.review_json) {
       return (
         <RepostCard
-          clipping={item}
+          clipping={clipping}
           owner={{
             avatarUrl: clippingUser?.avatarUrl,
             displayName: clippingUser?.displayName ?? 'Village User',
@@ -214,14 +232,17 @@ export default function NativeProfileScreen() {
         />
       )
     }
-    return (
-      <ClippingCard
-        clipping={item}
-        readOnly
-        user={clippingUser}
-      />
-    )
+    return <ClippingCard clipping={clipping} readOnly user={clippingUser} />
   }, [clippingUser, userId])
+
+  const emptyState = useMemo(() => (
+    <View style={styles.emptyContainer}>
+      <Ionicons name={filter === 'takes' ? 'chatbubble-outline' : 'bookmark-outline'} size={32} color={colors.border} />
+      <Text style={styles.emptyText}>
+        {filter === 'takes' ? 'No takes yet.' : filter === 'clippings' ? 'No clippings yet.' : 'No takes or clippings yet.'}
+      </Text>
+    </View>
+  ), [filter, styles, colors])
 
   // ---------------------------------------------------------------------------
   // Render
@@ -233,10 +254,11 @@ export default function NativeProfileScreen() {
         <ProfileSkeleton variant="native" />
       ) : (
         <FlatList
-          data={clippings}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
+          data={feedItems}
+          keyExtractor={(item) => `${item.kind}-${item.item.id}`}
+          renderItem={renderFeedItem}
           ListHeaderComponent={listHeader}
+          ListEmptyComponent={emptyState}
           initialNumToRender={6}
           maxToRenderPerBatch={4}
           windowSize={9}
@@ -299,21 +321,25 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       marginTop: spacing.md,
       marginBottom: spacing.xl,
     },
+    filterRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
     metaCount: {
       fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
       letterSpacing: typography.magazineMeta.letterSpacing,
       color: colors.secondaryText,
     },
-    sectionLabel: {
+    metaDot: {
       fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
-      lineHeight: typography.magazineMeta.lineHeight,
-      letterSpacing: typography.magazineMeta.letterSpacing,
       color: colors.secondaryText,
-      paddingHorizontal: HORIZONTAL_PAD,
-      paddingTop: spacing.lg,
-      paddingBottom: spacing.sm,
+    },
+    filterActive: {
+      color: colors.foreground,
+      fontWeight: '600' as const,
     },
     emptyContainer: {
       alignItems: 'center',
