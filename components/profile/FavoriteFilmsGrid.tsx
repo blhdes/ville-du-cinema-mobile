@@ -1,5 +1,5 @@
 import { memo, useMemo } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, View } from 'react-native'
 import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
@@ -38,7 +38,6 @@ function FavoriteFilmsGrid({ favorites, editable, onEditSlot }: FavoriteFilmsGri
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Favorite Films</Text>
       <View style={styles.grid}>
         {slots.map((film, idx) => {
           const position = idx + 1
@@ -91,13 +90,6 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({
     container: {
       paddingHorizontal: 20,
-      marginTop: spacing.lg,
-    },
-    label: {
-      fontFamily: fonts.heading,
-      fontSize: typography.callout.fontSize,
-      color: colors.foreground,
-      marginBottom: spacing.sm,
     },
     grid: {
       flexDirection: 'row',

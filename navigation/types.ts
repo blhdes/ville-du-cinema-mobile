@@ -78,6 +78,7 @@ export type FavoriteFilmPickerParams = {
 export type ProfileStackParamList = {
   ProfileMain: undefined
   EditProfile: undefined
+  FollowingScreen: undefined
   ExternalProfile: { username: string }
   NativeProfile: { userId: string; username?: string }
   UserSearch: undefined

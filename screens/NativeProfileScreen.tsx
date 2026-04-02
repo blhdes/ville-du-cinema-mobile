@@ -32,6 +32,7 @@ import FeedDivider from '@/components/ui/FeedDivider'
 import ExpandableAvatar from '@/components/ui/ExpandableAvatar'
 import FollowButton from '@/components/ui/FollowButton'
 import FavoriteFilmsGrid from '@/components/profile/FavoriteFilmsGrid'
+import FeedFilterBar from '@/components/profile/FeedFilterBar'
 
 const AVATAR_SIZE = 72
 const HORIZONTAL_PAD = 20
@@ -169,21 +170,14 @@ export default function NativeProfileScreen() {
             <Text style={styles.bio}>{profile.bio}</Text>
           ) : null}
 
-          {/* Metadata row — tappable filters */}
+          {/* Metadata row — tappable filters + follow */}
           <View style={styles.metaRow}>
-            <View style={styles.filterRow}>
-              <Pressable onPress={() => toggleFilter('takes')} hitSlop={4}>
-                <Text style={[styles.metaCount, filter === 'takes' && styles.filterActive]}>
-                  {contentLoading ? '—' : `${takes.length} takes`}
-                </Text>
-              </Pressable>
-              <Text style={styles.metaDot}>·</Text>
-              <Pressable onPress={() => toggleFilter('clippings')} hitSlop={4}>
-                <Text style={[styles.metaCount, filter === 'clippings' && styles.filterActive]}>
-                  {contentLoading ? '—' : `${clippings.length} clippings`}
-                </Text>
-              </Pressable>
-            </View>
+            <FeedFilterBar
+              filter={filter}
+              takesCount={contentLoading ? null : takes.length}
+              clippingsCount={contentLoading ? null : clippings.length}
+              onToggle={toggleFilter}
+            />
             <FollowButton isFollowing={isFollowing} onPress={handleFollowToggle} />
           </View>
         </View>
@@ -320,26 +314,6 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       gap: spacing.lg,
       marginTop: spacing.md,
       marginBottom: spacing.xl,
-    },
-    filterRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-    },
-    metaCount: {
-      fontFamily: fonts.system,
-      fontSize: typography.magazineMeta.fontSize,
-      letterSpacing: typography.magazineMeta.letterSpacing,
-      color: colors.secondaryText,
-    },
-    metaDot: {
-      fontFamily: fonts.system,
-      fontSize: typography.magazineMeta.fontSize,
-      color: colors.secondaryText,
-    },
-    filterActive: {
-      color: colors.foreground,
-      fontWeight: '600' as const,
     },
     emptyContainer: {
       alignItems: 'center',

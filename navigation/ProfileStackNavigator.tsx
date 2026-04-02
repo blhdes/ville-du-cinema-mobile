@@ -15,6 +15,7 @@ import CreateTakeScreen from '@/screens/CreateTakeScreen'
 import TakeDetailScreen from '@/screens/TakeDetailScreen'
 import SavedFilmsScreen from '@/screens/SavedFilmsScreen'
 import FavoriteFilmPickerScreen from '@/screens/FavoriteFilmPickerScreen'
+import FollowingScreen from '@/screens/FollowingScreen'
 import type { ProfileStackParamList } from '@/navigation/types'
 import { fonts } from '@/theme'
 import { useTypography } from '@/hooks/useTypography'
@@ -62,6 +63,11 @@ export default function ProfileStackNavigator() {
           presentation: 'modal',
           headerLeft: () => null,
         }}
+      />
+      <Stack.Screen
+        name="FollowingScreen"
+        component={FollowingScreen}
+        options={{ headerTitle: 'Following' }}
       />
       <Stack.Screen
         name="ExternalProfile"

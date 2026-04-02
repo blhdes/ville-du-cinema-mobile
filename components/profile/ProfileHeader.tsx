@@ -16,12 +16,14 @@ interface ProfileHeaderProps {
   profile: UserProfile | VillagePublicProfile
   email?: string
   showEdit?: boolean
+  followingCount?: number
+  onFollowingPress?: () => void
 }
 
 const AVATAR_SIZE = 72
 const HORIZONTAL_PAD = 20
 
-export default function ProfileHeader({ profile, email, showEdit }: ProfileHeaderProps) {
+export default function ProfileHeader({ profile, email, showEdit, followingCount, onFollowingPress }: ProfileHeaderProps) {
   const { colors } = useTheme()
   const typography = useTypography()
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>()
@@ -52,15 +54,41 @@ export default function ProfileHeader({ profile, email, showEdit }: ProfileHeade
             <Text style={styles.meta}>{email}</Text>
           ) : null}
 
-          {showEdit ? (
-            <Pressable
-              style={styles.editButton}
-              onPress={() => navigation.navigate('EditProfile')}
-              hitSlop={8}
-            >
-              <Text style={styles.editButtonText}>Edit</Text>
-            </Pressable>
-          ) : null}
+          {(showEdit || followingCount !== undefined) && (
+            <View style={styles.actionsRow}>
+              {showEdit ? (
+                <Pressable
+                  style={styles.editButton}
+                  onPress={() => navigation.navigate('EditProfile')}
+                  hitSlop={8}
+                >
+                  <Text style={styles.editButtonText}>Edit</Text>
+                </Pressable>
+              ) : null}
+
+              {followingCount !== undefined && (
+                onFollowingPress ? (
+                  <Pressable
+                    style={({ pressed }) => [styles.followingRow, pressed && styles.followingPressed]}
+                    onPress={onFollowingPress}
+                    hitSlop={8}
+                  >
+                    <Text style={styles.followingLabel}>Following</Text>
+                    <View style={styles.countPill}>
+                      <Text style={styles.countPillText}>{followingCount}</Text>
+                    </View>
+                  </Pressable>
+                ) : (
+                  <View style={styles.followingRow}>
+                    <Text style={styles.followingLabel}>Following</Text>
+                    <View style={styles.countPill}>
+                      <Text style={styles.countPillText}>{followingCount}</Text>
+                    </View>
+                  </View>
+                )
+              )}
+            </View>
+          )}
         </View>
       </View>
 
@@ -154,7 +182,6 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       marginTop: 2,
     },
     editButton: {
-      marginTop: spacing.sm,
       alignSelf: 'flex-start',
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
@@ -181,6 +208,39 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       lineHeight: typography.magazineBody.lineHeight,
       color: colors.secondaryText,
       marginTop: spacing.lg,
+    },
+    actionsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      marginTop: spacing.sm,
+    },
+    followingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    followingLabel: {
+      fontFamily: fonts.system,
+      fontSize: typography.magazineMeta.fontSize,
+      lineHeight: typography.magazineMeta.lineHeight,
+      letterSpacing: typography.magazineMeta.letterSpacing,
+      color: colors.secondaryText,
+    },
+    countPill: {
+      backgroundColor: colors.backgroundSecondary,
+      borderRadius: 10,
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+    },
+    countPillText: {
+      fontFamily: fonts.system,
+      fontWeight: '600' as const,
+      fontSize: typography.caption.fontSize,
+      color: colors.secondaryText,
+    },
+    followingPressed: {
+      opacity: 0.6,
     },
     metadataRow: {
       flexDirection: 'row',

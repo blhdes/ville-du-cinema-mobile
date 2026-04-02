@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   FlatList,
-  LayoutAnimation,
   Pressable,
   StyleSheet,
   Text,
-  UIManager,
-  Platform,
   View,
 } from 'react-native'
 import { useFocusEffect } from '@react-navigation/native'
@@ -29,21 +26,20 @@ import type { ProfileStackParamList } from '@/navigation/types'
 import { useFavoriteFilms } from '@/hooks/useFavoriteFilms'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import ProfileHeader from '@/components/profile/ProfileHeader'
-import FavoriteFilmsGrid from '@/components/profile/FavoriteFilmsGrid'
+import ProfileMediaSection from '@/components/profile/ProfileMediaSection'
 import ProfileSkeleton from '@/components/profile/ProfileSkeleton'
-import FollowingList from '@/components/profile/FollowingList'
 import ClippingCard from '@/components/profile/ClippingCard'
 import RepostCard from '@/components/feed/RepostCard'
 import TakeCard from '@/components/TakeCard'
 import FeedDivider from '@/components/ui/FeedDivider'
-
-// Enable LayoutAnimation on Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true)
-}
+import FeedFilterBar from '@/components/profile/FeedFilterBar'
 
 const HORIZONTAL_PAD = 20
 const FAB_SIZE = 52
+
+type FeedItem =
+  | { kind: 'take'; item: Take }
+  | { kind: 'clipping'; item: Clipping }
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets()
@@ -65,12 +61,10 @@ export default function ProfileScreen() {
     }
   }, [profileScrollTopRequested])
 
-  // Following accordion state
-  const [followingExpanded, setFollowingExpanded] = useState(false)
-
-  const toggleFollowing = useCallback(() => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
-    setFollowingExpanded((prev) => !prev)
+  // Feed filter state
+  const [filter, setFilter] = useState<'all' | 'takes' | 'clippings'>('all')
+  const toggleFilter = useCallback((f: 'takes' | 'clippings') => {
+    setFilter((prev) => (prev === f ? 'all' : f))
   }, [])
 
   // Favorites
@@ -97,7 +91,6 @@ export default function ProfileScreen() {
       if (!user) return
 
       let cancelled = false
-      // Only show skeleton on first load — subsequent focuses refresh silently
       if (!hasLoadedOnce.current) {
         setContentLoading(true)
       }
@@ -128,109 +121,79 @@ export default function ProfileScreen() {
     displayName: profile.display_name ?? profile.username ?? 'You',
   } : undefined, [profile])
 
+  const feedItems = useMemo(() => {
+    const items: FeedItem[] = [
+      ...takes.map((t) => ({ kind: 'take' as const, item: t })),
+      ...clippings.map((c) => ({ kind: 'clipping' as const, item: c })),
+    ]
+    items.sort((a, b) =>
+      new Date(b.item.created_at).getTime() - new Date(a.item.created_at).getTime()
+    )
+    if (filter === 'takes') return items.filter((i) => i.kind === 'take')
+    if (filter === 'clippings') return items.filter((i) => i.kind === 'clipping')
+    return items
+  }, [takes, clippings, filter])
+
+  const followingCount = followedUsers.length + villageUsers.length
+
   const listHeader = useMemo(() => {
     if (!user) return null
     return (
       <>
-        {profile && <ProfileHeader profile={profile} email={user.email} showEdit />}
+        {profile && (
+          <ProfileHeader
+            profile={profile}
+            email={user.email}
+            showEdit
+            followingCount={followingCount}
+            onFollowingPress={() => navigation.navigate('FollowingScreen')}
+          />
+        )}
 
-        {/* Favorite Films grid */}
-        <FavoriteFilmsGrid
+        <ProfileMediaSection
           favorites={favorites}
           editable
           onEditSlot={(pos) => navigation.navigate('FavoriteFilmPicker', { position: pos })}
+          savedFilmsCount={savedFilms.length}
+          onWatchlistPress={() => navigation.navigate('SavedFilms', {
+            userId: user.id,
+            username: profile?.username ?? undefined,
+          })}
         />
 
-        {/* Watchlist link */}
-        {savedFilms.length > 0 && (
-          <Pressable
-            style={({ pressed }) => [styles.watchlistLink, pressed && styles.pressed]}
-            onPress={() => navigation.navigate('SavedFilms', {
-              userId: user.id,
-              username: profile?.username ?? undefined,
-            })}
-          >
-            <Ionicons name="bookmark-outline" size={16} color={colors.teal} />
-            <Text style={styles.watchlistLinkText}>
-              Watchlist ({savedFilms.length})
-            </Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.secondaryText} />
-          </Pressable>
-        )}
-
-        {/* Following accordion */}
-        <Pressable onPress={toggleFollowing} style={styles.accordionToggle}>
-          <Text style={styles.accordionLabel}>Following</Text>
-          <View style={styles.countPill}>
-            <Text style={styles.countPillText}>{followedUsers.length + villageUsers.length}</Text>
-          </View>
-          <View style={{ flex: 1 }} />
-          <Ionicons
-            name={followingExpanded ? 'chevron-up' : 'chevron-down'}
-            size={16}
-            color={colors.secondaryText}
-          />
-        </Pressable>
-        {followingExpanded && (
-          <View style={styles.followingSection}>
-            <FollowingList letterboxdUsers={followedUsers} villageUsers={villageUsers} />
-          </View>
-        )}
         <FeedDivider />
 
-        {/* Takes section */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionLabel}>Takes</Text>
-          <Pressable
-            onPress={() => navigation.navigate('CreateTake', undefined)}
-            hitSlop={8}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Ionicons name="add-circle-outline" size={20} color={colors.teal} />
-          </Pressable>
+        {/* Feed filter bar */}
+        <View style={styles.filterBar}>
+          <FeedFilterBar
+            filter={filter}
+            takesCount={contentLoading ? null : takes.length}
+            clippingsCount={contentLoading ? null : clippings.length}
+            onToggle={toggleFilter}
+          />
         </View>
 
-        {takes.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="chatbubble-outline" size={32} color={colors.border} />
-            <Text style={styles.emptyText}>
-              No takes yet.{'\n'}Share your thoughts on a film.
-            </Text>
-          </View>
-        ) : (
-          takes.map((take) => (
-            <TakeCard key={take.id} take={take} onDeleted={handleTakeDeleted} />
-          ))
-        )}
-
         <FeedDivider />
 
-        {/* Clippings section label */}
-        <Text style={styles.sectionLabel}>Clippings</Text>
-
-        {/* Error / empty states */}
+        {/* Clippings load error */}
         {clippingsError && (
           <Text style={styles.emptyText}>
             Something went wrong loading your clippings.
           </Text>
         )}
-        {!clippingsError && clippings.length === 0 && (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="bookmark-outline" size={32} color={colors.border} />
-            <Text style={styles.emptyText}>
-              Your archive is empty.{'\n'}Highlight text in reviews to save them here.
-            </Text>
-          </View>
-        )}
       </>
     )
-  }, [user, profile, followedUsers, villageUsers, colors, followingExpanded, toggleFollowing, contentLoading, clippingsError, clippings, takes, savedFilms, favorites, handleTakeDeleted, navigation, styles])
+  }, [user, profile, followingCount, colors, filter, toggleFilter, contentLoading, clippingsError, clippings, takes, savedFilms, favorites, navigation, styles])
 
-  const renderItem = useCallback(({ item }: { item: Clipping }) => {
-    if (item.type === 'repost' && item.review_json) {
+  const renderItem = useCallback(({ item }: { item: FeedItem }) => {
+    if (item.kind === 'take') {
+      return <TakeCard take={item.item} onDeleted={handleTakeDeleted} />
+    }
+    const clipping = item.item
+    if (clipping.type === 'repost' && clipping.review_json) {
       return (
         <RepostCard
-          clipping={item}
+          clipping={clipping}
           onDeleted={handleClippingDeleted}
           owner={{
             avatarUrl: clippingUser?.avatarUrl,
@@ -241,12 +204,29 @@ export default function ProfileScreen() {
     }
     return (
       <ClippingCard
-        clipping={item}
+        clipping={clipping}
         onDeleted={handleClippingDeleted}
         user={clippingUser}
       />
     )
-  }, [handleClippingDeleted, clippingUser])
+  }, [handleClippingDeleted, handleTakeDeleted, clippingUser])
+
+  const emptyState = useMemo(() => (
+    <View style={styles.emptyContainer}>
+      <Ionicons
+        name={filter === 'takes' ? 'chatbubble-outline' : filter === 'clippings' ? 'bookmark-outline' : 'film-outline'}
+        size={32}
+        color={colors.border}
+      />
+      <Text style={styles.emptyText}>
+        {filter === 'takes'
+          ? 'No takes yet.\nShare your thoughts on a film.'
+          : filter === 'clippings'
+          ? 'Your archive is empty.\nHighlight text in reviews to save them here.'
+          : 'No activity yet.'}
+      </Text>
+    </View>
+  ), [filter, styles, colors])
 
   // Guest mode
   if (!user) {
@@ -278,10 +258,11 @@ export default function ProfileScreen() {
       ) : (
         <FlatList
           ref={flatListRef}
-          data={clippings}
-          keyExtractor={(item) => item.id}
+          data={feedItems}
+          keyExtractor={(item) => `${item.kind}-${item.item.id}`}
           renderItem={renderItem}
           ListHeaderComponent={listHeader}
+          ListEmptyComponent={emptyState}
           initialNumToRender={6}
           maxToRenderPerBatch={4}
           windowSize={9}
@@ -291,14 +272,12 @@ export default function ProfileScreen() {
       )}
 
       {/* ---- Compose FAB ---- */}
-      {user ? (
-        <Pressable
-          onPress={() => navigation.navigate('CreateTake', undefined)}
-          style={({ pressed }) => [styles.fab, { bottom: tabBarInset + spacing.md }, pressed && styles.fabPressed]}
-        >
-          <Ionicons name="create-outline" size={24} color={colors.background} />
-        </Pressable>
-      ) : null}
+      <Pressable
+        onPress={() => navigation.navigate('CreateTake', undefined)}
+        style={({ pressed }) => [styles.fab, { bottom: tabBarInset + spacing.md }, pressed && styles.fabPressed]}
+      >
+        <Ionicons name="create-outline" size={24} color={colors.background} />
+      </Pressable>
     </View>
   )
 }
@@ -336,52 +315,10 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       fontSize: typography.title3.fontSize,
       color: colors.foreground,
     },
-    accordionToggle: {
-      flexDirection: 'row',
+    filterBar: {
       alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: HORIZONTAL_PAD,
       paddingVertical: spacing.md,
-    },
-    accordionLabel: {
-      fontFamily: fonts.system,
-      fontSize: typography.magazineMeta.fontSize,
-      lineHeight: typography.magazineMeta.lineHeight,
-      letterSpacing: typography.magazineMeta.letterSpacing,
-      color: colors.secondaryText,
-    },
-    countPill: {
-      backgroundColor: colors.backgroundSecondary,
-      borderRadius: 10,
-      paddingHorizontal: 7,
-      paddingVertical: 2,
-    },
-    countPillText: {
-      fontFamily: fonts.system,
-      fontWeight: '600' as const,
-      fontSize: typography.caption.fontSize,
-      color: colors.secondaryText,
-    },
-    followingSection: {
-      paddingBottom: spacing.md,
-    },
-    sectionHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
       paddingHorizontal: HORIZONTAL_PAD,
-      paddingTop: spacing.lg,
-      paddingBottom: spacing.sm,
-    },
-    sectionLabel: {
-      fontFamily: fonts.system,
-      fontSize: typography.magazineMeta.fontSize,
-      lineHeight: typography.magazineMeta.lineHeight,
-      letterSpacing: typography.magazineMeta.letterSpacing,
-      color: colors.secondaryText,
-      paddingHorizontal: HORIZONTAL_PAD,
-      paddingTop: spacing.lg,
-      paddingBottom: spacing.sm,
     },
     pressed: {
       opacity: 0.6,
@@ -413,19 +350,6 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       lineHeight: typography.magazineTitle.lineHeight,
       color: colors.foreground,
       marginBottom: spacing.md,
-    },
-    watchlistLink: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      paddingHorizontal: HORIZONTAL_PAD,
-      paddingVertical: spacing.md,
-    },
-    watchlistLinkText: {
-      flex: 1,
-      fontFamily: fonts.system,
-      fontSize: typography.callout.fontSize,
-      color: colors.teal,
     },
     guestText: {
       fontFamily: fonts.system,
