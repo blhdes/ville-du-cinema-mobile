@@ -4,15 +4,15 @@ import * as Haptics from 'expo-haptics'
 import { Ionicons } from '@expo/vector-icons'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import type { FeedStackParamList } from '@/navigation/types'
-import type { Clipping, Review } from '@/types/database'
-import { deleteClipping, saveRepost } from '@/services/clippings'
+import type { Clipping } from '@/types/database'
+import { deleteClipping, saveRepostClipping } from '@/services/clippings'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
-import ReviewCard from '@/components/ReviewCard'
+import ClippingCard from '@/components/profile/ClippingCard'
 import SwipeableRow from '@/components/ui/SwipeableRow'
 
-interface RepostCardProps {
+interface ClippingRepostCardProps {
   clipping: Clipping
   owner: {
     avatarUrl?: string
@@ -24,13 +24,13 @@ interface RepostCardProps {
   onDeleted?: (id: string) => void
 }
 
-function RepostCard({ clipping, owner, onDeleted }: RepostCardProps) {
+function ClippingRepostCard({ clipping, owner, onDeleted }: ClippingRepostCardProps) {
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const { colors } = useTheme()
   const typography = useTypography()
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
-  const review = clipping.review_json as Review
+  const originalClipping = clipping.review_json as Clipping
 
   const handleOwnerPress = useCallback(() => {
     if (owner.userId) {
@@ -40,19 +40,19 @@ function RepostCard({ clipping, owner, onDeleted }: RepostCardProps) {
 
   const handleRepost = useCallback(async () => {
     try {
-      await saveRepost(review, clipping.tmdb_id)
+      await saveRepostClipping(originalClipping)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     } catch (error) {
-      console.error('Failed to repost:', error)
+      console.error('Failed to repost clipping:', error)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
     }
-  }, [review, clipping.tmdb_id])
+  }, [originalClipping])
 
   const handleDelete = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
     onDeleted?.(clipping.id)
     deleteClipping(clipping.id).catch((error) => {
-      console.error('Failed to delete repost:', error)
+      console.error('Failed to delete clipping repost:', error)
     })
   }, [clipping.id, onDeleted])
 
@@ -70,26 +70,30 @@ function RepostCard({ clipping, owner, onDeleted }: RepostCardProps) {
         </Text>
       </Pressable>
 
-      {/* Embedded ReviewCard — not swipeable to prevent re-reposting */}
-      <ReviewCard review={review} repostable={false} compact />
+      {/* Embedded ClippingCard — repostable=false prevents nested re-reposting */}
+      <ClippingCard
+        clipping={originalClipping}
+        readOnly
+        repostable={false}
+      />
     </View>
   )
 
-  // Others' reposts: swipe-to-repost
+  // Others' clipping reposts: swipe-to-repost
   if (!onDeleted) {
     return (
       <SwipeableRow
         onAction={handleRepost}
         actionColor={colors.teal}
         actionIcon="repeat-outline"
-        actionLabel="Repost this review"
+        actionLabel="Repost this clipping"
       >
         {cardContent}
       </SwipeableRow>
     )
   }
 
-  // Own repost: swipe-to-delete
+  // Own clipping repost: swipe-to-delete
   return (
     <SwipeableRow
       onAction={handleDelete}
@@ -102,7 +106,7 @@ function RepostCard({ clipping, owner, onDeleted }: RepostCardProps) {
   )
 }
 
-export default memo(RepostCard)
+export default memo(ClippingRepostCard)
 
 function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({

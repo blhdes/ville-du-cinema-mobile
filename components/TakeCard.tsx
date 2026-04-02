@@ -3,11 +3,14 @@ import { Alert, LayoutAnimation, Pressable, StyleSheet, Text, View } from 'react
 import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
+import * as Haptics from 'expo-haptics'
 import type { Take } from '@/types/database'
 import type { FeedStackParamList } from '@/navigation/types'
 import { deleteTake } from '@/services/takes'
+import { saveRepostTake } from '@/services/clippings'
 import { useLike } from '@/hooks/useLike'
 import { useCommentCount } from '@/hooks/useCommentCount'
+import { useRepostCount, publishRepostCount } from '@/hooks/useRepostCount'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
@@ -31,12 +34,16 @@ interface TakeCardProps {
   onDeleted?: (id: string) => void
   /** Disables swipe-to-delete — for read-only contexts (other user's profile). */
   readOnly?: boolean
+  /** Hides the repost button and disables swipe-to-repost — used when embedded inside TakeRepostCard. */
+  repostable?: boolean
   /** Pre-resolved like status from batch fetch (avoids per-card API call in feeds). */
   initialLiked?: boolean
   /** Pre-resolved like count from batch fetch. */
   initialLikeCount?: number
   /** Pre-resolved comment count from batch fetch. */
   initialCommentCount?: number
+  /** Pre-resolved repost count from batch fetch. */
+  initialRepostCount?: number
 }
 
 function TakeCard({
@@ -45,9 +52,11 @@ function TakeCard({
   hideAuthor = false,
   onDeleted,
   readOnly = false,
+  repostable = true,
   initialLiked,
   initialLikeCount,
   initialCommentCount,
+  initialRepostCount,
 }: TakeCardProps) {
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const { colors } = useTheme()
@@ -60,6 +69,7 @@ function TakeCard({
     initialLikeCount,
   )
   const commentCount = useCommentCount(take.id, initialCommentCount)
+  const repostCount = useRepostCount(take.id, initialRepostCount)
 
   const handleDelete = useCallback(() => {
     Alert.alert('Delete take', 'Are you sure you want to delete this take?', [
@@ -90,6 +100,19 @@ function TakeCard({
   const handleDetailPress = useCallback(() => {
     navigation.navigate('TakeDetail', { takeId: take.id, author })
   }, [navigation, take.id, author])
+
+  const handleRepost = useCallback(async () => {
+    const prevCount = repostCount
+    publishRepostCount(take.id, prevCount + 1)
+    try {
+      await saveRepostTake(take, author?.displayName ?? 'Unknown')
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    } catch (error) {
+      console.error('Failed to repost take:', error)
+      publishRepostCount(take.id, prevCount)
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+    }
+  }, [take, author?.displayName, repostCount])
 
   const dateStr = new Date(take.created_at).toLocaleDateString('en-US', {
     month: 'short',
@@ -169,6 +192,19 @@ function TakeCard({
             <Text style={styles.interactionCount}>{commentCount}</Text>
           ) : null}
         </Pressable>
+
+        {repostable ? (
+          <Pressable
+            onPress={handleRepost}
+            hitSlop={8}
+            style={({ pressed }) => [styles.interactionButton, pressed && styles.interactionPressed]}
+          >
+            <Ionicons name="repeat-outline" size={17} color={colors.secondaryText} />
+            {repostCount > 0 ? (
+              <Text style={styles.interactionCount}>{repostCount}</Text>
+            ) : null}
+          </Pressable>
+        ) : null}
       </View>
 
       </View>
@@ -176,18 +212,35 @@ function TakeCard({
     </Pressable>
   )
 
-  if (readOnly || !onDeleted) return cardContent
+  // Others' takes: swipe-to-repost (when repostable)
+  if (readOnly && repostable) {
+    return (
+      <SwipeableRow
+        onAction={handleRepost}
+        actionColor={colors.teal}
+        actionIcon="repeat-outline"
+        actionLabel="Repost this take"
+      >
+        {cardContent}
+      </SwipeableRow>
+    )
+  }
 
-  return (
-    <SwipeableRow
-      onAction={handleDelete}
-      actionColor={colors.red}
-      actionIcon="trash-outline"
-      actionLabel="Delete take"
-    >
-      {cardContent}
-    </SwipeableRow>
-  )
+  // Own takes: swipe-to-delete
+  if (!readOnly && onDeleted) {
+    return (
+      <SwipeableRow
+        onAction={handleDelete}
+        actionColor={colors.red}
+        actionIcon="trash-outline"
+        actionLabel="Delete take"
+      >
+        {cardContent}
+      </SwipeableRow>
+    )
+  }
+
+  return cardContent
 }
 
 export default memo(TakeCard)

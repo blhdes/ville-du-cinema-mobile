@@ -30,6 +30,8 @@ import ProfileMediaSection from '@/components/profile/ProfileMediaSection'
 import ProfileSkeleton from '@/components/profile/ProfileSkeleton'
 import ClippingCard from '@/components/profile/ClippingCard'
 import RepostCard from '@/components/feed/RepostCard'
+import TakeRepostCard from '@/components/feed/TakeRepostCard'
+import ClippingRepostCard from '@/components/feed/ClippingRepostCard'
 import TakeCard from '@/components/TakeCard'
 import FeedDivider from '@/components/ui/FeedDivider'
 import FeedFilterBar from '@/components/profile/FeedFilterBar'
@@ -204,6 +206,30 @@ export default function ProfileScreen() {
     if (clipping.type === 'repost' && clipping.review_json) {
       return (
         <RepostCard
+          clipping={clipping}
+          onDeleted={handleClippingDeleted}
+          owner={{
+            avatarUrl: clippingUser?.avatarUrl,
+            displayName: clippingUser?.displayName ?? 'You',
+          }}
+        />
+      )
+    }
+    if (clipping.type === 'take-repost' && clipping.review_json) {
+      return (
+        <TakeRepostCard
+          clipping={clipping}
+          onDeleted={handleClippingDeleted}
+          owner={{
+            avatarUrl: clippingUser?.avatarUrl,
+            displayName: clippingUser?.displayName ?? 'You',
+          }}
+        />
+      )
+    }
+    if (clipping.type === 'clipping-repost' && clipping.review_json) {
+      return (
+        <ClippingRepostCard
           clipping={clipping}
           onDeleted={handleClippingDeleted}
           owner={{

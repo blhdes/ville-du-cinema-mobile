@@ -375,8 +375,9 @@ export interface Clipping {
   author_name: string
   original_url: string
   created_at: string // ISO 8601 timestamp
-  type: 'quote' | 'repost'
-  review_json: Review | null
+  type: 'quote' | 'repost' | 'take-repost' | 'clipping-repost'
+  /** Stores the original content: Review for 'repost', Take for 'take-repost', Clipping for 'clipping-repost'. */
+  review_json: Review | Take | Clipping | null
   tmdb_id: number | null // nullable — old clippings won't have this
 }
 
@@ -515,8 +516,32 @@ export interface TakeFeedItem {
   ownerUsername?: string
 }
 
+/** A reposted Take entry in the unified Super-Feed. */
+export interface TakeRepostFeedItem {
+  kind: 'take-repost'
+  /** Milliseconds since epoch — derived from created_at once at mapping time. */
+  sortKey: number
+  data: Clipping
+  ownerAvatarUrl?: string
+  ownerDisplayName: string
+  ownerUserId?: string
+  ownerUsername?: string
+}
+
+/** A reposted Clipping entry in the unified Super-Feed. */
+export interface ClippingRepostFeedItem {
+  kind: 'clipping-repost'
+  /** Milliseconds since epoch — derived from created_at once at mapping time. */
+  sortKey: number
+  data: Clipping
+  ownerAvatarUrl?: string
+  ownerDisplayName: string
+  ownerUserId?: string
+  ownerUsername?: string
+}
+
 /** Discriminated union used as the single item type in the Super-Feed FlatList. */
-export type FeedItem = ReviewFeedItem | ClippingFeedItem | RepostFeedItem | TakeFeedItem
+export type FeedItem = ReviewFeedItem | ClippingFeedItem | RepostFeedItem | TakeFeedItem | TakeRepostFeedItem | ClippingRepostFeedItem
 
 // ---------------------------------------------------------------------------
 // API request types — used to type request bodies in API route handlers.

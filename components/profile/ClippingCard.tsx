@@ -1,10 +1,11 @@
 import { memo, useCallback, useMemo, useState } from 'react'
 import { Alert, LayoutAnimation, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import { Image } from 'expo-image'
+import * as Haptics from 'expo-haptics'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import type { Clipping } from '@/types/database'
 import type { FeedStackParamList } from '@/navigation/types'
-import { deleteClipping } from '@/services/clippings'
+import { deleteClipping, saveRepostClipping } from '@/services/clippings'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
@@ -18,9 +19,11 @@ interface ClippingCardProps {
   user?: { avatarUrl?: string; displayName: string; userId?: string; username?: string }
   /** Disables swipe-to-delete. Use on read-only views (e.g. another user's profile). */
   readOnly?: boolean
+  /** Hides swipe-to-repost — used when embedded inside ClippingRepostCard. */
+  repostable?: boolean
 }
 
-function ClippingCard({ clipping, onDeleted, user, readOnly = false }: ClippingCardProps) {
+function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable = true }: ClippingCardProps) {
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const { colors } = useTheme()
   const typography = useTypography()
@@ -32,6 +35,16 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false }: ClippingC
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
     setIsExpanded(true)
   }, [isExpanded])
+
+  const handleRepost = useCallback(async () => {
+    try {
+      await saveRepostClipping(clipping)
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    } catch (error) {
+      console.error('Failed to repost clipping:', error)
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+    }
+  }, [clipping])
 
   const handleDelete = useCallback(() => {
     Alert.alert('Delete clipping', 'Are you sure you want to delete this clipping?', [
@@ -109,8 +122,24 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false }: ClippingC
       </View>
   )
 
+  // Others' clippings: swipe-to-repost (when repostable)
+  if (readOnly && repostable) {
+    return (
+      <SwipeableRow
+        onAction={handleRepost}
+        actionColor={colors.teal}
+        actionIcon="repeat-outline"
+        actionLabel="Repost this clipping"
+      >
+        {cardContent}
+      </SwipeableRow>
+    )
+  }
+
+  // Embedded in ClippingRepostCard: no swipe
   if (readOnly) return cardContent
 
+  // Own clippings: swipe-to-delete
   return (
     <SwipeableRow
       onAction={handleDelete}

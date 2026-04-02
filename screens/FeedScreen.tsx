@@ -33,13 +33,16 @@ import { getVillageClippings } from '@/services/clippings'
 import { getVillageTakes } from '@/services/takes'
 import { getBatchLikeStatus, type LikeStatus } from '@/services/likes'
 import { getBatchCommentCounts } from '@/services/comments'
-import type { Review, FeedItem, Clipping, Take, RepostFeedItem, TakeFeedItem } from '@/types/database'
+import { getBatchRepostCounts } from '@/services/clippings'
+import type { Review, FeedItem, Clipping, Take, RepostFeedItem, TakeFeedItem, TakeRepostFeedItem, ClippingRepostFeedItem } from '@/types/database'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import ReviewCard from '@/components/ReviewCard'
 import ClippingCard from '@/components/profile/ClippingCard'
 import RepostCard from '@/components/feed/RepostCard'
+import TakeRepostCard from '@/components/feed/TakeRepostCard'
+import ClippingRepostCard from '@/components/feed/ClippingRepostCard'
 import TakeCard from '@/components/TakeCard'
 import ReviewCardSkeleton from '@/components/feed/ReviewCardSkeleton'
 import WatchNotification from '@/components/WatchNotification'
@@ -63,6 +66,8 @@ const SNAP_SPRING = { damping: 24, stiffness: 120, mass: 1.0, overshootClamping:
 const keyExtractor = (item: FeedItem): string => {
   if (item.kind === 'review') return `review-${item.data.id}`
   if (item.kind === 'repost') return `repost-${item.data.id}`
+  if (item.kind === 'take-repost') return `take-repost-${item.data.id}`
+  if (item.kind === 'clipping-repost') return `clipping-repost-${item.data.id}`
   if (item.kind === 'take') return `take-${item.data.id}`
   return `clipping-${item.data.id}`
 }
@@ -228,6 +233,7 @@ export default function FeedScreen() {
   const [villageTakes, setVillageTakes] = useState<Take[]>([])
   const [takeLikesMap, setTakeLikesMap] = useState<Map<string, LikeStatus>>(new Map())
   const [takeCommentCounts, setTakeCommentCounts] = useState<Map<string, number>>(new Map())
+  const [takeRepostCounts, setTakeRepostCounts] = useState<Map<string, number>>(new Map())
 
   // Fetch clippings + takes from followed Village users whenever the follow list changes
   useEffect(() => {
@@ -264,6 +270,7 @@ export default function FeedScreen() {
     }
     getBatchLikeStatus(takeIds).then(setTakeLikesMap).catch(() => {})
     getBatchCommentCounts(takeIds).then(setTakeCommentCounts).catch(() => {})
+    getBatchRepostCounts(takeIds).then(setTakeRepostCounts).catch(() => {})
   }, [villageTakes])
 
   // Initial fetch when takes change
@@ -426,8 +433,10 @@ export default function FeedScreen() {
     const ownerDisplayName = profile?.display_name ?? profile?.username ?? 'Me'
     const ownerAvatarUrl = profile?.avatar_url ?? undefined
 
-    const ownQuotes = clippings.filter((c) => c.type !== 'repost')
+    const ownQuotes = clippings.filter((c) => c.type === 'quote')
     const ownReposts = clippings.filter((c) => c.type === 'repost')
+    const ownTakeReposts = clippings.filter((c) => c.type === 'take-repost')
+    const ownClippingReposts = clippings.filter((c) => c.type === 'clipping-repost')
 
     const clippingItems = ownQuotes.map((c): FeedItem => ({
       kind: 'clipping',
@@ -445,8 +454,26 @@ export default function FeedScreen() {
       ownerDisplayName,
     }))
 
-    const villageQuotes = villageClippings.filter((c) => c.type !== 'repost')
+    const takeRepostItems: FeedItem[] = ownTakeReposts.map((c): TakeRepostFeedItem => ({
+      kind: 'take-repost',
+      sortKey: new Date(c.created_at).getTime(),
+      data: c,
+      ownerAvatarUrl,
+      ownerDisplayName,
+    }))
+
+    const clippingRepostItems: FeedItem[] = ownClippingReposts.map((c): ClippingRepostFeedItem => ({
+      kind: 'clipping-repost',
+      sortKey: new Date(c.created_at).getTime(),
+      data: c,
+      ownerAvatarUrl,
+      ownerDisplayName,
+    }))
+
+    const villageQuotes = villageClippings.filter((c) => c.type === 'quote')
     const villageReposts = villageClippings.filter((c) => c.type === 'repost')
+    const villageTakeReposts = villageClippings.filter((c) => c.type === 'take-repost')
+    const villageClippingReposts = villageClippings.filter((c) => c.type === 'clipping-repost')
 
     const villageClippingItems = villageQuotes.map((c): FeedItem => {
       const owner = villageUserMap.get(c.user_id)
@@ -474,6 +501,32 @@ export default function FeedScreen() {
       }
     })
 
+    const villageTakeRepostItems: FeedItem[] = villageTakeReposts.map((c): TakeRepostFeedItem => {
+      const owner = villageUserMap.get(c.user_id)
+      return {
+        kind: 'take-repost',
+        sortKey: new Date(c.created_at).getTime(),
+        data: c,
+        ownerAvatarUrl: owner?.avatarUrl,
+        ownerDisplayName: owner?.displayName ?? 'Village User',
+        ownerUserId: c.user_id,
+        ownerUsername: owner?.username,
+      }
+    })
+
+    const villageClippingRepostItems: FeedItem[] = villageClippingReposts.map((c): ClippingRepostFeedItem => {
+      const owner = villageUserMap.get(c.user_id)
+      return {
+        kind: 'clipping-repost',
+        sortKey: new Date(c.created_at).getTime(),
+        data: c,
+        ownerAvatarUrl: owner?.avatarUrl,
+        ownerDisplayName: owner?.displayName ?? 'Village User',
+        ownerUserId: c.user_id,
+        ownerUsername: owner?.username,
+      }
+    })
+
     const takeItems: FeedItem[] = villageTakes.map((t): TakeFeedItem => {
       const owner = villageUserMap.get(t.user_id)
       return {
@@ -487,7 +540,7 @@ export default function FeedScreen() {
       }
     })
 
-    return [...reviewItems, ...clippingItems, ...repostItems, ...villageClippingItems, ...villageRepostItems, ...takeItems].sort((a, b) => b.sortKey - a.sortKey)
+    return [...reviewItems, ...clippingItems, ...repostItems, ...takeRepostItems, ...clippingRepostItems, ...villageClippingItems, ...villageRepostItems, ...villageTakeRepostItems, ...villageClippingRepostItems, ...takeItems].sort((a, b) => b.sortKey - a.sortKey)
   }, [reviews, clippings, villageClippings, villageTakes, villageUserMap, profile?.avatar_url, profile?.display_name, profile?.username])
 
   // Filter watch notifications — clippings are always shown regardless
@@ -495,7 +548,7 @@ export default function FeedScreen() {
     () => preferences.showWatchNotifications
       ? feedItems
       : feedItems.filter((item) => {
-          if (item.kind === 'clipping' || item.kind === 'repost' || item.kind === 'take') return true
+          if (item.kind === 'clipping' || item.kind === 'repost' || item.kind === 'take' || item.kind === 'take-repost' || item.kind === 'clipping-repost') return true
           return item.data.type !== 'watch'
         }),
     [feedItems, preferences.showWatchNotifications],
@@ -529,6 +582,7 @@ export default function FeedScreen() {
           initialLiked={likeData?.liked}
           initialLikeCount={likeData?.count}
           initialCommentCount={takeCommentCounts.get(item.data.id) ?? 0}
+          initialRepostCount={takeRepostCounts.get(item.data.id) ?? 0}
           readOnly
         />
       )
@@ -551,11 +605,27 @@ export default function FeedScreen() {
         />
       )
     }
+    if (item.kind === 'take-repost') {
+      return (
+        <TakeRepostCard
+          clipping={item.data}
+          owner={{ avatarUrl: item.ownerAvatarUrl, displayName: item.ownerDisplayName, userId: item.ownerUserId, username: item.ownerUsername }}
+        />
+      )
+    }
+    if (item.kind === 'clipping-repost') {
+      return (
+        <ClippingRepostCard
+          clipping={item.data}
+          owner={{ avatarUrl: item.ownerAvatarUrl, displayName: item.ownerDisplayName, userId: item.ownerUserId, username: item.ownerUsername }}
+        />
+      )
+    }
     if (item.data.type === 'watch') {
       return <WatchNotification review={item.data} />
     }
     return <ReviewCard review={item.data} />
-  }, [removeClipping, takeLikesMap, takeCommentCounts])
+  }, [removeClipping, takeLikesMap, takeCommentCounts, takeRepostCounts])
 
   const renderEmpty = useCallback(() => {
     if (isLoading || isListLoading) return null

@@ -4,7 +4,7 @@
  */
 
 import { supabase } from '@/lib/supabase/client'
-import type { Clipping, Database, Review } from '@/types/database'
+import type { Clipping, Database, Review, Take } from '@/types/database'
 import { stripHtml } from '@/utils/html'
 
 type ClippingRow = Database['public']['Tables']['user_clippings']['Row']
@@ -143,6 +143,90 @@ export async function saveRepost(review: Review, tmdbId?: number | null): Promis
 }
 
 /**
+ * Saves a Take as a repost in the user's clippings.
+ * Stores the complete Take object in `review_json` for rich rendering.
+ */
+export async function saveRepostTake(take: Take, authorDisplayName: string): Promise<Clipping> {
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('You must be signed in to repost.')
+  }
+
+  // Remove previous repost of the same take (if any) so it resurfaces as fresh
+  await supabase
+    .from('user_clippings')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('type', 'take-repost')
+    .eq('original_url', `take:${take.id}`)
+
+  const { data, error } = await supabase
+    .from('user_clippings')
+    .insert({
+      user_id: user.id,
+      type: 'take-repost',
+      quote_text: take.content,
+      movie_title: take.movie_title,
+      author_name: authorDisplayName,
+      original_url: `take:${take.id}`,
+      review_json: JSON.parse(JSON.stringify(take)),
+      tmdb_id: take.tmdb_id,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('saveRepostTake error:', error.message)
+    throw new Error(`Failed to save take repost: ${error.message}`)
+  }
+
+  return toClipping(data)
+}
+
+/**
+ * Saves a Clipping as a repost in the user's clippings.
+ * Stores the complete Clipping object in `review_json` for rich rendering.
+ */
+export async function saveRepostClipping(clipping: Clipping): Promise<Clipping> {
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('You must be signed in to repost.')
+  }
+
+  // Remove previous repost of the same clipping (if any) so it resurfaces as fresh
+  await supabase
+    .from('user_clippings')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('type', 'clipping-repost')
+    .eq('original_url', clipping.original_url)
+
+  const { data, error } = await supabase
+    .from('user_clippings')
+    .insert({
+      user_id: user.id,
+      type: 'clipping-repost',
+      quote_text: clipping.quote_text,
+      movie_title: clipping.movie_title,
+      author_name: clipping.author_name,
+      original_url: clipping.original_url,
+      review_json: JSON.parse(JSON.stringify(clipping)),
+      tmdb_id: clipping.tmdb_id,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('saveRepostClipping error:', error.message)
+    throw new Error(`Failed to save clipping repost: ${error.message}`)
+  }
+
+  return toClipping(data)
+}
+
+/**
  * Fetches all clippings anchored to a specific film (by TMDB ID), newest first.
  * Used on Film Card screens to show what people have clipped about a movie.
  */
@@ -159,6 +243,36 @@ export async function getFilmClippings(tmdbId: number): Promise<Clipping[]> {
   }
 
   return (data ?? []).map(toClipping)
+}
+
+/**
+ * Batch-fetch repost counts for multiple Takes.
+ * Counts `user_clippings` rows with type='take-repost' and matching original_url.
+ * Returns a Map of take_id → count. Used by feeds to avoid N+1 queries.
+ */
+export async function getBatchRepostCounts(takeIds: string[]): Promise<Map<string, number>> {
+  const result = new Map<string, number>()
+  if (takeIds.length === 0) return result
+
+  const urls = takeIds.map((id) => `take:${id}`)
+
+  const { data, error } = await supabase
+    .from('user_clippings')
+    .select('original_url')
+    .eq('type', 'take-repost')
+    .in('original_url', urls)
+
+  if (error) {
+    console.error('getBatchRepostCounts error:', error.message)
+    return result
+  }
+
+  for (const row of data ?? []) {
+    const takeId = row.original_url.replace('take:', '')
+    result.set(takeId, (result.get(takeId) ?? 0) + 1)
+  }
+
+  return result
 }
 
 /**
