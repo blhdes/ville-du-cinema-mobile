@@ -339,6 +339,9 @@ export interface VillagePublicProfile {
   website_label: string | null
   twitter_handle: string | null
   letterboxd_username: string | null
+  /** JSONB arrays — present when explicitly selected; used for following count. */
+  followed_users?: FollowedUser[] | null
+  followed_village_users?: FollowedVillageUser[] | null
 }
 
 /**

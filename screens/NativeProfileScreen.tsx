@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   FlatList,
   InteractionManager,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -10,7 +9,6 @@ import {
 import { useRoute, type RouteProp } from '@react-navigation/native'
 import { useTabBarInset } from '@/hooks/useTabBarInset'
 import * as Haptics from 'expo-haptics'
-import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase/client'
 import { getUserClippings } from '@/services/clippings'
@@ -31,7 +29,7 @@ import TakeCard from '@/components/TakeCard'
 import FeedDivider from '@/components/ui/FeedDivider'
 import ExpandableAvatar from '@/components/ui/ExpandableAvatar'
 import FollowButton from '@/components/ui/FollowButton'
-import FavoriteFilmsGrid from '@/components/profile/FavoriteFilmsGrid'
+import ProfileMediaSection from '@/components/profile/ProfileMediaSection'
 import FeedFilterBar from '@/components/profile/FeedFilterBar'
 
 const AVATAR_SIZE = 72
@@ -51,7 +49,6 @@ export default function NativeProfileScreen() {
   const { villageUserIds, addVillageUser, removeVillageUser } = useUserLists()
 
   const isFollowing = villageUserIds.includes(userId)
-
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
 
   const [profile, setProfile] = useState<VillagePublicProfile | null>(null)
@@ -70,7 +67,7 @@ export default function NativeProfileScreen() {
       const [profileResult, clippingsResult, takesResult, savedResult, favResult] = await Promise.allSettled([
         supabase
           .from('user_data')
-          .select('user_id, username, display_name, avatar_url, bio, location, website_url, website_label, twitter_handle, letterboxd_username')
+          .select('user_id, username, display_name, avatar_url, bio, location, website_url, website_label, twitter_handle, letterboxd_username, followed_users, followed_village_users')
           .eq('user_id', userId)
           .single(),
         getUserClippings(userId),
@@ -85,18 +82,10 @@ export default function NativeProfileScreen() {
       }
       if (!cancelled) setProfileLoading(false)
 
-      if (clippingsResult.status === 'fulfilled' && !cancelled) {
-        setClippings(clippingsResult.value)
-      }
-      if (takesResult.status === 'fulfilled' && !cancelled) {
-        setTakes(takesResult.value)
-      }
-      if (savedResult.status === 'fulfilled' && !cancelled) {
-        setSavedFilms(savedResult.value)
-      }
-      if (favResult.status === 'fulfilled' && !cancelled) {
-        setFavorites(favResult.value)
-      }
+      if (clippingsResult.status === 'fulfilled' && !cancelled) setClippings(clippingsResult.value)
+      if (takesResult.status === 'fulfilled' && !cancelled) setTakes(takesResult.value)
+      if (savedResult.status === 'fulfilled' && !cancelled) setSavedFilms(savedResult.value)
+      if (favResult.status === 'fulfilled' && !cancelled) setFavorites(favResult.value)
       if (!cancelled) setContentLoading(false)
     })
 
@@ -120,10 +109,6 @@ export default function NativeProfileScreen() {
     }
   }, [profile, isFollowing, userId, addVillageUser, removeVillageUser])
 
-  // ---------------------------------------------------------------------------
-  // List header + renderItem — memoized to prevent unnecessary FlatList remounts
-  // ---------------------------------------------------------------------------
-
   const toggleFilter = useCallback((f: 'takes' | 'clippings') => {
     setFilter((prev) => (prev === f ? 'all' : f))
   }, [])
@@ -146,10 +131,16 @@ export default function NativeProfileScreen() {
     displayName: profile.display_name ?? profile.username ?? 'Village User',
   } : undefined, [profile])
 
+  const followingCount = useMemo(() =>
+    (profile?.followed_users?.length ?? 0) + (profile?.followed_village_users?.length ?? 0),
+    [profile]
+  )
+
   const listHeader = useMemo(() => {
     if (!profile) return null
     return (
       <>
+        {/* Centered profile header */}
         <View style={styles.profileHeader}>
           <ExpandableAvatar
             avatarUrl={profile.avatar_url}
@@ -170,44 +161,45 @@ export default function NativeProfileScreen() {
             <Text style={styles.bio}>{profile.bio}</Text>
           ) : null}
 
-          {/* Metadata row — tappable filters + follow */}
-          <View style={styles.metaRow}>
-            <FeedFilterBar
-              filter={filter}
-              takesCount={contentLoading ? null : takes.length}
-              clippingsCount={contentLoading ? null : clippings.length}
-              onToggle={toggleFilter}
-            />
+          {/* Following count · Follow button */}
+          <View style={styles.socialRow}>
+            <View style={styles.followingPill}>
+              <Text style={styles.followingLabel}>Following</Text>
+              <View style={styles.countPill}>
+                <Text style={styles.countPillText}>{followingCount}</Text>
+              </View>
+            </View>
+            <Text style={styles.socialDot}>·</Text>
             <FollowButton isFollowing={isFollowing} onPress={handleFollowToggle} />
           </View>
         </View>
 
-        {/* Favorite Films grid (read-only) */}
-        {favorites.length > 0 && (
-          <FavoriteFilmsGrid favorites={favorites} />
-        )}
+        {/* Top-4 + watchlist (read-only) */}
+        <ProfileMediaSection
+          favorites={favorites}
+          savedFilmsCount={savedFilms.length}
+          onWatchlistPress={() => navigation.navigate('SavedFilms', {
+            userId,
+            username: profile.username ?? undefined,
+          })}
+        />
 
-        {/* Watchlist link */}
-        {savedFilms.length > 0 && (
-          <Pressable
-            style={({ pressed }) => [styles.watchlistLink, pressed && styles.pressed]}
-            onPress={() => navigation.navigate('SavedFilms', {
-              userId,
-              username: profile.username ?? undefined,
-            })}
-          >
-            <Ionicons name="bookmark-outline" size={16} color={colors.teal} />
-            <Text style={styles.watchlistLinkText}>
-              Watchlist ({savedFilms.length})
-            </Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.secondaryText} />
-          </Pressable>
-        )}
+        <FeedDivider />
+
+        {/* Feed filter bar */}
+        <View style={styles.filterBar}>
+          <FeedFilterBar
+            filter={filter}
+            takesCount={contentLoading ? null : takes.length}
+            clippingsCount={contentLoading ? null : clippings.length}
+            onToggle={toggleFilter}
+          />
+        </View>
 
         <FeedDivider />
       </>
     )
-  }, [profile, contentLoading, clippings, takes, savedFilms, favorites, filter, isFollowing, handleFollowToggle, toggleFilter, navigation, styles, colors, userId])
+  }, [profile, followingCount, contentLoading, clippings, takes, savedFilms, favorites, filter, isFollowing, handleFollowToggle, toggleFilter, navigation, styles, colors, userId])
 
   const renderFeedItem = useCallback(({ item }: { item: FeedItem }) => {
     if (item.kind === 'take') {
@@ -231,16 +223,16 @@ export default function NativeProfileScreen() {
 
   const emptyState = useMemo(() => (
     <View style={styles.emptyContainer}>
-      <Ionicons name={filter === 'takes' ? 'chatbubble-outline' : 'bookmark-outline'} size={32} color={colors.border} />
+      <Ionicons
+        name={filter === 'takes' ? 'chatbubble-outline' : filter === 'clippings' ? 'bookmark-outline' : 'film-outline'}
+        size={32}
+        color={colors.border}
+      />
       <Text style={styles.emptyText}>
         {filter === 'takes' ? 'No takes yet.' : filter === 'clippings' ? 'No clippings yet.' : 'No takes or clippings yet.'}
       </Text>
     </View>
   ), [filter, styles, colors])
-
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
 
   return (
     <View style={styles.container}>
@@ -260,14 +252,9 @@ export default function NativeProfileScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
-
     </View>
   )
 }
-
-// ---------------------------------------------------------------------------
-// Styles
-// ---------------------------------------------------------------------------
 
 function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({
@@ -275,12 +262,11 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       flex: 1,
       backgroundColor: colors.background,
     },
-
-    // Centered profile header — mirrors ExternalHeaderBones spatially
     profileHeader: {
       alignItems: 'center',
       paddingHorizontal: HORIZONTAL_PAD,
       paddingTop: spacing.xl,
+      paddingBottom: spacing.lg,
     },
     displayName: {
       fontFamily: fonts.heading,
@@ -300,20 +286,53 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       marginTop: spacing.sm,
     },
     bio: {
-      fontFamily: fonts.bodyItalic,
+      fontFamily: fonts.body,
       fontSize: typography.magazineBody.fontSize,
       lineHeight: typography.magazineBody.lineHeight,
       color: colors.foreground,
       textAlign: 'center',
       marginTop: spacing.lg,
     },
-    // Mirrors the 2-bone metadataRow in ExternalHeaderBones
-    metaRow: {
+    socialRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: spacing.lg,
+      justifyContent: 'center',
+      gap: spacing.sm,
       marginTop: spacing.md,
-      marginBottom: spacing.xl,
+    },
+    followingPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    followingLabel: {
+      fontFamily: fonts.system,
+      fontSize: typography.magazineMeta.fontSize,
+      lineHeight: typography.magazineMeta.lineHeight,
+      letterSpacing: typography.magazineMeta.letterSpacing,
+      color: colors.secondaryText,
+    },
+    countPill: {
+      backgroundColor: colors.backgroundSecondary,
+      borderRadius: 10,
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+    },
+    countPillText: {
+      fontFamily: fonts.system,
+      fontWeight: '600' as const,
+      fontSize: typography.caption.fontSize,
+      color: colors.secondaryText,
+    },
+    socialDot: {
+      fontFamily: fonts.system,
+      fontSize: typography.magazineMeta.fontSize,
+      color: colors.secondaryText,
+    },
+    filterBar: {
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      paddingHorizontal: HORIZONTAL_PAD,
     },
     emptyContainer: {
       alignItems: 'center',
@@ -328,22 +347,6 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       lineHeight: typography.magazineBody.lineHeight,
       color: colors.secondaryText,
       textAlign: 'center',
-    },
-    pressed: {
-      opacity: 0.6,
-    },
-    watchlistLink: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      paddingHorizontal: HORIZONTAL_PAD,
-      paddingVertical: spacing.md,
-    },
-    watchlistLinkText: {
-      flex: 1,
-      fontFamily: fonts.system,
-      fontSize: typography.callout.fontSize,
-      color: colors.teal,
     },
   })
 }

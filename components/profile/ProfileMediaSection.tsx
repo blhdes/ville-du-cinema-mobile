@@ -27,7 +27,7 @@ export default function ProfileMediaSection({
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
   return (
-    <View>
+    <View style={savedFilmsCount > 0 && onWatchlistPress ? undefined : styles.container}>
       {/* Top-4 favorite films */}
       <FavoriteFilmsGrid
         favorites={favorites}
@@ -54,6 +54,9 @@ export default function ProfileMediaSection({
 
 function createStyles(colors: ThemeColors, typography: ScaledTypography) {
   return StyleSheet.create({
+    container: {
+      paddingBottom: spacing.lg,
+    },
     watchlistLink: {
       flexDirection: 'row',
       alignItems: 'center',

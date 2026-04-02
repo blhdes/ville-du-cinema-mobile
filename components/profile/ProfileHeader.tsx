@@ -196,7 +196,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       color: colors.secondaryText,
     },
     bioText: {
-      fontFamily: fonts.bodyItalic,
+      fontFamily: fonts.body,
       fontSize: typography.magazineBody.fontSize,
       lineHeight: typography.magazineBody.lineHeight,
       color: colors.foreground,

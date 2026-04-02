@@ -503,13 +503,13 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       marginTop: spacing.xs,
     },
     directors: {
-      fontFamily: fonts.bodyItalic,
+      fontFamily: fonts.body,
       fontSize: typography.callout.fontSize,
       lineHeight: typography.callout.lineHeight,
       color: colors.secondaryText,
     },
     directorLink: {
-      fontFamily: fonts.bodyItalic,
+      fontFamily: fonts.body,
       fontSize: typography.callout.fontSize,
       lineHeight: typography.callout.lineHeight,
       color: colors.teal,
