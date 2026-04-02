@@ -203,7 +203,18 @@ export default function NativeProfileScreen() {
 
   const renderFeedItem = useCallback(({ item }: { item: FeedItem }) => {
     if (item.kind === 'take') {
-      return <TakeCard take={item.item} hideAuthor readOnly />
+      return (
+        <TakeCard
+          take={item.item}
+          readOnly
+          author={profile ? {
+            avatarUrl: profile.avatar_url ?? undefined,
+            displayName: profile.display_name ?? profile.username ?? 'Village User',
+            userId,
+            username: profile.username ?? undefined,
+          } : undefined}
+        />
+      )
     }
     const clipping = item.item
     if (clipping.type === 'repost' && clipping.review_json) {

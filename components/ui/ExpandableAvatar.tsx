@@ -58,12 +58,22 @@ export default function ExpandableAvatar({
           <Pressable style={styles.overlay} onPress={() => setOpen(false)}>
             <Image
               source={{ uri: avatarUrl }}
-              style={{ width: width * 0.6, height: width * 0.6, borderRadius: width * 0.3 }}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              blurRadius={20}
               cachePolicy="memory-disk"
             />
-            {label ? (
-              <Text style={[styles.overlayName, { fontSize: typography.title1.fontSize }]}>{label}</Text>
-            ) : null}
+            <View style={styles.darkTint} />
+            <View style={styles.overlayContent}>
+              <Image
+                source={{ uri: avatarUrl }}
+                style={{ width: width * 0.6, height: width * 0.6, borderRadius: width * 0.3 }}
+                cachePolicy="memory-disk"
+              />
+              {label ? (
+                <Text style={[styles.overlayName, { fontSize: typography.title1.fontSize }]}>{label}</Text>
+              ) : null}
+            </View>
           </Pressable>
         </Modal>
       ) : null}
@@ -82,7 +92,13 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+  },
+  darkTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  overlayContent: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },

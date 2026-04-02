@@ -187,7 +187,18 @@ export default function ProfileScreen() {
 
   const renderItem = useCallback(({ item }: { item: FeedItem }) => {
     if (item.kind === 'take') {
-      return <TakeCard take={item.item} onDeleted={handleTakeDeleted} />
+      return (
+        <TakeCard
+          take={item.item}
+          onDeleted={handleTakeDeleted}
+          author={profile && user ? {
+            avatarUrl: profile.avatar_url ?? undefined,
+            displayName: profile.display_name ?? profile.username ?? 'You',
+            userId: user.id,
+            username: profile.username ?? undefined,
+          } : undefined}
+        />
+      )
     }
     const clipping = item.item
     if (clipping.type === 'repost' && clipping.review_json) {
