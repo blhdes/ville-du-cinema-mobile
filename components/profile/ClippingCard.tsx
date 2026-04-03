@@ -38,13 +38,18 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable 
 
   const handleRepost = useCallback(async () => {
     try {
-      await saveRepostClipping(clipping)
+      await saveRepostClipping(clipping, {
+        displayName: user?.displayName ?? clipping.author_name,
+        userId: user?.userId,
+        avatarUrl: user?.avatarUrl,
+        username: user?.username,
+      })
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     } catch (error) {
       console.error('Failed to repost clipping:', error)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
     }
-  }, [clipping])
+  }, [clipping, user])
 
   const handleDelete = useCallback(() => {
     Alert.alert('Delete clipping', 'Are you sure you want to delete this clipping?', [

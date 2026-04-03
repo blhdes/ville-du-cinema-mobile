@@ -105,14 +105,19 @@ function TakeCard({
     const prevCount = repostCount
     publishRepostCount(take.id, prevCount + 1)
     try {
-      await saveRepostTake(take, author?.displayName ?? 'Unknown')
+      await saveRepostTake(take, {
+        displayName: author?.displayName ?? 'Unknown',
+        userId: author?.userId,
+        avatarUrl: author?.avatarUrl,
+        username: author?.username,
+      })
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     } catch (error) {
       console.error('Failed to repost take:', error)
       publishRepostCount(take.id, prevCount)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
     }
-  }, [take, author?.displayName, repostCount])
+  }, [take, author, repostCount])
 
   const dateStr = new Date(take.created_at).toLocaleDateString('en-US', {
     month: 'short',
@@ -204,6 +209,11 @@ function TakeCard({
               <Text style={styles.interactionCount}>{repostCount}</Text>
             ) : null}
           </Pressable>
+        ) : repostCount > 0 ? (
+          <View style={styles.interactionButton}>
+            <Ionicons name="repeat-outline" size={17} color={colors.secondaryText} />
+            <Text style={styles.interactionCount}>{repostCount}</Text>
+          </View>
         ) : null}
       </View>
 

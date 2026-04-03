@@ -366,6 +366,26 @@ export interface PublicProfile {
 // Clippings types
 // ---------------------------------------------------------------------------
 
+/** Author/user metadata snapshot stored inside repost JSON payloads. */
+export interface RepostAuthor {
+  displayName: string
+  userId?: string
+  avatarUrl?: string
+  username?: string
+}
+
+/** Stored in review_json for type='take-repost' — preserves full author metadata. */
+export interface TakeRepostJson {
+  take: Take
+  author: RepostAuthor
+}
+
+/** Stored in review_json for type='clipping-repost' — preserves original poster metadata. */
+export interface ClippingRepostJson {
+  clipping: Clipping
+  user: RepostAuthor
+}
+
 /** A saved review quote or reposted review from the user's Clippings archive. */
 export interface Clipping {
   id: string // uuid
@@ -376,8 +396,8 @@ export interface Clipping {
   original_url: string
   created_at: string // ISO 8601 timestamp
   type: 'quote' | 'repost' | 'take-repost' | 'clipping-repost'
-  /** Stores the original content: Review for 'repost', Take for 'take-repost', Clipping for 'clipping-repost'. */
-  review_json: Review | Take | Clipping | null
+  /** Stores the original content: Review for 'repost', TakeRepostJson for 'take-repost', ClippingRepostJson for 'clipping-repost'. */
+  review_json: Review | TakeRepostJson | ClippingRepostJson | null
   tmdb_id: number | null // nullable — old clippings won't have this
 }
 

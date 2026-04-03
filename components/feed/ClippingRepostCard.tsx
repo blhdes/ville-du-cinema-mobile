@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics'
 import { Ionicons } from '@expo/vector-icons'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import type { FeedStackParamList } from '@/navigation/types'
-import type { Clipping } from '@/types/database'
+import type { Clipping, ClippingRepostJson } from '@/types/database'
 import { deleteClipping, saveRepostClipping } from '@/services/clippings'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
@@ -30,7 +30,7 @@ function ClippingRepostCard({ clipping, owner, onDeleted }: ClippingRepostCardPr
   const typography = useTypography()
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
-  const originalClipping = clipping.review_json as Clipping
+  const { clipping: originalClipping, user: originalUser } = clipping.review_json as ClippingRepostJson
 
   const handleOwnerPress = useCallback(() => {
     if (owner.userId) {
@@ -40,13 +40,13 @@ function ClippingRepostCard({ clipping, owner, onDeleted }: ClippingRepostCardPr
 
   const handleRepost = useCallback(async () => {
     try {
-      await saveRepostClipping(originalClipping)
+      await saveRepostClipping(originalClipping, originalUser)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     } catch (error) {
       console.error('Failed to repost clipping:', error)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
     }
-  }, [originalClipping])
+  }, [originalClipping, originalUser])
 
   const handleDelete = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
@@ -70,9 +70,10 @@ function ClippingRepostCard({ clipping, owner, onDeleted }: ClippingRepostCardPr
         </Text>
       </Pressable>
 
-      {/* Embedded ClippingCard — repostable=false prevents nested re-reposting */}
+      {/* Embedded ClippingCard — repostable=false disables repost swipe on inner card */}
       <ClippingCard
         clipping={originalClipping}
+        user={originalUser}
         readOnly
         repostable={false}
       />

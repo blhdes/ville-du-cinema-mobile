@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics'
 import { Ionicons } from '@expo/vector-icons'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import type { FeedStackParamList } from '@/navigation/types'
-import type { Clipping, Take } from '@/types/database'
+import type { Clipping, TakeRepostJson } from '@/types/database'
 import { deleteClipping, saveRepostTake } from '@/services/clippings'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
@@ -30,7 +30,7 @@ function TakeRepostCard({ clipping, owner, onDeleted }: TakeRepostCardProps) {
   const typography = useTypography()
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
-  const take = clipping.review_json as Take
+  const { take, author } = clipping.review_json as TakeRepostJson
 
   const handleOwnerPress = useCallback(() => {
     if (owner.userId) {
@@ -40,13 +40,13 @@ function TakeRepostCard({ clipping, owner, onDeleted }: TakeRepostCardProps) {
 
   const handleRepost = useCallback(async () => {
     try {
-      await saveRepostTake(take, clipping.author_name)
+      await saveRepostTake(take, author)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     } catch (error) {
       console.error('Failed to repost take:', error)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
     }
-  }, [take, clipping.author_name])
+  }, [take, author])
 
   const handleDelete = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
@@ -70,10 +70,10 @@ function TakeRepostCard({ clipping, owner, onDeleted }: TakeRepostCardProps) {
         </Text>
       </Pressable>
 
-      {/* Embedded TakeCard — repostable=false prevents nested re-reposting */}
+      {/* Embedded TakeCard — repostable=false disables action but still shows count */}
       <TakeCard
         take={take}
-        author={{ displayName: clipping.author_name }}
+        author={author}
         repostable={false}
         readOnly
       />

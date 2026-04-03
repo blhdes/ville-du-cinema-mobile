@@ -4,7 +4,7 @@
  */
 
 import { supabase } from '@/lib/supabase/client'
-import type { Clipping, Database, Review, Take } from '@/types/database'
+import type { Clipping, Database, Review, Take, RepostAuthor } from '@/types/database'
 import { stripHtml } from '@/utils/html'
 
 type ClippingRow = Database['public']['Tables']['user_clippings']['Row']
@@ -144,9 +144,9 @@ export async function saveRepost(review: Review, tmdbId?: number | null): Promis
 
 /**
  * Saves a Take as a repost in the user's clippings.
- * Stores the complete Take object in `review_json` for rich rendering.
+ * Stores { take, author } in review_json to preserve full author metadata for rendering.
  */
-export async function saveRepostTake(take: Take, authorDisplayName: string): Promise<Clipping> {
+export async function saveRepostTake(take: Take, author: RepostAuthor): Promise<Clipping> {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
@@ -168,9 +168,9 @@ export async function saveRepostTake(take: Take, authorDisplayName: string): Pro
       type: 'take-repost',
       quote_text: take.content,
       movie_title: take.movie_title,
-      author_name: authorDisplayName,
+      author_name: author.displayName,
       original_url: `take:${take.id}`,
-      review_json: JSON.parse(JSON.stringify(take)),
+      review_json: JSON.parse(JSON.stringify({ take, author })),
       tmdb_id: take.tmdb_id,
     })
     .select()
@@ -186,9 +186,9 @@ export async function saveRepostTake(take: Take, authorDisplayName: string): Pro
 
 /**
  * Saves a Clipping as a repost in the user's clippings.
- * Stores the complete Clipping object in `review_json` for rich rendering.
+ * Stores { clipping, user } in review_json to preserve original poster metadata for rendering.
  */
-export async function saveRepostClipping(clipping: Clipping): Promise<Clipping> {
+export async function saveRepostClipping(clipping: Clipping, originalUser: RepostAuthor): Promise<Clipping> {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
@@ -212,7 +212,7 @@ export async function saveRepostClipping(clipping: Clipping): Promise<Clipping> 
       movie_title: clipping.movie_title,
       author_name: clipping.author_name,
       original_url: clipping.original_url,
-      review_json: JSON.parse(JSON.stringify(clipping)),
+      review_json: JSON.parse(JSON.stringify({ clipping, user: originalUser })),
       tmdb_id: clipping.tmdb_id,
     })
     .select()
