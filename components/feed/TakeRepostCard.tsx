@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics'
 import { Ionicons } from '@expo/vector-icons'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import type { FeedStackParamList } from '@/navigation/types'
-import type { Clipping, TakeRepostJson } from '@/types/database'
+import type { Clipping, Take, TakeRepostJson, RepostAuthor } from '@/types/database'
 import { deleteClipping, saveRepostTake } from '@/services/clippings'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
@@ -30,7 +30,10 @@ function TakeRepostCard({ clipping, owner, onDeleted }: TakeRepostCardProps) {
   const typography = useTypography()
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
-  const { take, author } = clipping.review_json as TakeRepostJson
+  // Support both new format { take, author } and legacy bare Take stored before the metadata fix
+  const json = clipping.review_json as TakeRepostJson | Take | null
+  const take: Take = (json && 'take' in json) ? (json as TakeRepostJson).take : (json as Take)
+  const author: RepostAuthor = (json && 'author' in json) ? (json as TakeRepostJson).author : { displayName: clipping.author_name }
 
   const handleOwnerPress = useCallback(() => {
     if (owner.userId) {

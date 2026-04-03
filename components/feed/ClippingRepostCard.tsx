@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics'
 import { Ionicons } from '@expo/vector-icons'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import type { FeedStackParamList } from '@/navigation/types'
-import type { Clipping, ClippingRepostJson } from '@/types/database'
+import type { Clipping, ClippingRepostJson, RepostAuthor } from '@/types/database'
 import { deleteClipping, saveRepostClipping } from '@/services/clippings'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
@@ -30,7 +30,10 @@ function ClippingRepostCard({ clipping, owner, onDeleted }: ClippingRepostCardPr
   const typography = useTypography()
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
-  const { clipping: originalClipping, user: originalUser } = clipping.review_json as ClippingRepostJson
+  // Support both new format { clipping, user } and legacy bare Clipping stored before the metadata fix
+  const json = clipping.review_json as ClippingRepostJson | Clipping | null
+  const originalClipping: Clipping = (json && 'clipping' in json) ? (json as ClippingRepostJson).clipping : (json as Clipping)
+  const originalUser: RepostAuthor | undefined = (json && 'user' in json) ? (json as ClippingRepostJson).user : undefined
 
   const handleOwnerPress = useCallback(() => {
     if (owner.userId) {
