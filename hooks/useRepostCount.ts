@@ -1,41 +1,60 @@
 import { useEffect, useRef, useState } from 'react'
 
 // ---------------------------------------------------------------------------
-// Module-level pub/sub store for take repost counts
-// TakeCard.handleRepost publishes here for instant optimistic updates across
-// all instances watching the same takeId — no network round-trip needed.
+// Module-level pub/sub store for take repost status (reposted + count)
+// Mirrors the useLike pattern — optimistic updates propagate to all instances.
 // ---------------------------------------------------------------------------
-type Subscriber = (count: number) => void
+export type RepostStatus = { reposted: boolean; count: number }
+type Subscriber = (status: RepostStatus) => void
 
-const countCache = new Map<string, number>()
+const statusCache = new Map<string, RepostStatus>()
 const subscribers = new Map<string, Set<Subscriber>>()
 
-export function publishRepostCount(takeId: string, count: number) {
-  countCache.set(takeId, count)
-  subscribers.get(takeId)?.forEach((cb) => cb(count))
+export function publishRepostStatus(takeId: string, status: RepostStatus) {
+  statusCache.set(takeId, status)
+  subscribers.get(takeId)?.forEach((cb) => cb(status))
 }
 
-export function useRepostCount(takeId: string, initialCount = 0): number {
-  const cached = countCache.get(takeId)
-  const [count, setCount] = useState(cached ?? initialCount)
+export function useRepost(
+  takeId: string,
+  initialReposted?: boolean,
+  initialCount?: number,
+): RepostStatus {
+  const hasInitial = initialReposted !== undefined && initialCount !== undefined
+  const cached = statusCache.get(takeId)
+
+  const [reposted, setReposted] = useState(cached?.reposted ?? initialReposted ?? false)
+  const [count, setCount] = useState(cached?.count ?? initialCount ?? 0)
   const isMounted = useRef(true)
 
   useEffect(() => () => { isMounted.current = false }, [])
 
-  // Sync initial prop when it arrives from batch fetch — cache wins if fresher
-  useEffect(() => {
-    if (countCache.has(takeId)) return
-    setCount(initialCount)
-  }, [initialCount, takeId])
-
-  // Subscribe to optimistic broadcasts from handleRepost
+  // Subscribe to broadcasts from handleRepost
   useEffect(() => {
     if (!subscribers.has(takeId)) subscribers.set(takeId, new Set())
     const set = subscribers.get(takeId)!
-    const cb: Subscriber = (c) => { if (isMounted.current) setCount(c) }
+    const cb: Subscriber = (s) => {
+      if (isMounted.current) {
+        setReposted(s.reposted)
+        setCount(s.count)
+      }
+    }
     set.add(cb)
     return () => { set.delete(cb) }
   }, [takeId])
 
-  return count
+  // Sync initial props when they arrive from batch fetch — cache wins if fresher
+  useEffect(() => {
+    if (initialReposted === undefined) return
+    if (statusCache.has(takeId)) return
+    setReposted(initialReposted)
+  }, [initialReposted, takeId])
+
+  useEffect(() => {
+    if (initialCount === undefined) return
+    if (statusCache.has(takeId)) return
+    setCount(initialCount)
+  }, [initialCount, takeId])
+
+  return { reposted, count }
 }

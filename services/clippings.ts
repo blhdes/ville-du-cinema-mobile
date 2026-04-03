@@ -245,31 +245,62 @@ export async function getFilmClippings(tmdbId: number): Promise<Clipping[]> {
   return (data ?? []).map(toClipping)
 }
 
+export interface RepostStatus {
+  reposted: boolean
+  count: number
+}
+
 /**
- * Batch-fetch repost counts for multiple Takes.
- * Counts `user_clippings` rows with type='take-repost' and matching original_url.
- * Returns a Map of take_id → count. Used by feeds to avoid N+1 queries.
+ * Batch-fetch repost status (has the current user reposted? + total count) for multiple Takes.
+ * Mirrors getBatchLikeStatus — two queries, no N+1.
  */
-export async function getBatchRepostCounts(takeIds: string[]): Promise<Map<string, number>> {
-  const result = new Map<string, number>()
+export async function getBatchRepostStatus(takeIds: string[]): Promise<Map<string, RepostStatus>> {
+  const result = new Map<string, RepostStatus>()
   if (takeIds.length === 0) return result
 
+  for (const id of takeIds) result.set(id, { reposted: false, count: 0 })
+
   const urls = takeIds.map((id) => `take:${id}`)
+  const { data: { user } } = await supabase.auth.getUser()
 
-  const { data, error } = await supabase
-    .from('user_clippings')
-    .select('original_url')
-    .eq('type', 'take-repost')
-    .in('original_url', urls)
+  const [userRepostsResult, allRepostsResult] = await Promise.allSettled([
+    user
+      ? supabase
+          .from('user_clippings')
+          .select('original_url')
+          .eq('user_id', user.id)
+          .eq('type', 'take-repost')
+          .in('original_url', urls)
+      : Promise.resolve({ data: [] as { original_url: string }[] }),
+    supabase
+      .from('user_clippings')
+      .select('original_url')
+      .eq('type', 'take-repost')
+      .in('original_url', urls),
+  ])
 
-  if (error) {
-    console.error('getBatchRepostCounts error:', error.message)
-    return result
+  // Mark which takes the current user has reposted
+  if (userRepostsResult.status === 'fulfilled') {
+    const rows = (userRepostsResult.value as { data: { original_url: string }[] | null }).data ?? []
+    for (const row of rows) {
+      const takeId = row.original_url.replace('take:', '')
+      const entry = result.get(takeId)
+      if (entry) entry.reposted = true
+    }
   }
 
-  for (const row of data ?? []) {
-    const takeId = row.original_url.replace('take:', '')
-    result.set(takeId, (result.get(takeId) ?? 0) + 1)
+  // Count all reposts per take (client-side grouping)
+  if (allRepostsResult.status === 'fulfilled') {
+    const rows = (allRepostsResult.value as { data: { original_url: string }[] | null }).data ?? []
+    const counts = new Map<string, number>()
+    for (const row of rows) {
+      const takeId = row.original_url.replace('take:', '')
+      counts.set(takeId, (counts.get(takeId) ?? 0) + 1)
+    }
+    for (const [takeId, count] of counts) {
+      const entry = result.get(takeId)
+      if (entry) entry.count = count
+    }
   }
 
   return result

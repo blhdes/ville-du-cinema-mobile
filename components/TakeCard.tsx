@@ -10,7 +10,7 @@ import { deleteTake } from '@/services/takes'
 import { saveRepostTake } from '@/services/clippings'
 import { useLike } from '@/hooks/useLike'
 import { useCommentCount } from '@/hooks/useCommentCount'
-import { useRepostCount, publishRepostCount } from '@/hooks/useRepostCount'
+import { useRepost, publishRepostStatus } from '@/hooks/useRepostCount'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
@@ -44,6 +44,8 @@ interface TakeCardProps {
   initialCommentCount?: number
   /** Pre-resolved repost count from batch fetch. */
   initialRepostCount?: number
+  /** Pre-resolved repost status (has current user reposted?) from batch fetch. */
+  initialReposted?: boolean
 }
 
 function TakeCard({
@@ -57,6 +59,7 @@ function TakeCard({
   initialLikeCount,
   initialCommentCount,
   initialRepostCount,
+  initialReposted,
 }: TakeCardProps) {
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const { colors } = useTheme()
@@ -69,7 +72,7 @@ function TakeCard({
     initialLikeCount,
   )
   const commentCount = useCommentCount(take.id, initialCommentCount)
-  const repostCount = useRepostCount(take.id, initialRepostCount)
+  const { reposted, count: repostCount } = useRepost(take.id, initialReposted, initialRepostCount)
 
   const handleDelete = useCallback(() => {
     Alert.alert('Delete take', 'Are you sure you want to delete this take?', [
@@ -102,8 +105,9 @@ function TakeCard({
   }, [navigation, take.id, author])
 
   const handleRepost = useCallback(async () => {
+    const prevReposted = reposted
     const prevCount = repostCount
-    publishRepostCount(take.id, prevCount + 1)
+    publishRepostStatus(take.id, { reposted: true, count: prevCount + 1 })
     try {
       await saveRepostTake(take, {
         displayName: author?.displayName ?? 'Unknown',
@@ -114,10 +118,10 @@ function TakeCard({
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     } catch (error) {
       console.error('Failed to repost take:', error)
-      publishRepostCount(take.id, prevCount)
+      publishRepostStatus(take.id, { reposted: prevReposted, count: prevCount })
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
     }
-  }, [take, author, repostCount])
+  }, [take, author, reposted, repostCount])
 
   const dateStr = new Date(take.created_at).toLocaleDateString('en-US', {
     month: 'short',
@@ -204,9 +208,9 @@ function TakeCard({
             hitSlop={8}
             style={({ pressed }) => [styles.interactionButton, pressed && styles.interactionPressed]}
           >
-            <Ionicons name="repeat-outline" size={17} color={colors.secondaryText} />
+            <Ionicons name="repeat-outline" size={17} color={reposted ? colors.teal : colors.secondaryText} />
             {repostCount > 0 ? (
-              <Text style={styles.interactionCount}>{repostCount}</Text>
+              <Text style={[styles.interactionCount, reposted && { color: colors.teal }]}>{repostCount}</Text>
             ) : null}
           </Pressable>
         ) : repostCount > 0 ? (

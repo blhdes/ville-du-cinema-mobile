@@ -18,8 +18,10 @@ import { useUserLists } from '@/hooks/useUserLists'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
-import { getUserClippings } from '@/services/clippings'
+import { getUserClippings, getBatchRepostStatus, type RepostStatus } from '@/services/clippings'
 import { getUserTakes } from '@/services/takes'
+import { getBatchCommentCounts } from '@/services/comments'
+import { getBatchLikeStatus, type LikeStatus } from '@/services/likes'
 import { getUserSavedFilms } from '@/services/savedFilms'
 import type { Clipping, Take, SavedFilm } from '@/types/database'
 import type { ProfileStackParamList } from '@/navigation/types'
@@ -76,6 +78,9 @@ export default function ProfileScreen() {
   const [clippings, setClippings] = useState<Clipping[]>([])
   const [takes, setTakes] = useState<Take[]>([])
   const [savedFilms, setSavedFilms] = useState<SavedFilm[]>([])
+  const [takeLikesMap, setTakeLikesMap] = useState<Map<string, LikeStatus>>(new Map())
+  const [takeCommentCounts, setTakeCommentCounts] = useState<Map<string, number>>(new Map())
+  const [takeRepostStatus, setTakeRepostStatus] = useState<Map<string, RepostStatus>>(new Map())
   const [contentLoading, setContentLoading] = useState(true)
   const [clippingsError, setClippingsError] = useState(false)
   const hasLoadedOnce = useRef(false)
@@ -103,7 +108,16 @@ export default function ProfileScreen() {
           if (cancelled) return
           if (clippingsResult.status === 'fulfilled') setClippings(clippingsResult.value)
           else setClippingsError(true)
-          if (takesResult.status === 'fulfilled') setTakes(takesResult.value)
+          if (takesResult.status === 'fulfilled') {
+            const loadedTakes = takesResult.value
+            setTakes(loadedTakes)
+            const takeIds = loadedTakes.map((t) => t.id)
+            if (takeIds.length > 0) {
+              getBatchLikeStatus(takeIds).then(setTakeLikesMap).catch(() => {})
+              getBatchCommentCounts(takeIds).then(setTakeCommentCounts).catch(() => {})
+              getBatchRepostStatus(takeIds).then(setTakeRepostStatus).catch(() => {})
+            }
+          }
           if (savedResult.status === 'fulfilled') setSavedFilms(savedResult.value)
           refetchFavorites()
         })
@@ -199,6 +213,11 @@ export default function ProfileScreen() {
             userId: user.id,
             username: profile.username ?? undefined,
           } : undefined}
+          initialLiked={takeLikesMap.get(item.item.id)?.liked}
+          initialLikeCount={takeLikesMap.get(item.item.id)?.count}
+          initialCommentCount={takeCommentCounts.get(item.item.id) ?? 0}
+          initialRepostCount={takeRepostStatus.get(item.item.id)?.count ?? 0}
+          initialReposted={takeRepostStatus.get(item.item.id)?.reposted ?? false}
         />
       )
     }
@@ -246,7 +265,7 @@ export default function ProfileScreen() {
         user={clippingUser}
       />
     )
-  }, [handleClippingDeleted, handleTakeDeleted, clippingUser])
+  }, [handleClippingDeleted, handleTakeDeleted, clippingUser, takeLikesMap, takeCommentCounts, takeRepostStatus])
 
   const emptyState = useMemo(() => (
     <View style={styles.emptyContainer}>

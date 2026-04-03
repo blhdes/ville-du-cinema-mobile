@@ -33,7 +33,7 @@ import { getVillageClippings } from '@/services/clippings'
 import { getVillageTakes } from '@/services/takes'
 import { getBatchLikeStatus, type LikeStatus } from '@/services/likes'
 import { getBatchCommentCounts } from '@/services/comments'
-import { getBatchRepostCounts } from '@/services/clippings'
+import { getBatchRepostStatus, type RepostStatus } from '@/services/clippings'
 import type { Review, FeedItem, Clipping, Take, RepostFeedItem, TakeFeedItem, TakeRepostFeedItem, ClippingRepostFeedItem } from '@/types/database'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
@@ -233,7 +233,7 @@ export default function FeedScreen() {
   const [villageTakes, setVillageTakes] = useState<Take[]>([])
   const [takeLikesMap, setTakeLikesMap] = useState<Map<string, LikeStatus>>(new Map())
   const [takeCommentCounts, setTakeCommentCounts] = useState<Map<string, number>>(new Map())
-  const [takeRepostCounts, setTakeRepostCounts] = useState<Map<string, number>>(new Map())
+  const [takeRepostStatus, setTakeRepostStatus] = useState<Map<string, RepostStatus>>(new Map())
 
   // Fetch clippings + takes from followed Village users whenever the follow list changes
   useEffect(() => {
@@ -270,7 +270,7 @@ export default function FeedScreen() {
     }
     getBatchLikeStatus(takeIds).then(setTakeLikesMap).catch(() => {})
     getBatchCommentCounts(takeIds).then(setTakeCommentCounts).catch(() => {})
-    getBatchRepostCounts(takeIds).then(setTakeRepostCounts).catch(() => {})
+    getBatchRepostStatus(takeIds).then(setTakeRepostStatus).catch(() => {})
   }, [villageTakes])
 
   // Initial fetch when takes change
@@ -582,7 +582,8 @@ export default function FeedScreen() {
           initialLiked={likeData?.liked}
           initialLikeCount={likeData?.count}
           initialCommentCount={takeCommentCounts.get(item.data.id) ?? 0}
-          initialRepostCount={takeRepostCounts.get(item.data.id) ?? 0}
+          initialRepostCount={takeRepostStatus.get(item.data.id)?.count ?? 0}
+          initialReposted={takeRepostStatus.get(item.data.id)?.reposted ?? false}
           readOnly
         />
       )
@@ -625,7 +626,7 @@ export default function FeedScreen() {
       return <WatchNotification review={item.data} />
     }
     return <ReviewCard review={item.data} />
-  }, [removeClipping, takeLikesMap, takeCommentCounts, takeRepostCounts])
+  }, [removeClipping, takeLikesMap, takeCommentCounts, takeRepostStatus])
 
   const renderEmpty = useCallback(() => {
     if (isLoading || isListLoading) return null

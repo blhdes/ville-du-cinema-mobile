@@ -11,8 +11,10 @@ import { useTabBarInset } from '@/hooks/useTabBarInset'
 import * as Haptics from 'expo-haptics'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase/client'
-import { getUserClippings } from '@/services/clippings'
+import { getUserClippings, getBatchRepostStatus, type RepostStatus } from '@/services/clippings'
 import { getUserTakes } from '@/services/takes'
+import { getBatchCommentCounts } from '@/services/comments'
+import { getBatchLikeStatus, type LikeStatus } from '@/services/likes'
 import { getUserSavedFilms } from '@/services/savedFilms'
 import { getUserFavorites } from '@/services/favoriteFilms'
 import { useUserLists } from '@/hooks/useUserLists'
@@ -59,6 +61,9 @@ export default function NativeProfileScreen() {
   const [takes, setTakes] = useState<Take[]>([])
   const [savedFilms, setSavedFilms] = useState<SavedFilm[]>([])
   const [favorites, setFavorites] = useState<FavoriteFilm[]>([])
+  const [takeLikesMap, setTakeLikesMap] = useState<Map<string, LikeStatus>>(new Map())
+  const [takeCommentCounts, setTakeCommentCounts] = useState<Map<string, number>>(new Map())
+  const [takeRepostStatus, setTakeRepostStatus] = useState<Map<string, RepostStatus>>(new Map())
   const [contentLoading, setContentLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'takes' | 'clippings'>('all')
 
@@ -85,7 +90,16 @@ export default function NativeProfileScreen() {
       if (!cancelled) setProfileLoading(false)
 
       if (clippingsResult.status === 'fulfilled' && !cancelled) setClippings(clippingsResult.value)
-      if (takesResult.status === 'fulfilled' && !cancelled) setTakes(takesResult.value)
+      if (takesResult.status === 'fulfilled' && !cancelled) {
+        const loadedTakes = takesResult.value
+        setTakes(loadedTakes)
+        const takeIds = loadedTakes.map((t) => t.id)
+        if (takeIds.length > 0) {
+          getBatchLikeStatus(takeIds).then(setTakeLikesMap).catch(() => {})
+          getBatchCommentCounts(takeIds).then(setTakeCommentCounts).catch(() => {})
+          getBatchRepostStatus(takeIds).then(setTakeRepostStatus).catch(() => {})
+        }
+      }
       if (savedResult.status === 'fulfilled' && !cancelled) setSavedFilms(savedResult.value)
       if (favResult.status === 'fulfilled' && !cancelled) setFavorites(favResult.value)
       if (!cancelled) setContentLoading(false)
@@ -215,6 +229,11 @@ export default function NativeProfileScreen() {
             userId,
             username: profile.username ?? undefined,
           } : undefined}
+          initialLiked={takeLikesMap.get(item.item.id)?.liked}
+          initialLikeCount={takeLikesMap.get(item.item.id)?.count}
+          initialCommentCount={takeCommentCounts.get(item.item.id) ?? 0}
+          initialRepostCount={takeRepostStatus.get(item.item.id)?.count ?? 0}
+          initialReposted={takeRepostStatus.get(item.item.id)?.reposted ?? false}
         />
       )
     }
@@ -256,7 +275,7 @@ export default function NativeProfileScreen() {
       )
     }
     return <ClippingCard clipping={clipping} readOnly user={clippingUser} />
-  }, [clippingUser, userId])
+  }, [clippingUser, userId, takeLikesMap, takeCommentCounts, takeRepostStatus])
 
   const emptyState = useMemo(() => (
     <View style={styles.emptyContainer}>
