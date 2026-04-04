@@ -237,6 +237,9 @@ export default function FeedScreen() {
   const [takeLikesMap, setTakeLikesMap] = useState<Map<string, LikeStatus>>(new Map())
   const [takeCommentCounts, setTakeCommentCounts] = useState<Map<string, number>>(new Map())
   const [takeRepostStatus, setTakeRepostStatus] = useState<Map<string, RepostStatus>>(new Map())
+  // Stays false until the first social-data fetch completes — gates takes out of
+  // feedItems until caches are warm so cards never render with stale 0/false counts.
+  const [takesReady, setTakesReady] = useState(false)
 
   // Warm the pub/sub caches for a given set of takes, then update local state.
   // By publishing BEFORE setVillageTakes, cards mount with warm caches and
@@ -247,6 +250,7 @@ export default function FeedScreen() {
       setTakeLikesMap(new Map())
       setTakeCommentCounts(new Map())
       setTakeRepostStatus(new Map())
+      setTakesReady(true)
       return
     }
     const [likeResult, commentResult, repostResult] = await Promise.allSettled([
@@ -266,6 +270,7 @@ export default function FeedScreen() {
       repostResult.value.forEach((status, id) => publishRepostStatus(id, status))
       setTakeRepostStatus(repostResult.value)
     }
+    setTakesReady(true)
   }, [])
 
   // Fetch clippings + takes from followed Village users whenever the follow list changes
@@ -279,6 +284,7 @@ export default function FeedScreen() {
     if (villageUserIds.length === 0 && !profile?.user_id) {
       setVillageClippings([])
       setVillageTakes([])
+      setTakesReady(true)
       return
     }
     if (villageUserIds.length > 0) {
@@ -577,7 +583,7 @@ export default function FeedScreen() {
     [feedItems, preferences.showWatchNotifications],
   )
 
-  const isInitialLoad = (isLoading || isListLoading) && page === 1 && reviews.length === 0
+  const isInitialLoad = ((isLoading || isListLoading) && page === 1 && reviews.length === 0) || !takesReady
 
   useEffect(() => {
     spinnerProgress.value = withTiming(isRefreshing ? 1 : 0, {
