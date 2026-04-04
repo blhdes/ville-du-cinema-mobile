@@ -238,6 +238,36 @@ export default function FeedScreen() {
   const [takeCommentCounts, setTakeCommentCounts] = useState<Map<string, number>>(new Map())
   const [takeRepostStatus, setTakeRepostStatus] = useState<Map<string, RepostStatus>>(new Map())
 
+  // Warm the pub/sub caches for a given set of takes, then update local state.
+  // By publishing BEFORE setVillageTakes, cards mount with warm caches and
+  // initialize to the correct values without a secondary render/jitter.
+  const fetchSocialData = useCallback(async (takes: Take[]) => {
+    const takeIds = takes.map((t) => t.id)
+    if (takeIds.length === 0) {
+      setTakeLikesMap(new Map())
+      setTakeCommentCounts(new Map())
+      setTakeRepostStatus(new Map())
+      return
+    }
+    const [likeResult, commentResult, repostResult] = await Promise.allSettled([
+      getBatchLikeStatus(takeIds),
+      getBatchCommentCounts(takeIds),
+      getBatchRepostStatus(takeIds),
+    ])
+    if (likeResult.status === 'fulfilled') {
+      likeResult.value.forEach((status, id) => publishLikeStatus(id, status))
+      setTakeLikesMap(likeResult.value)
+    }
+    if (commentResult.status === 'fulfilled') {
+      commentResult.value.forEach((count, id) => publishCommentCount(id, count))
+      setTakeCommentCounts(commentResult.value)
+    }
+    if (repostResult.status === 'fulfilled') {
+      repostResult.value.forEach((status, id) => publishRepostStatus(id, status))
+      setTakeRepostStatus(repostResult.value)
+    }
+  }, [])
+
   // Fetch clippings + takes from followed Village users whenever the follow list changes
   useEffect(() => {
     // Include the current user's ID so their own Takes appear in the feed.
@@ -258,38 +288,16 @@ export default function FeedScreen() {
     }
     if (takeUserIds.length > 0) {
       getVillageTakes(takeUserIds)
-        .then(setVillageTakes)
+        .then(async (takes) => {
+          await fetchSocialData(takes)
+          setVillageTakes(takes)
+        })
         .catch(() => {})
     }
-  }, [villageUserIds, profile?.user_id])
+  }, [villageUserIds, profile?.user_id, fetchSocialData])
 
-  // Batch-fetch like/comment data for all takes in the feed
-  const refetchSocialData = useCallback(() => {
-    const takeIds = villageTakes.map((t) => t.id)
-    if (takeIds.length === 0) {
-      setTakeLikesMap(new Map())
-      setTakeCommentCounts(new Map())
-      return
-    }
-    getBatchLikeStatus(takeIds).then((statusMap) => {
-      setTakeLikesMap(statusMap)
-      statusMap.forEach((status, id) => publishLikeStatus(id, status))
-    }).catch(() => {})
-    getBatchCommentCounts(takeIds).then((countsMap) => {
-      setTakeCommentCounts(countsMap)
-      countsMap.forEach((count, id) => publishCommentCount(id, count))
-    }).catch(() => {})
-    getBatchRepostStatus(takeIds).then((statusMap) => {
-      setTakeRepostStatus(statusMap)
-      statusMap.forEach((status, id) => publishRepostStatus(id, status))
-    }).catch(() => {})
-  }, [villageTakes])
-
-  // Initial fetch when takes change
-  useEffect(() => { refetchSocialData() }, [refetchSocialData])
-
-  // Re-fetch likes & comment counts when returning from TakeDetail
-  useFocusEffect(useCallback(() => { refetchSocialData() }, [refetchSocialData]))
+  // Re-fetch social data when returning from TakeDetail (counts may have changed)
+  useFocusEffect(useCallback(() => { fetchSocialData(villageTakes) }, [villageTakes, fetchSocialData]))
 
   const refetchVillageContent = useCallback(() => {
     const takeUserIds = profile?.user_id
@@ -305,12 +313,15 @@ export default function FeedScreen() {
     }
     if (takeUserIds.length > 0) {
       getVillageTakes(takeUserIds)
-        .then(setVillageTakes)
+        .then(async (takes) => {
+          await fetchSocialData(takes)
+          setVillageTakes(takes)
+        })
         .catch(() => {})
     } else {
       setVillageTakes([])
     }
-  }, [villageUserIds, profile?.user_id])
+  }, [villageUserIds, profile?.user_id, fetchSocialData])
 
   const loadFeed = useCallback(async (pageNum: number, append = false, keepContent = false) => {
     if (usernames.length === 0) {
