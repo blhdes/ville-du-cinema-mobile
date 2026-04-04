@@ -107,28 +107,35 @@ export default function ProfileScreen() {
       setClippingsError(false)
 
       Promise.allSettled([getUserClippings(user.id), getUserTakes(user.id), getUserSavedFilms(user.id)])
-        .then(([clippingsResult, takesResult, savedResult]) => {
+        .then(async ([clippingsResult, takesResult, savedResult]) => {
           if (cancelled) return
           if (clippingsResult.status === 'fulfilled') setClippings(clippingsResult.value)
           else setClippingsError(true)
           if (takesResult.status === 'fulfilled') {
             const loadedTakes = takesResult.value
-            setTakes(loadedTakes)
             const takeIds = loadedTakes.map((t) => t.id)
             if (takeIds.length > 0) {
-              getBatchLikeStatus(takeIds).then((statusMap) => {
-                setTakeLikesMap(statusMap)
-                statusMap.forEach((status, id) => publishLikeStatus(id, status))
-              }).catch(() => {})
-              getBatchCommentCounts(takeIds).then((countsMap) => {
-                setTakeCommentCounts(countsMap)
-                countsMap.forEach((count, id) => publishCommentCount(id, count))
-              }).catch(() => {})
-              getBatchRepostStatus(takeIds).then((statusMap) => {
-                setTakeRepostStatus(statusMap)
-                statusMap.forEach((status, id) => publishRepostStatus(id, status))
-              }).catch(() => {})
+              const [likeResult, commentResult, repostResult] = await Promise.allSettled([
+                getBatchLikeStatus(takeIds),
+                getBatchCommentCounts(takeIds),
+                getBatchRepostStatus(takeIds),
+              ])
+              if (!cancelled) {
+                if (likeResult.status === 'fulfilled') {
+                  likeResult.value.forEach((status, id) => publishLikeStatus(id, status))
+                  setTakeLikesMap(likeResult.value)
+                }
+                if (commentResult.status === 'fulfilled') {
+                  commentResult.value.forEach((count, id) => publishCommentCount(id, count))
+                  setTakeCommentCounts(commentResult.value)
+                }
+                if (repostResult.status === 'fulfilled') {
+                  repostResult.value.forEach((status, id) => publishRepostStatus(id, status))
+                  setTakeRepostStatus(repostResult.value)
+                }
+              }
             }
+            if (!cancelled) setTakes(loadedTakes)
           }
           if (savedResult.status === 'fulfilled') setSavedFilms(savedResult.value)
           refetchFavorites()
