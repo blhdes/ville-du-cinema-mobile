@@ -193,7 +193,6 @@ function TakeCard({
       <SwipeableRow
         onAction={handleRepost}
         actionColor={colors.teal}
-        actionColor={colors.teal}
         actionIcon="repeat-outline"
         actionLabel="Repost this take"
       >
