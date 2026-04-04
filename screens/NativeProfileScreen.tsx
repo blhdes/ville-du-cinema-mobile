@@ -15,6 +15,7 @@ import { getUserClippings, getBatchRepostStatus, type RepostStatus } from '@/ser
 import { publishRepostStatus } from '@/hooks/useRepostCount'
 import { getUserTakes } from '@/services/takes'
 import { getBatchCommentCounts } from '@/services/comments'
+import { publishCommentCount } from '@/hooks/useCommentCount'
 import { getBatchLikeStatus, type LikeStatus } from '@/services/likes'
 import { getUserSavedFilms } from '@/services/savedFilms'
 import { getUserFavorites } from '@/services/favoriteFilms'
@@ -97,7 +98,10 @@ export default function NativeProfileScreen() {
         const takeIds = loadedTakes.map((t) => t.id)
         if (takeIds.length > 0) {
           getBatchLikeStatus(takeIds).then(setTakeLikesMap).catch(() => {})
-          getBatchCommentCounts(takeIds).then(setTakeCommentCounts).catch(() => {})
+          getBatchCommentCounts(takeIds).then((countsMap) => {
+            setTakeCommentCounts(countsMap)
+            countsMap.forEach((count, id) => publishCommentCount(id, count))
+          }).catch(() => {})
           getBatchRepostStatus(takeIds).then((statusMap) => {
             setTakeRepostStatus(statusMap)
             statusMap.forEach((status, id) => publishRepostStatus(id, status))

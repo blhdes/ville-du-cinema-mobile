@@ -33,6 +33,7 @@ import { getVillageClippings } from '@/services/clippings'
 import { getVillageTakes } from '@/services/takes'
 import { getBatchLikeStatus, type LikeStatus } from '@/services/likes'
 import { getBatchCommentCounts } from '@/services/comments'
+import { publishCommentCount } from '@/hooks/useCommentCount'
 import { getBatchRepostStatus, type RepostStatus } from '@/services/clippings'
 import { publishRepostStatus } from '@/hooks/useRepostCount'
 import type { Review, FeedItem, Clipping, Take, RepostFeedItem, TakeFeedItem, TakeRepostFeedItem, ClippingRepostFeedItem } from '@/types/database'
@@ -270,7 +271,10 @@ export default function FeedScreen() {
       return
     }
     getBatchLikeStatus(takeIds).then(setTakeLikesMap).catch(() => {})
-    getBatchCommentCounts(takeIds).then(setTakeCommentCounts).catch(() => {})
+    getBatchCommentCounts(takeIds).then((countsMap) => {
+      setTakeCommentCounts(countsMap)
+      countsMap.forEach((count, id) => publishCommentCount(id, count))
+    }).catch(() => {})
     getBatchRepostStatus(takeIds).then((statusMap) => {
       setTakeRepostStatus(statusMap)
       statusMap.forEach((status, id) => publishRepostStatus(id, status))
