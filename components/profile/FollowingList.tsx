@@ -9,7 +9,6 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import LetterboxdDots from '@/components/ui/LetterboxdDots'
-import LogoIcon from '@/components/ui/LogoIcon'
 
 const AVATAR_SIZE = 32
 const HORIZONTAL_PAD = 20
@@ -44,17 +43,18 @@ const LetterboxdRow = memo(function LetterboxdRow({ user, isLast }: { user: Foll
           </Text>
         </View>
         <View style={styles.textColumn}>
-          <Text style={styles.displayName}>{user.display_name || user.username}</Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.displayName}>{user.display_name || user.username}</Text>
+            <Pressable
+              onPress={() => Linking.openURL(`https://letterboxd.com/${user.username}/`)}
+              hitSlop={8}
+              style={({ pressed }) => pressed && styles.rowPressed}
+            >
+              <LetterboxdDots size={14} />
+            </Pressable>
+          </View>
           <Text style={styles.handle}>@{user.username}</Text>
         </View>
-      </Pressable>
-      {/* Letterboxd dots — tappable link, also serves as the platform indicator */}
-      <Pressable
-        onPress={() => Linking.openURL(`https://letterboxd.com/${user.username}/`)}
-        hitSlop={8}
-        style={({ pressed }) => [styles.platformIcon, pressed && styles.rowPressed]}
-      >
-        <LetterboxdDots size={20} />
       </Pressable>
     </View>
   )
@@ -95,17 +95,6 @@ const VillageRow = memo(function VillageRow({ user, isLast }: { user: FollowedVi
             <Text style={styles.handle}>@{user.username}</Text>
           )}
         </View>
-      </Pressable>
-      {/* Village logo — tappable, navigates to profile */}
-      <Pressable
-        style={({ pressed }) => [styles.platformIcon, pressed && styles.rowPressed]}
-        onPress={() => navigation.navigate('NativeProfile', {
-          userId: user.user_id,
-          username: user.username ?? undefined,
-        })}
-        hitSlop={8}
-      >
-        <LogoIcon size={34} fill={colors.secondaryText} />
       </Pressable>
     </View>
   )
@@ -190,10 +179,10 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       fontSize: 13,
       color: colors.secondaryText,
     },
-    platformIcon: {
-      width: 36,
+    nameRow: {
+      flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
+      gap: 6,
     },
     textColumn: {
       flex: 1,
