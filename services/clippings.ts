@@ -83,7 +83,7 @@ export async function getUserClippings(userId: string): Promise<Clipping[]> {
  * Fetches clippings for a list of Village user IDs, newest first.
  * Used to populate followed users' clippings in the feed.
  */
-export async function getVillageClippings(userIds: string[]): Promise<Clipping[]> {
+export async function getVillageClippings(userIds: string[], limit = 50): Promise<Clipping[]> {
   if (userIds.length === 0) return []
 
   const { data, error } = await supabase
@@ -91,6 +91,7 @@ export async function getVillageClippings(userIds: string[]): Promise<Clipping[]
     .select('*')
     .in('user_id', userIds)
     .order('created_at', { ascending: false })
+    .limit(limit)
 
   if (error) {
     console.error('getVillageClippings error:', error.message)
@@ -230,12 +231,13 @@ export async function saveRepostClipping(clipping: Clipping, originalUser: Repos
  * Fetches all clippings anchored to a specific film (by TMDB ID), newest first.
  * Used on Film Card screens to show what people have clipped about a movie.
  */
-export async function getFilmClippings(tmdbId: number): Promise<Clipping[]> {
+export async function getFilmClippings(tmdbId: number, limit = 30): Promise<Clipping[]> {
   const { data, error } = await supabase
     .from('user_clippings')
     .select('*')
     .eq('tmdb_id', tmdbId)
     .order('created_at', { ascending: false })
+    .limit(limit)
 
   if (error) {
     console.error('getFilmClippings error:', error.message)
