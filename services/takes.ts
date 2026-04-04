@@ -108,7 +108,7 @@ export async function getFilmTakes(tmdbId: number): Promise<Take[]> {
  * Fetches Takes from a list of Village user IDs, newest first.
  * Used to populate the feed with Takes from followed users.
  */
-export async function getVillageTakes(userIds: string[]): Promise<Take[]> {
+export async function getVillageTakes(userIds: string[], limit = 50): Promise<Take[]> {
   if (userIds.length === 0) return []
 
   const { data, error } = await supabase
@@ -116,6 +116,7 @@ export async function getVillageTakes(userIds: string[]): Promise<Take[]> {
     .select('*')
     .in('user_id', userIds)
     .order('created_at', { ascending: false })
+    .limit(limit)
 
   if (error) {
     console.error('getVillageTakes error:', error.message)
