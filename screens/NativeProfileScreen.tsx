@@ -17,6 +17,7 @@ import { getUserTakes } from '@/services/takes'
 import { getBatchCommentCounts } from '@/services/comments'
 import { publishCommentCount } from '@/hooks/useCommentCount'
 import { getBatchLikeStatus, type LikeStatus } from '@/services/likes'
+import { publishLikeStatus } from '@/hooks/useLike'
 import { getUserSavedFilms } from '@/services/savedFilms'
 import { getUserFavorites } from '@/services/favoriteFilms'
 import { useUserLists } from '@/hooks/useUserLists'
@@ -97,7 +98,10 @@ export default function NativeProfileScreen() {
         setTakes(loadedTakes)
         const takeIds = loadedTakes.map((t) => t.id)
         if (takeIds.length > 0) {
-          getBatchLikeStatus(takeIds).then(setTakeLikesMap).catch(() => {})
+          getBatchLikeStatus(takeIds).then((statusMap) => {
+            setTakeLikesMap(statusMap)
+            statusMap.forEach((status, id) => publishLikeStatus(id, status))
+          }).catch(() => {})
           getBatchCommentCounts(takeIds).then((countsMap) => {
             setTakeCommentCounts(countsMap)
             countsMap.forEach((count, id) => publishCommentCount(id, count))

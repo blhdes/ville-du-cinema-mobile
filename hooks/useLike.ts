@@ -25,6 +25,10 @@ function publish(takeId: string, status: LikeStatus) {
   subscribers.get(takeId)?.forEach((cb) => cb(status))
 }
 
+export function publishLikeStatus(takeId: string, status: LikeStatus) {
+  publish(takeId, status)
+}
+
 function subscribe(takeId: string, cb: Subscriber) {
   if (!subscribers.has(takeId)) subscribers.set(takeId, new Set())
   subscribers.get(takeId)!.add(cb)

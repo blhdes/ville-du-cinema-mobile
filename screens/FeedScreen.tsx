@@ -32,6 +32,7 @@ import { fetchFeed, clearFeedCache, type FeedResult } from '@/services/feed'
 import { getVillageClippings } from '@/services/clippings'
 import { getVillageTakes } from '@/services/takes'
 import { getBatchLikeStatus, type LikeStatus } from '@/services/likes'
+import { publishLikeStatus } from '@/hooks/useLike'
 import { getBatchCommentCounts } from '@/services/comments'
 import { publishCommentCount } from '@/hooks/useCommentCount'
 import { getBatchRepostStatus, type RepostStatus } from '@/services/clippings'
@@ -270,7 +271,10 @@ export default function FeedScreen() {
       setTakeCommentCounts(new Map())
       return
     }
-    getBatchLikeStatus(takeIds).then(setTakeLikesMap).catch(() => {})
+    getBatchLikeStatus(takeIds).then((statusMap) => {
+      setTakeLikesMap(statusMap)
+      statusMap.forEach((status, id) => publishLikeStatus(id, status))
+    }).catch(() => {})
     getBatchCommentCounts(takeIds).then((countsMap) => {
       setTakeCommentCounts(countsMap)
       countsMap.forEach((count, id) => publishCommentCount(id, count))
@@ -587,8 +591,8 @@ export default function FeedScreen() {
             userId: item.ownerUserId,
             username: item.ownerUsername,
           }}
-          initialLiked={likeData?.liked}
-          initialLikeCount={likeData?.count}
+          initialLiked={likeData?.liked ?? false}
+          initialLikeCount={likeData?.count ?? 0}
           initialCommentCount={takeCommentCounts.get(item.data.id) ?? 0}
           initialRepostCount={takeRepostStatus.get(item.data.id)?.count ?? 0}
           initialReposted={takeRepostStatus.get(item.data.id)?.reposted ?? false}
