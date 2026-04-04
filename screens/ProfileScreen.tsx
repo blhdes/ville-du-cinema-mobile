@@ -19,6 +19,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import { getUserClippings, getBatchRepostStatus, type RepostStatus } from '@/services/clippings'
+import { publishRepostStatus } from '@/hooks/useRepostCount'
 import { getUserTakes } from '@/services/takes'
 import { getBatchCommentCounts } from '@/services/comments'
 import { getBatchLikeStatus, type LikeStatus } from '@/services/likes'
@@ -115,7 +116,10 @@ export default function ProfileScreen() {
             if (takeIds.length > 0) {
               getBatchLikeStatus(takeIds).then(setTakeLikesMap).catch(() => {})
               getBatchCommentCounts(takeIds).then(setTakeCommentCounts).catch(() => {})
-              getBatchRepostStatus(takeIds).then(setTakeRepostStatus).catch(() => {})
+              getBatchRepostStatus(takeIds).then((statusMap) => {
+                setTakeRepostStatus(statusMap)
+                statusMap.forEach((status, id) => publishRepostStatus(id, status))
+              }).catch(() => {})
             }
           }
           if (savedResult.status === 'fulfilled') setSavedFilms(savedResult.value)

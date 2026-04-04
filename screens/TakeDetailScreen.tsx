@@ -19,7 +19,6 @@ import type { FeedStackParamList } from '@/navigation/types'
 import type { TakeCommentWithAuthor, Take } from '@/types/database'
 import { getTakeById } from '@/services/takes'
 import { useTabBarInset } from '@/hooks/useTabBarInset'
-import { useLike } from '@/hooks/useLike'
 import { useComments } from '@/hooks/useComments'
 import { useUser } from '@/hooks/useUser'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -28,6 +27,7 @@ import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import SwipeableRow from '@/components/ui/SwipeableRow'
 import FeedDivider from '@/components/ui/FeedDivider'
 import Spinner from '@/components/ui/Spinner'
+import TakeInteractionBar from '@/components/TakeInteractionBar'
 
 type TakeDetailRoute = RouteProp<FeedStackParamList, 'TakeDetail'>
 
@@ -48,7 +48,6 @@ export default function TakeDetailScreen() {
   const typography = useTypography()
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
-  const { liked, count: likeCount, toggle: toggleLike } = useLike(takeId)
   const { comments, isLoading: commentsLoading, addComment, removeComment } = useComments(takeId)
 
   // We need the Take data. Fetch it by ID since we only pass takeId in params.
@@ -160,29 +159,15 @@ export default function TakeDetailScreen() {
         {/* Take body */}
         <Text style={styles.body}>{take.content}</Text>
 
-        {/* Like row */}
-        <View style={styles.likeRow}>
-          <Pressable
-            onPress={toggleLike}
-            hitSlop={8}
-            style={({ pressed }) => [styles.likeButton, pressed && styles.pressed]}
-          >
-            <Ionicons
-              name={liked ? 'heart' : 'heart-outline'}
-              size={20}
-              color={liked ? colors.red : colors.secondaryText}
-            />
-            {likeCount > 0 ? (
-              <Text style={[styles.likeCount, liked && { color: colors.red }]}>
-                {likeCount}
-              </Text>
-            ) : null}
-          </Pressable>
-        </View>
-
+        <TakeInteractionBar
+          take={take}
+          author={author}
+          size="md"
+          onCommentPress={() => inputRef.current?.focus()}
+        />
       </View>
     )
-  }, [take, takeLoading, author, dateStr, liked, likeCount, toggleLike, navigation, colors, styles])
+  }, [take, takeLoading, author, dateStr, navigation, styles, inputRef])
 
   const renderComment = useCallback(({ item }: { item: TakeCommentWithAuthor }) => {
     const isOwn = user?.id === item.comment.user_id
@@ -381,21 +366,6 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       fontSize: typography.body.fontSize,
       lineHeight: typography.body.lineHeight,
       color: colors.foreground,
-    },
-    likeRow: {
-      flexDirection: 'row',
-      marginTop: spacing.md,
-      marginBottom: spacing.md,
-    },
-    likeButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-    },
-    likeCount: {
-      fontFamily: fonts.system,
-      fontSize: typography.callout.fontSize,
-      color: colors.secondaryText,
     },
     commentsLabel: {
       fontFamily: fonts.system,

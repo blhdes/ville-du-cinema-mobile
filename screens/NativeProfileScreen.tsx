@@ -12,6 +12,7 @@ import * as Haptics from 'expo-haptics'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase/client'
 import { getUserClippings, getBatchRepostStatus, type RepostStatus } from '@/services/clippings'
+import { publishRepostStatus } from '@/hooks/useRepostCount'
 import { getUserTakes } from '@/services/takes'
 import { getBatchCommentCounts } from '@/services/comments'
 import { getBatchLikeStatus, type LikeStatus } from '@/services/likes'
@@ -97,7 +98,10 @@ export default function NativeProfileScreen() {
         if (takeIds.length > 0) {
           getBatchLikeStatus(takeIds).then(setTakeLikesMap).catch(() => {})
           getBatchCommentCounts(takeIds).then(setTakeCommentCounts).catch(() => {})
-          getBatchRepostStatus(takeIds).then(setTakeRepostStatus).catch(() => {})
+          getBatchRepostStatus(takeIds).then((statusMap) => {
+            setTakeRepostStatus(statusMap)
+            statusMap.forEach((status, id) => publishRepostStatus(id, status))
+          }).catch(() => {})
         }
       }
       if (savedResult.status === 'fulfilled' && !cancelled) setSavedFilms(savedResult.value)

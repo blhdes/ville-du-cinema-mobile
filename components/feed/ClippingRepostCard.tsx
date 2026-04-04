@@ -1,15 +1,12 @@
-import { memo, useMemo, useCallback } from 'react'
-import { LayoutAnimation, Pressable, StyleSheet, Text, View } from 'react-native'
+import { memo, useMemo, useCallback, useRef } from 'react'
+import { LayoutAnimation, StyleSheet, View } from 'react-native'
 import * as Haptics from 'expo-haptics'
-import { Ionicons } from '@expo/vector-icons'
-import { useNavigation, type NavigationProp } from '@react-navigation/native'
-import type { FeedStackParamList } from '@/navigation/types'
 import type { Clipping, ClippingRepostJson, RepostAuthor } from '@/types/database'
 import { deleteClipping, saveRepostClipping } from '@/services/clippings'
 import { useTheme } from '@/contexts/ThemeContext'
-import { fonts, spacing, type ThemeColors } from '@/theme'
-import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
+import { type ThemeColors } from '@/theme'
 import ClippingCard from '@/components/profile/ClippingCard'
+import RepostHeader from '@/components/feed/RepostHeader'
 import SwipeableRow from '@/components/ui/SwipeableRow'
 
 interface ClippingRepostCardProps {
@@ -25,29 +22,27 @@ interface ClippingRepostCardProps {
 }
 
 function ClippingRepostCard({ clipping, owner, onDeleted }: ClippingRepostCardProps) {
-  const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const { colors } = useTheme()
-  const typography = useTypography()
-  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
+  const styles = useMemo(() => createStyles(colors), [colors])
 
   // Support both new format { clipping, user } and legacy bare Clipping stored before the metadata fix
   const json = clipping.review_json as ClippingRepostJson | Clipping | null
   const originalClipping: Clipping = (json && 'clipping' in json) ? (json as ClippingRepostJson).clipping : (json as Clipping)
   const originalUser: RepostAuthor | undefined = (json && 'user' in json) ? (json as ClippingRepostJson).user : undefined
 
-  const handleOwnerPress = useCallback(() => {
-    if (owner.userId) {
-      navigation.navigate('NativeProfile', { userId: owner.userId, username: owner.username })
-    }
-  }, [navigation, owner.userId, owner.username])
+  const isReposting = useRef(false)
 
   const handleRepost = useCallback(async () => {
+    if (isReposting.current) return
+    isReposting.current = true
     try {
       await saveRepostClipping(originalClipping, originalUser)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     } catch (error) {
       console.error('Failed to repost clipping:', error)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+    } finally {
+      isReposting.current = false
     }
   }, [originalClipping, originalUser])
 
@@ -61,25 +56,8 @@ function ClippingRepostCard({ clipping, owner, onDeleted }: ClippingRepostCardPr
 
   const cardContent = (
     <View style={styles.surface}>
-      {/* "Reposted by" header */}
-      <Pressable
-        style={({ pressed }) => [styles.header, pressed && owner.userId && styles.pressed]}
-        onPress={handleOwnerPress}
-        disabled={!owner.userId}
-      >
-        <Ionicons name="repeat-outline" size={16} color={colors.teal} style={styles.icon} />
-        <Text style={styles.repostLabel} numberOfLines={1}>
-          Reposted by {owner.displayName}
-        </Text>
-      </Pressable>
-
-      {/* Embedded ClippingCard — repostable=false disables repost swipe on inner card */}
-      <ClippingCard
-        clipping={originalClipping}
-        user={originalUser}
-        readOnly
-        repostable={false}
-      />
+      <RepostHeader owner={owner} />
+      <ClippingCard clipping={originalClipping} user={originalUser} readOnly repostable={false} />
     </View>
   )
 
@@ -112,30 +90,10 @@ function ClippingRepostCard({ clipping, owner, onDeleted }: ClippingRepostCardPr
 
 export default memo(ClippingRepostCard)
 
-function createStyles(colors: ThemeColors, typography: ScaledTypography) {
+function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
     surface: {
       backgroundColor: colors.background,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 20,
-      paddingTop: spacing.xl,
-    },
-    pressed: {
-      opacity: 0.6,
-    },
-    icon: {
-      marginRight: spacing.xs,
-    },
-    repostLabel: {
-      fontFamily: fonts.system,
-      fontSize: typography.magazineMeta.fontSize,
-      lineHeight: typography.magazineMeta.lineHeight,
-      letterSpacing: typography.magazineMeta.letterSpacing,
-      color: colors.secondaryText,
-      flex: 1,
     },
   })
 }

@@ -73,7 +73,7 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable 
         <Pressable
           onPress={handleExpand}
           disabled={isExpanded}
-          style={({ pressed }) => [styles.container, pressed && styles.pressed]}
+          style={({ pressed }) => [styles.container, !repostable && styles.containerEmbedded, pressed && styles.pressed]}
         >
           {/* ── Header row: avatar + name on left, decorative " on right ── */}
           <View style={styles.headerRow}>
@@ -168,6 +168,9 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       paddingHorizontal: 20,
       paddingTop: spacing.xl,
       paddingBottom: spacing.lg,
+    },
+    containerEmbedded: {
+      paddingTop: spacing.sm,
     },
     pressed: {
       opacity: 0.6,

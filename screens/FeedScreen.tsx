@@ -34,6 +34,7 @@ import { getVillageTakes } from '@/services/takes'
 import { getBatchLikeStatus, type LikeStatus } from '@/services/likes'
 import { getBatchCommentCounts } from '@/services/comments'
 import { getBatchRepostStatus, type RepostStatus } from '@/services/clippings'
+import { publishRepostStatus } from '@/hooks/useRepostCount'
 import type { Review, FeedItem, Clipping, Take, RepostFeedItem, TakeFeedItem, TakeRepostFeedItem, ClippingRepostFeedItem } from '@/types/database'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
@@ -270,7 +271,10 @@ export default function FeedScreen() {
     }
     getBatchLikeStatus(takeIds).then(setTakeLikesMap).catch(() => {})
     getBatchCommentCounts(takeIds).then(setTakeCommentCounts).catch(() => {})
-    getBatchRepostStatus(takeIds).then(setTakeRepostStatus).catch(() => {})
+    getBatchRepostStatus(takeIds).then((statusMap) => {
+      setTakeRepostStatus(statusMap)
+      statusMap.forEach((status, id) => publishRepostStatus(id, status))
+    }).catch(() => {})
   }, [villageTakes])
 
   // Initial fetch when takes change
@@ -607,18 +611,22 @@ export default function FeedScreen() {
       )
     }
     if (item.kind === 'take-repost') {
+      const isOwn = !item.ownerUserId
       return (
         <TakeRepostCard
           clipping={item.data}
           owner={{ avatarUrl: item.ownerAvatarUrl, displayName: item.ownerDisplayName, userId: item.ownerUserId, username: item.ownerUsername }}
+          onDeleted={isOwn ? removeClipping : undefined}
         />
       )
     }
     if (item.kind === 'clipping-repost') {
+      const isOwn = !item.ownerUserId
       return (
         <ClippingRepostCard
           clipping={item.data}
           owner={{ avatarUrl: item.ownerAvatarUrl, displayName: item.ownerDisplayName, userId: item.ownerUserId, username: item.ownerUsername }}
+          onDeleted={isOwn ? removeClipping : undefined}
         />
       )
     }

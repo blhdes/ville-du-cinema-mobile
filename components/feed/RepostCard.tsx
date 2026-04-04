@@ -1,15 +1,12 @@
 import { memo, useMemo, useCallback } from 'react'
-import { LayoutAnimation, Pressable, StyleSheet, Text, View } from 'react-native'
+import { LayoutAnimation, StyleSheet, View } from 'react-native'
 import * as Haptics from 'expo-haptics'
-import { Ionicons } from '@expo/vector-icons'
-import { useNavigation, type NavigationProp } from '@react-navigation/native'
-import type { FeedStackParamList } from '@/navigation/types'
 import type { Clipping, Review } from '@/types/database'
 import { deleteClipping, saveRepost } from '@/services/clippings'
 import { useTheme } from '@/contexts/ThemeContext'
-import { fonts, spacing, type ThemeColors } from '@/theme'
-import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
+import { type ThemeColors } from '@/theme'
 import ReviewCard from '@/components/ReviewCard'
+import RepostHeader from '@/components/feed/RepostHeader'
 import SwipeableRow from '@/components/ui/SwipeableRow'
 
 interface RepostCardProps {
@@ -25,18 +22,10 @@ interface RepostCardProps {
 }
 
 function RepostCard({ clipping, owner, onDeleted }: RepostCardProps) {
-  const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const { colors } = useTheme()
-  const typography = useTypography()
-  const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
+  const styles = useMemo(() => createStyles(colors), [colors])
 
   const review = clipping.review_json as Review
-
-  const handleOwnerPress = useCallback(() => {
-    if (owner.userId) {
-      navigation.navigate('NativeProfile', { userId: owner.userId, username: owner.username })
-    }
-  }, [navigation, owner.userId, owner.username])
 
   const handleRepost = useCallback(async () => {
     try {
@@ -58,19 +47,7 @@ function RepostCard({ clipping, owner, onDeleted }: RepostCardProps) {
 
   const cardContent = (
     <View style={styles.surface}>
-      {/* "Reposted by" header */}
-      <Pressable
-        style={({ pressed }) => [styles.header, pressed && owner.userId && styles.pressed]}
-        onPress={handleOwnerPress}
-        disabled={!owner.userId}
-      >
-        <Ionicons name="repeat-outline" size={16} color={colors.teal} style={styles.icon} />
-        <Text style={styles.repostLabel} numberOfLines={1}>
-          Reposted by {owner.displayName}
-        </Text>
-      </Pressable>
-
-      {/* Embedded ReviewCard — not swipeable to prevent re-reposting */}
+      <RepostHeader owner={owner} />
       <ReviewCard review={review} repostable={false} compact />
     </View>
   )
@@ -104,30 +81,10 @@ function RepostCard({ clipping, owner, onDeleted }: RepostCardProps) {
 
 export default memo(RepostCard)
 
-function createStyles(colors: ThemeColors, typography: ScaledTypography) {
+function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
     surface: {
       backgroundColor: colors.background,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 20,
-      paddingTop: spacing.xl,
-    },
-    pressed: {
-      opacity: 0.6,
-    },
-    icon: {
-      marginRight: spacing.xs,
-    },
-    repostLabel: {
-      fontFamily: fonts.system,
-      fontSize: typography.magazineMeta.fontSize,
-      lineHeight: typography.magazineMeta.lineHeight,
-      letterSpacing: typography.magazineMeta.letterSpacing,
-      color: colors.secondaryText,
-      flex: 1,
     },
   })
 }

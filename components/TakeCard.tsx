@@ -1,21 +1,19 @@
-import { memo, useCallback, useMemo } from 'react'
+import { memo, useCallback, useMemo, useRef } from 'react'
 import { Alert, LayoutAnimation, Pressable, StyleSheet, Text, View } from 'react-native'
 import { Image } from 'expo-image'
-import { Ionicons } from '@expo/vector-icons'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import * as Haptics from 'expo-haptics'
 import type { Take } from '@/types/database'
 import type { FeedStackParamList } from '@/navigation/types'
 import { deleteTake } from '@/services/takes'
 import { saveRepostTake } from '@/services/clippings'
-import { useLike } from '@/hooks/useLike'
-import { useCommentCount } from '@/hooks/useCommentCount'
 import { useRepost, publishRepostStatus } from '@/hooks/useRepostCount'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import SwipeableRow from '@/components/ui/SwipeableRow'
 import FeedDivider from '@/components/ui/FeedDivider'
+import TakeInteractionBar from '@/components/TakeInteractionBar'
 
 const HORIZONTAL_PAD = 20
 
@@ -66,13 +64,31 @@ function TakeCard({
   const typography = useTypography()
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
-  const { liked, count: likeCount, toggle: toggleLike } = useLike(
-    take.id,
-    initialLiked,
-    initialLikeCount,
-  )
-  const commentCount = useCommentCount(take.id, initialCommentCount)
   const { reposted, count: repostCount } = useRepost(take.id, initialReposted, initialRepostCount)
+  const isReposting = useRef(false)
+
+  const handleRepost = useCallback(async () => {
+    if (isReposting.current) return
+    isReposting.current = true
+    const prevReposted = reposted
+    const prevCount = repostCount
+    publishRepostStatus(take.id, { reposted: true, count: prevCount + 1 })
+    try {
+      await saveRepostTake(take, {
+        displayName: author?.displayName ?? 'Unknown',
+        userId: author?.userId,
+        avatarUrl: author?.avatarUrl,
+        username: author?.username,
+      })
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    } catch (error) {
+      console.error('Failed to repost take:', error)
+      publishRepostStatus(take.id, { reposted: prevReposted, count: prevCount })
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+    } finally {
+      isReposting.current = false
+    }
+  }, [take, author, reposted, repostCount])
 
   const handleDelete = useCallback(() => {
     Alert.alert('Delete take', 'Are you sure you want to delete this take?', [
@@ -104,25 +120,6 @@ function TakeCard({
     navigation.navigate('TakeDetail', { takeId: take.id, author })
   }, [navigation, take.id, author])
 
-  const handleRepost = useCallback(async () => {
-    const prevReposted = reposted
-    const prevCount = repostCount
-    publishRepostStatus(take.id, { reposted: true, count: prevCount + 1 })
-    try {
-      await saveRepostTake(take, {
-        displayName: author?.displayName ?? 'Unknown',
-        userId: author?.userId,
-        avatarUrl: author?.avatarUrl,
-        username: author?.username,
-      })
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-    } catch (error) {
-      console.error('Failed to repost take:', error)
-      publishRepostStatus(take.id, { reposted: prevReposted, count: prevCount })
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
-    }
-  }, [take, author, reposted, repostCount])
-
   const dateStr = new Date(take.created_at).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -131,7 +128,7 @@ function TakeCard({
 
   const cardContent = (
     <Pressable onPress={handleDetailPress}>
-    <View style={styles.article}>
+    <View style={[styles.article, !repostable && styles.articleEmbedded]}>
       {/* Film title — taps through to Film Card, mirrors ReviewCard header */}
       <Pressable
         onPress={handleFilmPress}
@@ -172,54 +169,18 @@ function TakeCard({
       {/* Take body — plain text, no HTML */}
       <Text style={styles.body}>{take.content}</Text>
 
-      {/* Interaction bar: like + comment */}
-      <View style={styles.interactionBar}>
-        <Pressable
-          onPress={toggleLike}
-          hitSlop={8}
-          style={({ pressed }) => [styles.interactionButton, pressed && styles.interactionPressed]}
-        >
-          <Ionicons
-            name={liked ? 'heart' : 'heart-outline'}
-            size={16}
-            color={liked ? colors.red : colors.secondaryText}
-          />
-          {likeCount > 0 ? (
-            <Text style={[styles.interactionCount, liked && { color: colors.red }]}>
-              {likeCount}
-            </Text>
-          ) : null}
-        </Pressable>
-
-        <Pressable
-          onPress={handleDetailPress}
-          hitSlop={8}
-          style={({ pressed }) => [styles.interactionButton, pressed && styles.interactionPressed]}
-        >
-          <Ionicons name="chatbubble-outline" size={15} color={colors.secondaryText} />
-          {(commentCount ?? 0) > 0 ? (
-            <Text style={styles.interactionCount}>{commentCount}</Text>
-          ) : null}
-        </Pressable>
-
-        {repostable ? (
-          <Pressable
-            onPress={handleRepost}
-            hitSlop={8}
-            style={({ pressed }) => [styles.interactionButton, pressed && styles.interactionPressed]}
-          >
-            <Ionicons name="repeat-outline" size={17} color={reposted ? colors.teal : colors.secondaryText} />
-            {repostCount > 0 ? (
-              <Text style={[styles.interactionCount, reposted && { color: colors.teal }]}>{repostCount}</Text>
-            ) : null}
-          </Pressable>
-        ) : repostCount > 0 ? (
-          <View style={styles.interactionButton}>
-            <Ionicons name="repeat-outline" size={17} color={colors.secondaryText} />
-            <Text style={styles.interactionCount}>{repostCount}</Text>
-          </View>
-        ) : null}
-      </View>
+      <TakeInteractionBar
+        take={take}
+        author={author}
+        repostable={repostable}
+        onCommentPress={handleDetailPress}
+        onRepostPress={repostable ? handleRepost : undefined}
+        initialLiked={initialLiked}
+        initialLikeCount={initialLikeCount}
+        initialCommentCount={initialCommentCount}
+        initialRepostCount={initialRepostCount}
+        initialReposted={initialReposted}
+      />
 
       </View>
     <FeedDivider />
@@ -231,6 +192,7 @@ function TakeCard({
     return (
       <SwipeableRow
         onAction={handleRepost}
+        actionColor={colors.teal}
         actionColor={colors.teal}
         actionIcon="repeat-outline"
         actionLabel="Repost this take"
@@ -269,6 +231,9 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       paddingHorizontal: HORIZONTAL_PAD,
       paddingTop: spacing.xl,
       paddingBottom: spacing.lg,
+    },
+    articleEmbedded: {
+      paddingTop: spacing.sm,
     },
     titlePressed: {
       opacity: 0.6,
@@ -317,28 +282,6 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       fontSize: typography.body.fontSize,
       lineHeight: typography.body.lineHeight,
       color: colors.foreground,
-    },
-
-    // Interaction bar
-    interactionBar: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.lg,
-      marginTop: spacing.md,
-    },
-    interactionButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-    },
-    interactionPressed: {
-      opacity: 0.5,
-    },
-    interactionCount: {
-      fontFamily: fonts.system,
-      fontSize: typography.caption.fontSize,
-      lineHeight: typography.caption.lineHeight,
-      color: colors.secondaryText,
     },
 
   })
