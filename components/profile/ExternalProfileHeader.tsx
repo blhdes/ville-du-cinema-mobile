@@ -47,7 +47,7 @@ export default function ExternalProfileHeader({
       >
         <Text style={styles.displayName}>{displayName}</Text>
         <View style={styles.dotsOffset}>
-          <LetterboxdDots size={16} />
+          <LetterboxdDots size={22} />
         </View>
       </Pressable>
 

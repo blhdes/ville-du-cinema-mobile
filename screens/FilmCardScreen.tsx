@@ -257,7 +257,7 @@ export default function FilmCardScreen() {
             style={({ pressed }) => pressed && styles.actionPressed}
             hitSlop={8}
           >
-            <LetterboxdDots size={28} />
+            <LetterboxdDots size={22} />
           </Pressable>
         </View>
       </View>
