@@ -302,8 +302,12 @@ export default function FeedScreen() {
     }
   }, [villageUserIds, profile?.user_id, fetchSocialData])
 
-  // Re-fetch social data when returning from TakeDetail (counts may have changed)
-  useFocusEffect(useCallback(() => { fetchSocialData(villageTakes) }, [villageTakes, fetchSocialData]))
+  // Re-fetch social data when returning from TakeDetail (counts may have changed).
+  // Guard: skip when villageTakes is empty (initial mount before data loads) so we
+  // don't prematurely set takesReady=true and collapse the skeleton gate early.
+  useFocusEffect(useCallback(() => {
+    if (villageTakes.length > 0) fetchSocialData(villageTakes)
+  }, [villageTakes, fetchSocialData]))
 
   const refetchVillageContent = useCallback(() => {
     const takeUserIds = profile?.user_id
@@ -725,7 +729,7 @@ export default function FeedScreen() {
   const listContentStyle = useMemo(
     () => [
       !hasItems && !isInitialLoad ? styles.emptyList : styles.list,
-      { paddingTop: headerHeight + spacing.md, paddingBottom: tabBarInset + 20 },
+      { paddingTop: headerHeight, paddingBottom: tabBarInset + 20 },
     ],
     [hasItems, isInitialLoad, styles, headerHeight, tabBarInset],
   )
