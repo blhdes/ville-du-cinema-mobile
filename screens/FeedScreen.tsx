@@ -35,8 +35,9 @@ import { getBatchLikeStatus, type LikeStatus } from '@/services/likes'
 import { publishLikeStatus } from '@/hooks/useLike'
 import { getBatchCommentCounts } from '@/services/comments'
 import { publishCommentCount } from '@/hooks/useCommentCount'
-import { getBatchRepostStatus, type RepostStatus } from '@/services/clippings'
+import { getBatchRepostStatus, getBatchClippingRepostStatus, type RepostStatus } from '@/services/clippings'
 import { publishRepostStatus } from '@/hooks/useRepostCount'
+import { publishClippingRepostStatus } from '@/hooks/useClippingRepostCount'
 import type { Review, FeedItem, Clipping, Take, RepostFeedItem, TakeFeedItem, TakeRepostFeedItem, ClippingRepostFeedItem } from '@/types/database'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
@@ -237,6 +238,7 @@ export default function FeedScreen() {
   const [takeLikesMap, setTakeLikesMap] = useState<Map<string, LikeStatus>>(new Map())
   const [takeCommentCounts, setTakeCommentCounts] = useState<Map<string, number>>(new Map())
   const [takeRepostStatus, setTakeRepostStatus] = useState<Map<string, RepostStatus>>(new Map())
+  const [clippingRepostStatus, setClippingRepostStatus] = useState<Map<string, RepostStatus>>(new Map())
   // Stays false until the first social-data fetch completes — gates takes out of
   // feedItems until caches are warm so cards never render with stale 0/false counts.
   const [takesReady, setTakesReady] = useState(false)
@@ -273,6 +275,17 @@ export default function FeedScreen() {
     setTakesReady(true)
   }, [])
 
+  const fetchClippingSocialData = useCallback(async (clippings: Clipping[]) => {
+    const urls = [...new Set(clippings.map((c) => c.original_url))]
+    if (urls.length === 0) {
+      setClippingRepostStatus(new Map())
+      return
+    }
+    const repostStatus = await getBatchClippingRepostStatus(urls)
+    repostStatus.forEach((status, url) => publishClippingRepostStatus(url, status))
+    setClippingRepostStatus(repostStatus)
+  }, [])
+
   // Fetch clippings + takes from followed Village users whenever the follow list changes
   useEffect(() => {
     // Include the current user's ID so their own Takes appear in the feed.
@@ -289,7 +302,10 @@ export default function FeedScreen() {
     }
     if (villageUserIds.length > 0) {
       getVillageClippings(villageUserIds)
-        .then(setVillageClippings)
+        .then(async (vc) => {
+          await fetchClippingSocialData(vc)
+          setVillageClippings(vc)
+        })
         .catch(() => {})
     }
     if (takeUserIds.length > 0) {
@@ -300,7 +316,7 @@ export default function FeedScreen() {
         })
         .catch(() => {})
     }
-  }, [villageUserIds, profile?.user_id, fetchSocialData])
+  }, [villageUserIds, profile?.user_id, fetchSocialData, fetchClippingSocialData])
 
   // Re-fetch social data when returning from TakeDetail (counts may have changed).
   // Guard: skip when villageTakes is empty (initial mount before data loads) so we
@@ -309,6 +325,10 @@ export default function FeedScreen() {
     if (villageTakes.length > 0) fetchSocialData(villageTakes)
   }, [villageTakes, fetchSocialData]))
 
+  useFocusEffect(useCallback(() => {
+    if (villageClippings.length > 0) fetchClippingSocialData(villageClippings)
+  }, [villageClippings, fetchClippingSocialData]))
+
   const refetchVillageContent = useCallback(() => {
     const takeUserIds = profile?.user_id
       ? [...new Set([...villageUserIds, profile.user_id])]
@@ -316,7 +336,10 @@ export default function FeedScreen() {
 
     if (villageUserIds.length > 0) {
       getVillageClippings(villageUserIds)
-        .then(setVillageClippings)
+        .then(async (vc) => {
+          await fetchClippingSocialData(vc)
+          setVillageClippings(vc)
+        })
         .catch(() => {})
     } else {
       setVillageClippings([])
@@ -331,7 +354,7 @@ export default function FeedScreen() {
     } else {
       setVillageTakes([])
     }
-  }, [villageUserIds, profile?.user_id, fetchSocialData])
+  }, [villageUserIds, profile?.user_id, fetchSocialData, fetchClippingSocialData])
 
   const loadFeed = useCallback(async (pageNum: number, append = false, keepContent = false) => {
     if (usernames.length === 0) {
@@ -636,6 +659,8 @@ export default function FeedScreen() {
           onDeleted={removeClipping}
           user={{ avatarUrl: item.ownerAvatarUrl, displayName: item.ownerDisplayName, userId: item.ownerUserId, username: item.ownerUsername }}
           readOnly
+          initialRepostCount={clippingRepostStatus.get(item.data.original_url)?.count ?? 0}
+          initialReposted={clippingRepostStatus.get(item.data.original_url)?.reposted ?? false}
         />
       )
     }
@@ -656,6 +681,8 @@ export default function FeedScreen() {
           clipping={item.data}
           owner={{ avatarUrl: item.ownerAvatarUrl, displayName: item.ownerDisplayName, userId: item.ownerUserId, username: item.ownerUsername }}
           onDeleted={isOwn ? removeClipping : undefined}
+          initialRepostCount={clippingRepostStatus.get(item.data.original_url)?.count ?? 0}
+          initialReposted={clippingRepostStatus.get(item.data.original_url)?.reposted ?? false}
         />
       )
     }
@@ -663,7 +690,7 @@ export default function FeedScreen() {
       return <WatchNotification review={item.data} />
     }
     return <ReviewCard review={item.data} />
-  }, [removeClipping, takeLikesMap, takeCommentCounts, takeRepostStatus])
+  }, [removeClipping, takeLikesMap, takeCommentCounts, takeRepostStatus, clippingRepostStatus])
 
   const renderEmpty = useCallback(() => {
     if (isLoading || isListLoading) return null

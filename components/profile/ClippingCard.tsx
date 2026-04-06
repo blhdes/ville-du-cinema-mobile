@@ -1,11 +1,13 @@
-import { memo, useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useRef, useState } from 'react'
 import { Alert, LayoutAnimation, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import { Image } from 'expo-image'
+import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import type { Clipping } from '@/types/database'
 import type { FeedStackParamList } from '@/navigation/types'
 import { deleteClipping, saveRepostClipping } from '@/services/clippings'
+import { useClippingRepost, publishClippingRepostStatus } from '@/hooks/useClippingRepostCount'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
@@ -21,14 +23,18 @@ interface ClippingCardProps {
   readOnly?: boolean
   /** Hides swipe-to-repost — used when embedded inside ClippingRepostCard. */
   repostable?: boolean
+  initialRepostCount?: number
+  initialReposted?: boolean
 }
 
-function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable = true }: ClippingCardProps) {
+function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable = true, initialRepostCount, initialReposted }: ClippingCardProps) {
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const { colors } = useTheme()
   const typography = useTypography()
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
   const [isExpanded, setIsExpanded] = useState(false)
+  const { reposted, count: repostCount } = useClippingRepost(clipping.original_url, initialReposted, initialRepostCount)
+  const isReposting = useRef(false)
 
   const handleExpand = useCallback(() => {
     if (isExpanded) return
@@ -37,6 +43,11 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable 
   }, [isExpanded])
 
   const handleRepost = useCallback(async () => {
+    if (isReposting.current) return
+    isReposting.current = true
+    const prevReposted = reposted
+    const prevCount = repostCount
+    publishClippingRepostStatus(clipping.original_url, { reposted: true, count: prevCount + 1 })
     try {
       await saveRepostClipping(clipping, {
         displayName: user?.displayName ?? clipping.author_name,
@@ -47,9 +58,12 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     } catch (error) {
       console.error('Failed to repost clipping:', error)
+      publishClippingRepostStatus(clipping.original_url, { reposted: prevReposted, count: prevCount })
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+    } finally {
+      isReposting.current = false
     }
-  }, [clipping, user])
+  }, [clipping, user, reposted, repostCount])
 
   const handleDelete = useCallback(() => {
     Alert.alert('Delete clipping', 'Are you sure you want to delete this clipping?', [
@@ -123,6 +137,12 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable 
           </Pressable>
         </Pressable>
 
+        {repostCount > 0 && (
+          <View style={styles.repostCount}>
+            <Ionicons name="repeat-outline" size={13} color={reposted ? colors.teal : colors.secondaryText} />
+            <Text style={[styles.repostCountText, reposted && { color: colors.teal }]}>{repostCount}</Text>
+          </View>
+        )}
         <FeedDivider />
       </View>
   )
@@ -241,6 +261,19 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,
+      color: colors.secondaryText,
+    },
+    repostCount: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 4,
+      paddingHorizontal: 20,
+      paddingBottom: spacing.sm,
+    },
+    repostCountText: {
+      fontFamily: fonts.system,
+      fontSize: typography.caption.fontSize,
+      lineHeight: typography.caption.lineHeight,
       color: colors.secondaryText,
     },
 

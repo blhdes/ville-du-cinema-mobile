@@ -31,7 +31,7 @@ export interface ScaledTypography {
 // ---------------------------------------------------------------------------
 
 function scale(base: number, multiplier: number): number {
-  const dampening = base >= 15 && base <= 18 ? 1.0 : 0.5
+  const dampening = base >= 15 && base <= 16 ? 1.0 : 0.5
   return Math.round(base * (1 + (multiplier - 1) * dampening))
 }
 

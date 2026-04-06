@@ -3,6 +3,7 @@ import { LayoutAnimation, StyleSheet, View } from 'react-native'
 import * as Haptics from 'expo-haptics'
 import type { Clipping, ClippingRepostJson, RepostAuthor } from '@/types/database'
 import { deleteClipping, saveRepostClipping } from '@/services/clippings'
+import { useClippingRepost, publishClippingRepostStatus } from '@/hooks/useClippingRepostCount'
 import { useTheme } from '@/contexts/ThemeContext'
 import { type ThemeColors } from '@/theme'
 import ClippingCard from '@/components/profile/ClippingCard'
@@ -19,9 +20,11 @@ interface ClippingRepostCardProps {
   }
   /** Called after a successful delete — removes from parent list state. */
   onDeleted?: (id: string) => void
+  initialRepostCount?: number
+  initialReposted?: boolean
 }
 
-function ClippingRepostCard({ clipping, owner, onDeleted }: ClippingRepostCardProps) {
+function ClippingRepostCard({ clipping, owner, onDeleted, initialRepostCount, initialReposted }: ClippingRepostCardProps) {
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
 
@@ -30,21 +33,26 @@ function ClippingRepostCard({ clipping, owner, onDeleted }: ClippingRepostCardPr
   const originalClipping: Clipping = (json && 'clipping' in json) ? (json as ClippingRepostJson).clipping : (json as Clipping)
   const originalUser: RepostAuthor | undefined = (json && 'user' in json) ? (json as ClippingRepostJson).user : undefined
 
+  const { reposted, count: repostCount } = useClippingRepost(originalClipping.original_url, initialReposted, initialRepostCount)
   const isReposting = useRef(false)
 
   const handleRepost = useCallback(async () => {
     if (isReposting.current) return
     isReposting.current = true
+    const prevReposted = reposted
+    const prevCount = repostCount
+    publishClippingRepostStatus(originalClipping.original_url, { reposted: true, count: prevCount + 1 })
     try {
       await saveRepostClipping(originalClipping, originalUser)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     } catch (error) {
       console.error('Failed to repost clipping:', error)
+      publishClippingRepostStatus(originalClipping.original_url, { reposted: prevReposted, count: prevCount })
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
     } finally {
       isReposting.current = false
     }
-  }, [originalClipping, originalUser])
+  }, [originalClipping, originalUser, reposted, repostCount])
 
   const handleDelete = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
@@ -57,7 +65,7 @@ function ClippingRepostCard({ clipping, owner, onDeleted }: ClippingRepostCardPr
   const cardContent = (
     <View style={styles.surface}>
       <RepostHeader owner={owner} />
-      <ClippingCard clipping={originalClipping} user={originalUser} readOnly repostable={false} />
+      <ClippingCard clipping={originalClipping} user={originalUser} readOnly repostable={false} initialRepostCount={initialRepostCount} initialReposted={initialReposted} />
     </View>
   )
 

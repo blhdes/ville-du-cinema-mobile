@@ -309,6 +309,57 @@ export async function getBatchRepostStatus(takeIds: string[]): Promise<Map<strin
 }
 
 /**
+ * Batch-fetch repost status for multiple Clippings by their original_url.
+ * Mirrors getBatchRepostStatus — two queries, no N+1.
+ */
+export async function getBatchClippingRepostStatus(originalUrls: string[]): Promise<Map<string, RepostStatus>> {
+  const result = new Map<string, RepostStatus>()
+  if (originalUrls.length === 0) return result
+
+  for (const url of originalUrls) result.set(url, { reposted: false, count: 0 })
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const [userRepostsResult, allRepostsResult] = await Promise.allSettled([
+    user
+      ? supabase
+          .from('user_clippings')
+          .select('original_url')
+          .eq('user_id', user.id)
+          .eq('type', 'clipping-repost')
+          .in('original_url', originalUrls)
+      : Promise.resolve({ data: [] as { original_url: string }[] }),
+    supabase
+      .from('user_clippings')
+      .select('original_url')
+      .eq('type', 'clipping-repost')
+      .in('original_url', originalUrls),
+  ])
+
+  if (userRepostsResult.status === 'fulfilled') {
+    const rows = (userRepostsResult.value as { data: { original_url: string }[] | null }).data ?? []
+    for (const row of rows) {
+      const entry = result.get(row.original_url)
+      if (entry) entry.reposted = true
+    }
+  }
+
+  if (allRepostsResult.status === 'fulfilled') {
+    const rows = (allRepostsResult.value as { data: { original_url: string }[] | null }).data ?? []
+    const counts = new Map<string, number>()
+    for (const row of rows) {
+      counts.set(row.original_url, (counts.get(row.original_url) ?? 0) + 1)
+    }
+    for (const [url, count] of counts) {
+      const entry = result.get(url)
+      if (entry) entry.count = count
+    }
+  }
+
+  return result
+}
+
+/**
  * Deletes a clipping by its ID.
  * Throws if the delete fails.
  */
