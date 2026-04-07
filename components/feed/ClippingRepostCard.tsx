@@ -41,7 +41,7 @@ function ClippingRepostCard({ clipping, owner, onDeleted, initialRepostCount, in
     isReposting.current = true
     const prevReposted = reposted
     const prevCount = repostCount
-    publishClippingRepostStatus(originalClipping.original_url, { reposted: true, count: prevCount + 1 })
+    publishClippingRepostStatus(originalClipping.original_url, { reposted: true, count: reposted ? prevCount : prevCount + 1 })
     try {
       await saveRepostClipping(originalClipping, originalUser)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)

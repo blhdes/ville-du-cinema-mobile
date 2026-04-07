@@ -47,7 +47,7 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable 
     isReposting.current = true
     const prevReposted = reposted
     const prevCount = repostCount
-    publishClippingRepostStatus(clipping.original_url, { reposted: true, count: prevCount + 1 })
+    publishClippingRepostStatus(clipping.original_url, { reposted: true, count: reposted ? prevCount : prevCount + 1 })
     try {
       await saveRepostClipping(clipping, {
         displayName: user?.displayName ?? clipping.author_name,
@@ -111,7 +111,15 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable 
                 </Text>
               </Pressable>
             )}
-            <Text style={styles.openQuoteMark}>{'\u201C'}</Text>
+            <View style={styles.headerRight}>
+              {repostCount > 0 && (
+                <View style={styles.repostCount}>
+                  <Ionicons name="repeat-outline" size={13} color={reposted ? colors.teal : colors.secondaryText} />
+                  <Text style={[styles.repostCountText, reposted && { color: colors.teal }]}>{repostCount}</Text>
+                </View>
+              )}
+              <Text style={styles.openQuoteMark}>{'\u201C'}</Text>
+            </View>
           </View>
 
           {/* ── Quote text ── */}
@@ -137,12 +145,6 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable 
           </Pressable>
         </Pressable>
 
-        {repostCount > 0 && (
-          <View style={styles.repostCount}>
-            <Ionicons name="repeat-outline" size={13} color={reposted ? colors.teal : colors.secondaryText} />
-            <Text style={[styles.repostCountText, reposted && { color: colors.teal }]}>{repostCount}</Text>
-          </View>
-        )}
         <FeedDivider />
       </View>
   )
@@ -263,12 +265,15 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       letterSpacing: typography.magazineMeta.letterSpacing,
       color: colors.secondaryText,
     },
+    headerRight: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: spacing.xs,
+    },
     repostCount: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
       gap: 4,
-      paddingHorizontal: 20,
-      paddingBottom: spacing.sm,
     },
     repostCountText: {
       fontFamily: fonts.system,
