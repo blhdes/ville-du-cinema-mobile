@@ -77,14 +77,14 @@ function truncateHtml(html: string, max: number): string {
 
 function ReviewCard({ review, hideAuthor = false, repostable = true, compact = false }: ReviewCardProps) {
   const [expanded, setExpanded] = useState(false)
-  const { preferences } = useDisplayPreferences()
   const { width } = useWindowDimensions()
+  const [contentWidth, setContentWidth] = useState(() => width - HORIZONTAL_PAD * 2)
+  const { preferences } = useDisplayPreferences()
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const { colors } = useTheme()
   const typography = useTypography()
   const { setTabBarVisible } = useTabBar()
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
-  const contentWidth = width - HORIZONTAL_PAD * 2
   const handleLongPress = useCallback(() => {
     if (review.review) {
       setTabBarVisible(false)
@@ -195,7 +195,13 @@ function ReviewCard({ review, hideAuthor = false, repostable = true, compact = f
 
   const cardContent = (
     <Pressable onLongPress={handleLongPress} delayLongPress={500}>
-    <View style={[styles.article, compact && styles.articleCompact]}>
+    <View
+      style={[styles.article, compact && styles.articleCompact]}
+      onLayout={(e) => {
+        const measured = e.nativeEvent.layout.width - HORIZONTAL_PAD * 2
+        if (measured !== contentWidth) setContentWidth(measured)
+      }}
+    >
       {/* Title — navigates to Film Card (TMDB) */}
       <Pressable
         onPress={async () => {

@@ -434,10 +434,10 @@ export default function FeedScreen() {
   }, [feedRefreshRequested]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLoadMore = useCallback(() => {
-    if (hasMore && !isLoading) {
+    if (hasMore && !isLoading && !isLoadingMore) {
       loadFeed(page + 1, true)
     }
-  }, [hasMore, isLoading, page, loadFeed])
+  }, [hasMore, isLoading, isLoadingMore, page, loadFeed])
 
   const openDrawer = useCallback(() => {
     navigation.dispatch(DrawerActions.openDrawer())
@@ -728,16 +728,19 @@ export default function FeedScreen() {
   const hasItems = filteredItems.length > 0
 
   const renderFooter = useCallback(() => {
-    if (isLoadingMore) {
-      return (
-        <View style={styles.footerLoader}>
-          <Spinner size={18} />
-        </View>
-      )
-    }
-
     if (hasItems && !hasMore) {
       return <QuoteOfTheDay />
+    }
+
+    // While there is more content to load, keep a stable-height container at the
+    // bottom of the list so the layout never collapses to 0 and triggers the iOS
+    // overscroll bounce. The spinner appears inside it only while actually loading.
+    if (hasItems && hasMore) {
+      return (
+        <View style={styles.footerLoader}>
+          {isLoadingMore ? <Spinner size={18} /> : null}
+        </View>
+      )
     }
 
     return null
@@ -777,7 +780,7 @@ export default function FeedScreen() {
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={renderFooter}
         onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.3}
+        onEndReachedThreshold={0.5}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         initialNumToRender={8}

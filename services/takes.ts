@@ -183,8 +183,13 @@ export async function getNetworkFilms(
 
 /**
  * Deletes a Take by its ID.
+ * Clears child rows (likes, comments) first because the FK constraints don't yet have ON DELETE CASCADE.
+ * Once the DB migration adds CASCADE, these pre-deletes become a no-op and can be removed.
  */
 export async function deleteTake(id: string): Promise<void> {
+  await supabase.from('take_likes').delete().eq('take_id', id)
+  await supabase.from('take_comments').delete().eq('take_id', id)
+
   const { error } = await supabase
     .from('takes')
     .delete()
