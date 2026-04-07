@@ -96,7 +96,7 @@ export default function FeedScreen() {
   const isDragging = useSharedValue(false)
   const scrollY = useSharedValue(0)
   const lastScrollDirection = useSharedValue(0)
-  const spinnerProgress = useSharedValue(1)
+  const spinnerProgress = useSharedValue(0)
   // Gate: prevents scroll worklets from touching translateY after leaving FeedScreen.
   const isFocused = useSharedValue(true)
 
@@ -149,19 +149,42 @@ export default function FeedScreen() {
   }
 
   const scrollHandler = useAnimatedScrollHandler({
-    onBeginDrag: (event, ctx: { prevY: number }) => {
+    onBeginDrag: (event, ctx: { prevY: number; overscrolling: boolean }) => {
       isDragging.value = true
       ctx.prevY = event.contentOffset.y
+      ctx.overscrolling = false
       downAccumulator.value = 0
     },
-    onScroll: (event, ctx: { prevY: number }) => {
+    onScroll: (event, ctx: { prevY: number; overscrolling: boolean }) => {
       const currentY = event.contentOffset.y
       scrollY.value = currentY
+
+      if (!isFocused.value) return
+
+      // Detect iOS rubber-band overscroll at top or bottom.
+      // These events are not real user scroll — they're the native bounce animation.
+      // Letting them through would cause the header/tab-bar to animate in response
+      // to the snap-back, which looks like the bars "bouncing" unexpectedly.
+      const maxScrollY = Math.max(
+        0,
+        event.contentSize.height - event.layoutMeasurement.height,
+      )
+      const isOverscroll = currentY < 0 || currentY > maxScrollY
+      if (isOverscroll) {
+        ctx.overscrolling = true
+        ctx.prevY = currentY
+        return
+      }
+      // First valid event after returning from overscroll — reset prevY so the
+      // snap-back delta doesn't register as intentional upward scrolling.
+      if (ctx.overscrolling) {
+        ctx.overscrolling = false
+        ctx.prevY = currentY
+        return
+      }
+
       const delta = currentY - ctx.prevY
       ctx.prevY = currentY
-
-      // Don't manipulate bars after leaving FeedScreen.
-      if (!isFocused.value) return
 
       // Track direction during both drag and momentum (needed for snap decisions).
       if (delta !== 0) {
