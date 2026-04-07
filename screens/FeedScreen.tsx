@@ -913,8 +913,9 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       textAlign: 'center',
     },
     footerLoader: {
-      paddingVertical: spacing.lg,
+      height: 60,
       alignItems: 'center',
+      justifyContent: 'center',
     },
   })
 }
