@@ -87,8 +87,9 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable 
         <Pressable
           onPress={handleExpand}
           disabled={isExpanded}
-          style={({ pressed }) => [styles.container, !repostable && styles.containerEmbedded, pressed && styles.pressed]}
+          style={({ pressed }) => pressed && styles.pressed}
         >
+          <View style={[styles.container, !repostable && styles.containerEmbedded]}>
           {/* ── Header row: avatar + name on left, decorative " on right ── */}
           <View style={styles.headerRow}>
             {user && (
@@ -144,6 +145,7 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable 
             </Text>
           </Pressable>
 
+          </View>
           <FeedDivider />
         </Pressable>
       </View>

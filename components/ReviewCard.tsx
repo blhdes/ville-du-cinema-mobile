@@ -220,15 +220,13 @@ function ReviewCard({ review, hideAuthor = false, repostable = true, compact = f
           onPress={() => navigation.navigate('ExternalProfile', { username: review.username })}
           style={({ pressed }) => [styles.metaRow, pressed && styles.metaPressed]}
         >
-          <Text style={styles.displayName} numberOfLines={1}>{review.creator}</Text>
-          {(dateStr || (review.rating && preferences.showRatings)) ? (
-            <Text style={styles.meta}>
-              {dateStr ? ` \u00B7 ${dateStr}` : ''}
-              {review.rating && preferences.showRatings ? (
-                <Text style={styles.rating}>{` \u00B7 ${review.rating}`}</Text>
-              ) : null}
-            </Text>
-          ) : null}
+          <Text style={styles.meta}>
+            {review.creator}
+            {dateStr ? ` \u00B7 ${dateStr}` : ''}
+            {review.rating && preferences.showRatings ? (
+              <Text style={styles.rating}>{` \u00B7 ${review.rating}`}</Text>
+            ) : null}
+          </Text>
         </Pressable>
       ) : (
         <View style={styles.metaRow}>
@@ -348,14 +346,6 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       height: 26,
       borderRadius: 13,
       marginRight: 8,
-    },
-    displayName: {
-      fontFamily: fonts.system,
-      fontWeight: '600' as const,
-      fontSize: typography.body.fontSize,
-      lineHeight: typography.body.lineHeight,
-      color: colors.foreground,
-      flexShrink: 1,
     },
     meta: {
       fontFamily: fonts.system,
