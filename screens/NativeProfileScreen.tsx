@@ -164,7 +164,9 @@ export default function NativeProfileScreen() {
   const clippingUser = useMemo(() => profile ? {
     avatarUrl: profile.avatar_url ?? undefined,
     displayName: profile.display_name ?? profile.username ?? 'Village User',
-  } : undefined, [profile])
+    userId,
+    username: profile.username ?? undefined,
+  } : undefined, [profile, userId])
 
   const followingCount = useMemo(() =>
     (profile?.followed_users?.length ?? 0) + (profile?.followed_village_users?.length ?? 0),

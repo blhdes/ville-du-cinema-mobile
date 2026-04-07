@@ -155,10 +155,8 @@ function TakeCard({
               </Text>
             </View>
           )}
-          <Text style={styles.meta}>
-            {author.displayName}
-            {dateStr ? ` \u00B7 ${dateStr}` : ''}
-          </Text>
+          <Text style={styles.displayName} numberOfLines={1}>{author.displayName}</Text>
+          {dateStr ? <Text style={styles.meta}>{` \u00B7 ${dateStr}`}</Text> : null}
         </Pressable>
       ) : (
         <View style={styles.metaRow}>
@@ -268,13 +266,20 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       fontSize: 10,
       color: colors.secondaryText,
     },
+    displayName: {
+      fontFamily: fonts.system,
+      fontWeight: '600' as const,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
+      color: colors.foreground,
+      flexShrink: 1,
+    },
     meta: {
       fontFamily: fonts.system,
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,
       color: colors.secondaryText,
-      flex: 1,
     },
     body: {
       fontFamily: fonts.body,

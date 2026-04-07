@@ -13,9 +13,11 @@ interface RepostHeaderProps {
     userId?: string
     username?: string
   }
+  repostCount?: number
+  reposted?: boolean
 }
 
-function RepostHeader({ owner }: RepostHeaderProps) {
+function RepostHeader({ owner, repostCount, reposted }: RepostHeaderProps) {
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const { colors } = useTheme()
   const typography = useTypography()
@@ -33,6 +35,15 @@ function RepostHeader({ owner }: RepostHeaderProps) {
       disabled={!owner.userId}
     >
       <Ionicons name="repeat-outline" size={16} color={colors.teal} style={styles.icon} />
+      {repostCount != null && repostCount > 0 && (
+        <Text style={[styles.countText, {
+          fontSize: typography.caption.fontSize,
+          lineHeight: typography.caption.lineHeight,
+          color: reposted ? colors.teal : colors.secondaryText,
+        }]}>
+          {repostCount}{'  '}
+        </Text>
+      )}
       <Text
         style={[styles.label, {
           fontSize: typography.magazineMeta.fontSize,
@@ -66,5 +77,8 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: fonts.system,
     flex: 1,
+  },
+  countText: {
+    fontFamily: fonts.system,
   },
 })

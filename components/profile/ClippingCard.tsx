@@ -112,7 +112,7 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable 
               </Pressable>
             )}
             <View style={styles.headerRight}>
-              {repostCount > 0 && (
+              {repostable && repostCount > 0 && (
                 <View style={styles.repostCount}>
                   <Ionicons name="repeat-outline" size={13} color={reposted ? colors.teal : colors.secondaryText} />
                   <Text style={[styles.repostCountText, reposted && { color: colors.teal }]}>{repostCount}</Text>
@@ -143,9 +143,9 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable 
               {clipping.author_name}
             </Text>
           </Pressable>
-        </Pressable>
 
-        <FeedDivider />
+          <FeedDivider />
+        </Pressable>
       </View>
   )
 
@@ -203,7 +203,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: spacing.xs,
+      marginBottom: spacing.md,
     },
     identity: {
       flexDirection: 'row',
@@ -215,6 +215,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       width: 26,
       height: 26,
       borderRadius: 13,
+      marginRight: 8,
     },
     avatarFallback: {
       backgroundColor: colors.border,
@@ -232,7 +233,6 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       fontSize: typography.body.fontSize,
       lineHeight: typography.body.lineHeight,
       color: colors.foreground,
-      marginLeft: spacing.sm,
     },
     openQuoteMark: {
       fontFamily: fonts.heading,

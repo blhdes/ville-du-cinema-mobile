@@ -31,7 +31,11 @@ function ClippingRepostCard({ clipping, owner, onDeleted, initialRepostCount, in
   // Support both new format { clipping, user } and legacy bare Clipping stored before the metadata fix
   const json = clipping.review_json as ClippingRepostJson | Clipping | null
   const originalClipping: Clipping = (json && 'clipping' in json) ? (json as ClippingRepostJson).clipping : (json as Clipping)
-  const originalUser: RepostAuthor | undefined = (json && 'user' in json) ? (json as ClippingRepostJson).user : undefined
+  const originalUserRaw: RepostAuthor | undefined = (json && 'user' in json) ? (json as ClippingRepostJson).user : undefined
+  // Fall back to the clipping's own user_id for old data where userId wasn't stored
+  const originalUser: RepostAuthor | undefined = originalUserRaw
+    ? { ...originalUserRaw, userId: originalUserRaw.userId ?? originalClipping.user_id }
+    : undefined
 
   const { reposted, count: repostCount } = useClippingRepost(originalClipping.original_url, initialReposted, initialRepostCount)
   const isReposting = useRef(false)
@@ -64,7 +68,7 @@ function ClippingRepostCard({ clipping, owner, onDeleted, initialRepostCount, in
 
   const cardContent = (
     <View style={styles.surface}>
-      <RepostHeader owner={owner} />
+      <RepostHeader owner={owner} repostCount={repostCount} reposted={reposted} />
       <ClippingCard clipping={originalClipping} user={originalUser} readOnly repostable={false} initialRepostCount={initialRepostCount} initialReposted={initialReposted} />
     </View>
   )
