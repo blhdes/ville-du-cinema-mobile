@@ -803,7 +803,7 @@ export default function FeedScreen() {
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={renderFooter}
         onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
+        onEndReachedThreshold={0.1}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         initialNumToRender={8}
