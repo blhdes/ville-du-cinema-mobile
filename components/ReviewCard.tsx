@@ -1,6 +1,6 @@
 import { memo, useState, useMemo, useCallback } from 'react'
 import { Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
-import Svg, { Circle } from 'react-native-svg'
+import Svg, { Circle, Path } from 'react-native-svg'
 import { Image } from 'expo-image'
 import * as Haptics from 'expo-haptics'
 import RenderHtml, { defaultSystemFonts } from 'react-native-render-html'
@@ -76,12 +76,24 @@ function truncateHtml(html: string, max: number): string {
   return html.slice(0, i) + suffix
 }
 
-function LetterboxdDots({ color }: { color: string }) {
+/** Replicates the official letterboxd-decal-dots-neg-mono.svg at small size.
+ *  Uses foreground/background theme colors so it works on both light and dark. */
+function LetterboxdDots({ color, bgColor }: { color: string; bgColor: string }) {
   return (
-    <Svg width={26} height={14} viewBox="0 0 38 20">
-      <Circle cx={8}  cy={10} r={7} fill={color} fillOpacity={0.55} />
-      <Circle cx={19} cy={10} r={7} fill={color} fillOpacity={0.55} />
-      <Circle cx={30} cy={10} r={7} fill={color} fillOpacity={0.55} />
+    <Svg width={27} height={10} viewBox="0 0 378 140">
+      {/* Three dots */}
+      <Circle cx={70.079}  cy={70} r={70.079} fill={color} />
+      <Circle cx={189}     cy={70} r={70.079} fill={color} />
+      <Circle cx={307.921} cy={70} r={70.079} fill={color} />
+      {/* Lens-shaped separators between adjacent dots, matching card background */}
+      <Path
+        fill={bgColor}
+        d="M129.539,107.063 C122.810,96.315 118.921,83.611 118.921,70 C118.921,56.389 122.810,43.685 129.539,32.937 C136.268,43.685 140.157,56.389 140.157,70 C140.157,83.611 136.268,96.315 129.539,107.063 Z"
+      />
+      <Path
+        fill={bgColor}
+        d="M248.461,32.937 C255.190,43.685 259.079,56.389 259.079,70 C259.079,83.611 255.190,96.315 248.461,107.063 C241.732,96.315 237.843,83.611 237.843,70 C237.843,56.389 241.732,43.685 248.461,32.937 Z"
+      />
     </Svg>
   )
 }
@@ -303,7 +315,7 @@ function ReviewCard({ review, hideAuthor = false, repostable = true, compact = f
         hitSlop={8}
         style={({ pressed }) => [styles.linkButton, pressed && { opacity: 0.4 }]}
       >
-        <LetterboxdDots color={colors.secondaryText} />
+        <LetterboxdDots color={colors.foreground} bgColor={colors.background} />
       </Pressable>
 
     </View>
