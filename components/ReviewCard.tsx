@@ -1,5 +1,6 @@
 import { memo, useState, useMemo, useCallback } from 'react'
 import { Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import Svg, { Circle } from 'react-native-svg'
 import { Image } from 'expo-image'
 import * as Haptics from 'expo-haptics'
 import RenderHtml, { defaultSystemFonts } from 'react-native-render-html'
@@ -73,6 +74,15 @@ function truncateHtml(html: string, max: number): string {
     }
   }
   return html.slice(0, i) + suffix
+}
+
+function LetterboxdDots({ color }: { color: string }) {
+  return (
+    <Svg width={20} height={14} viewBox="0 0 28 20">
+      <Circle cx={9} cy={10} r={8} fill={color} fillOpacity={0.55} />
+      <Circle cx={19} cy={10} r={8} fill={color} fillOpacity={0.55} />
+    </Svg>
+  )
 }
 
 function ReviewCard({ review, hideAuthor = false, repostable = true, compact = false }: ReviewCardProps) {
@@ -286,16 +296,13 @@ function ReviewCard({ review, hideAuthor = false, repostable = true, compact = f
         </Pressable>
       ) : null}
 
-      {/* External link */}
+      {/* Letterboxd source link */}
       <Pressable
         onPress={() => Linking.openURL(review.link)}
-        style={styles.linkButton}
+        hitSlop={8}
+        style={({ pressed }) => [styles.linkButton, pressed && { opacity: 0.4 }]}
       >
-        {({ pressed }) => (
-          <Text style={[styles.linkText, pressed && styles.linkPressed]}>
-            View on Letterboxd
-          </Text>
-        )}
+        <LetterboxdDots color={colors.secondaryText} />
       </Pressable>
 
     </View>
@@ -374,16 +381,6 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       marginTop: spacing.lg,
       paddingVertical: spacing.xs,
       alignSelf: 'flex-end',
-    },
-    linkText: {
-      fontFamily: fonts.system,
-      fontSize: typography.magazineMeta.fontSize,
-      lineHeight: typography.magazineMeta.lineHeight,
-      letterSpacing: typography.magazineMeta.letterSpacing,
-      color: colors.secondaryText,
-    },
-    linkPressed: {
-      color: colors.teal,
     },
     dropCapRow: {
       flexDirection: 'row',

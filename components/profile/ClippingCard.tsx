@@ -1,7 +1,6 @@
 import { memo, useCallback, useMemo, useRef, useState } from 'react'
 import { Alert, LayoutAnimation, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import { Image } from 'expo-image'
-import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import type { Clipping } from '@/types/database'
@@ -112,15 +111,7 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable 
                 </Text>
               </Pressable>
             )}
-            <View style={styles.headerRight}>
-              {repostable && repostCount > 0 && (
-                <View style={styles.repostCount}>
-                  <Ionicons name="repeat-outline" size={13} color={reposted ? colors.teal : colors.secondaryText} />
-                  <Text style={[styles.repostCountText, reposted && { color: colors.teal }]}>{repostCount}</Text>
-                </View>
-              )}
-              <Text style={styles.openQuoteMark}>{'\u201C'}</Text>
-            </View>
+            <Text style={styles.openQuoteMark}>{'\u201C'}</Text>
           </View>
 
           {/* ── Quote text ── */}
@@ -267,22 +258,5 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       letterSpacing: typography.magazineMeta.letterSpacing,
       color: colors.secondaryText,
     },
-    headerRight: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      gap: spacing.xs,
-    },
-    repostCount: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      gap: 4,
-    },
-    repostCountText: {
-      fontFamily: fonts.system,
-      fontSize: typography.caption.fontSize,
-      lineHeight: typography.caption.lineHeight,
-      color: colors.secondaryText,
-    },
-
   })
 }

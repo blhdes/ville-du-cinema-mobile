@@ -96,9 +96,9 @@ function TakeInteractionBar({
           size={heartSize}
           color={liked ? colors.red : colors.secondaryText}
         />
-        {likeCount > 0 ? (
-          <Text style={[styles.count, liked && { color: colors.red }]}>{likeCount}</Text>
-        ) : null}
+        <Text style={[styles.count, liked && { color: colors.red }]}>
+          {likeCount > 0 ? likeCount : ''}
+        </Text>
       </Pressable>
 
       {/* Comment */}
@@ -108,9 +108,9 @@ function TakeInteractionBar({
         style={({ pressed }) => [styles.button, pressed && styles.pressed]}
       >
         <Ionicons name="chatbubble-outline" size={chatSize} color={colors.secondaryText} />
-        {(commentCount ?? 0) > 0 ? (
-          <Text style={styles.count}>{commentCount}</Text>
-        ) : null}
+        <Text style={styles.count}>
+          {(commentCount ?? 0) > 0 ? commentCount : ''}
+        </Text>
       </Pressable>
 
       {/* Repost */}
@@ -125,20 +125,22 @@ function TakeInteractionBar({
             size={repeatSize}
             color={reposted ? colors.teal : colors.secondaryText}
           />
-          {repostCount > 0 ? (
-            <Text style={[styles.count, reposted && { color: colors.teal }]}>{repostCount}</Text>
-          ) : null}
+          <Text style={[styles.count, reposted && { color: colors.teal }]}>
+            {repostCount > 0 ? repostCount : ''}
+          </Text>
         </Pressable>
-      ) : repostCount > 0 ? (
+      ) : (
         <View style={styles.button}>
           <Ionicons
             name="repeat-outline"
             size={repeatSize}
             color={reposted ? colors.teal : colors.secondaryText}
           />
-          <Text style={[styles.count, reposted && { color: colors.teal }]}>{repostCount}</Text>
+          <Text style={[styles.count, reposted && { color: colors.teal }]}>
+            {repostCount > 0 ? repostCount : ''}
+          </Text>
         </View>
-      ) : null}
+      )}
     </View>
   )
 }
@@ -168,6 +170,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography, size: '
       fontSize: isMd ? typography.callout.fontSize : typography.caption.fontSize,
       lineHeight: isMd ? typography.callout.lineHeight : typography.caption.lineHeight,
       color: colors.secondaryText,
+      minWidth: isMd ? typography.callout.fontSize * 2 : typography.caption.fontSize * 2,
     },
   })
 }
