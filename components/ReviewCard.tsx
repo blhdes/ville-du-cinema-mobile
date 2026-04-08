@@ -80,7 +80,7 @@ function truncateHtml(html: string, max: number): string {
  *  Uses foreground/background theme colors so it works on both light and dark. */
 function LetterboxdDots({ color, bgColor }: { color: string; bgColor: string }) {
   return (
-    <Svg width={27} height={10} viewBox="0 0 378 140">
+    <Svg width={18} height={7} viewBox="0 0 378 140" opacity={0.35}>
       {/* Three dots */}
       <Circle cx={70.079}  cy={70} r={70.079} fill={color} />
       <Circle cx={189}     cy={70} r={70.079} fill={color} />
