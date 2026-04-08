@@ -78,9 +78,10 @@ function truncateHtml(html: string, max: number): string {
 
 function LetterboxdDots({ color }: { color: string }) {
   return (
-    <Svg width={20} height={14} viewBox="0 0 28 20">
-      <Circle cx={9} cy={10} r={8} fill={color} fillOpacity={0.55} />
-      <Circle cx={19} cy={10} r={8} fill={color} fillOpacity={0.55} />
+    <Svg width={26} height={14} viewBox="0 0 38 20">
+      <Circle cx={8}  cy={10} r={7} fill={color} fillOpacity={0.55} />
+      <Circle cx={19} cy={10} r={7} fill={color} fillOpacity={0.55} />
+      <Circle cx={30} cy={10} r={7} fill={color} fillOpacity={0.55} />
     </Svg>
   )
 }
