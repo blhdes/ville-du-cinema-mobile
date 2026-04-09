@@ -22,6 +22,7 @@ import { publishLikeStatus } from '@/hooks/useLike'
 import { getUserSavedFilms } from '@/services/savedFilms'
 import { getUserFavorites } from '@/services/favoriteFilms'
 import { useUserLists } from '@/hooks/useUserLists'
+import { useProfile } from '@/contexts/ProfileContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
@@ -55,6 +56,11 @@ export default function NativeProfileScreen() {
   const typography = useTypography()
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
   const { villageUserIds, addVillageUser, removeVillageUser } = useUserLists()
+  const { profile: currentUserProfile } = useProfile()
+  const currentUser = useMemo(() => currentUserProfile?.display_name ? {
+    displayName: currentUserProfile.display_name,
+    username: currentUserProfile.username ?? undefined,
+  } : undefined, [currentUserProfile])
 
   const isFollowing = villageUserIds.includes(userId)
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
@@ -311,8 +317,8 @@ export default function NativeProfileScreen() {
         />
       )
     }
-    return <ClippingCard clipping={clipping} readOnly user={clippingUser} />
-  }, [clippingUser, userId, takeLikesMap, takeCommentCounts, takeRepostStatus, clippingRepostStatus])
+    return <ClippingCard clipping={clipping} readOnly user={clippingUser} reposter={currentUser} />
+  }, [clippingUser, userId, takeLikesMap, takeCommentCounts, takeRepostStatus, clippingRepostStatus, currentUser])
 
   const emptyState = useMemo(() => (
     <View style={styles.emptyContainer}>

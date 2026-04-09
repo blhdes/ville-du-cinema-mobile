@@ -1,6 +1,5 @@
 import { memo, useCallback, useMemo, useRef, useState } from 'react'
 import { Alert, LayoutAnimation, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
 import { Image } from 'expo-image'
 import * as Haptics from 'expo-haptics'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
@@ -13,6 +12,7 @@ import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import SwipeableRow from '@/components/ui/SwipeableRow'
 import FeedDivider from '@/components/ui/FeedDivider'
+import RepostHeader from '@/components/feed/RepostHeader'
 
 interface ClippingCardProps {
   clipping: Clipping
@@ -25,9 +25,11 @@ interface ClippingCardProps {
   repostable?: boolean
   initialRepostCount?: number
   initialReposted?: boolean
+  /** When provided, a RepostHeader appears above the card once the user reposts it. */
+  reposter?: { displayName: string; userId?: string; username?: string }
 }
 
-function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable = true, initialRepostCount, initialReposted }: ClippingCardProps) {
+function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable = true, initialRepostCount, initialReposted, reposter }: ClippingCardProps) {
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const { colors } = useTheme()
   const typography = useTypography()
@@ -84,6 +86,9 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable 
 
   const cardContent = (
       <View style={styles.surface}>
+        {repostable && reposted && reposter && (
+          <RepostHeader owner={reposter} repostCount={repostCount} reposted={reposted} />
+        )}
         <Pressable
           onPress={handleExpand}
           disabled={isExpanded}
@@ -136,14 +141,6 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable 
               {clipping.author_name}
             </Text>
           </Pressable>
-
-          {/* ── Repost count (appears after first repost) ── */}
-          {repostCount > 0 && (
-            <View style={styles.repostRow}>
-              <Ionicons name="repeat-outline" size={13} color={reposted ? colors.teal : colors.secondaryText} />
-              <Text style={[styles.repostCount, reposted && { color: colors.teal }]}>{repostCount}</Text>
-            </View>
-          )}
 
           </View>
           <FeedDivider />
@@ -265,18 +262,6 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,
-      color: colors.secondaryText,
-    },
-    repostRow: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      gap: 4,
-      marginTop: spacing.sm,
-    },
-    repostCount: {
-      fontFamily: fonts.system,
-      fontSize: typography.caption.fontSize,
-      lineHeight: typography.caption.lineHeight,
       color: colors.secondaryText,
     },
   })
