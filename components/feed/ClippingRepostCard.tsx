@@ -68,7 +68,7 @@ function ClippingRepostCard({ clipping, owner, onDeleted, initialRepostCount, in
 
   const cardContent = (
     <View style={styles.surface}>
-      <RepostHeader owner={owner} repostCount={repostCount} reposted={reposted} />
+      <RepostHeader owner={owner} />
       <ClippingCard clipping={originalClipping} user={originalUser} readOnly repostable={false} initialRepostCount={initialRepostCount} initialReposted={initialReposted} />
     </View>
   )
