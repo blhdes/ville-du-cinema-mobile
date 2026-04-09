@@ -10,9 +10,9 @@ import { useClippingRepost, publishClippingRepostStatus } from '@/hooks/useClipp
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
+import { Ionicons } from '@expo/vector-icons'
 import SwipeableRow from '@/components/ui/SwipeableRow'
 import FeedDivider from '@/components/ui/FeedDivider'
-import RepostHeader from '@/components/feed/RepostHeader'
 
 interface ClippingCardProps {
   clipping: Clipping
@@ -25,11 +25,9 @@ interface ClippingCardProps {
   repostable?: boolean
   initialRepostCount?: number
   initialReposted?: boolean
-  /** When provided, a RepostHeader appears above the card once the user reposts it. */
-  reposter?: { displayName: string; userId?: string; username?: string }
 }
 
-function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable = true, initialRepostCount, initialReposted, reposter }: ClippingCardProps) {
+function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable = true, initialRepostCount, initialReposted }: ClippingCardProps) {
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const { colors } = useTheme()
   const typography = useTypography()
@@ -86,9 +84,6 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable 
 
   const cardContent = (
       <View style={styles.surface}>
-        {repostable && reposted && reposter && (
-          <RepostHeader owner={reposter} repostCount={repostCount} reposted={reposted} />
-        )}
         <Pressable
           onPress={handleExpand}
           disabled={isExpanded}
@@ -128,19 +123,27 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable 
             {clipping.quote_text}
           </Text>
 
-          {/* ── Source attribution ── */}
-          <Pressable
-            onPress={() => Linking.openURL(clipping.original_url)}
-            hitSlop={8}
-            style={({ pressed }) => [styles.attribution, pressed && styles.pressed]}
-          >
-            <Text style={styles.movieTitle} numberOfLines={1}>
-              {clipping.movie_title}
-            </Text>
-            <Text style={styles.authorMeta}>
-              {clipping.author_name}
-            </Text>
-          </Pressable>
+          {/* ── Source attribution + repost count ── */}
+          <View style={styles.attributionRow}>
+            <Pressable
+              onPress={() => Linking.openURL(clipping.original_url)}
+              hitSlop={8}
+              style={({ pressed }) => [styles.attribution, pressed && styles.pressed]}
+            >
+              <Text style={styles.movieTitle} numberOfLines={1}>
+                {clipping.movie_title}
+              </Text>
+              <Text style={styles.authorMeta}>
+                {clipping.author_name}
+              </Text>
+            </Pressable>
+            {repostCount > 0 && (
+              <View style={styles.repostBadge}>
+                <Ionicons name="repeat-outline" size={13} color={reposted ? colors.teal : colors.secondaryText} />
+                <Text style={[styles.repostCount, reposted && { color: colors.teal }]}>{repostCount}</Text>
+              </View>
+            )}
+          </View>
 
           </View>
           <FeedDivider />
@@ -247,9 +250,27 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
     },
 
     // ── Attribution ──
-    attribution: {
+    attributionRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'flex-end' as const,
       marginTop: spacing.md,
+      gap: spacing.sm,
+    },
+    attribution: {
+      flex: 1,
       gap: 2,
+    },
+    repostBadge: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 3,
+      paddingBottom: 2,
+    },
+    repostCount: {
+      fontFamily: fonts.system,
+      fontSize: typography.caption.fontSize,
+      lineHeight: typography.caption.lineHeight,
+      color: colors.secondaryText,
     },
     movieTitle: {
       fontFamily: fonts.heading,
