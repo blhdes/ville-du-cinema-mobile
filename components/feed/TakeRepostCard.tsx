@@ -3,6 +3,7 @@ import { LayoutAnimation, StyleSheet, View } from 'react-native'
 import * as Haptics from 'expo-haptics'
 import type { Clipping, Take, TakeRepostJson, RepostAuthor } from '@/types/database'
 import { deleteClipping, saveRepostTake } from '@/services/clippings'
+import { useRepost } from '@/hooks/useRepostCount'
 import { useTheme } from '@/contexts/ThemeContext'
 import { type ThemeColors } from '@/theme'
 import TakeCard from '@/components/TakeCard'
@@ -30,10 +31,11 @@ function TakeRepostCard({ clipping, owner, onDeleted }: TakeRepostCardProps) {
   const take: Take = (json && 'take' in json) ? (json as TakeRepostJson).take : (json as Take)
   const author: RepostAuthor = (json && 'author' in json) ? (json as TakeRepostJson).author : { displayName: clipping.author_name }
 
+  const { reposted } = useRepost(take.id)
   const isReposting = useRef(false)
 
   const handleRepost = useCallback(async () => {
-    if (isReposting.current) return
+    if (isReposting.current || reposted) return
     isReposting.current = true
     try {
       await saveRepostTake(take, author)
@@ -44,7 +46,7 @@ function TakeRepostCard({ clipping, owner, onDeleted }: TakeRepostCardProps) {
     } finally {
       isReposting.current = false
     }
-  }, [take, author])
+  }, [take, author, reposted])
 
   const handleDelete = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
