@@ -32,7 +32,7 @@ function RepostHeader({ owner }: RepostHeaderProps) {
       onPress={handlePress}
       disabled={!owner.userId}
     >
-      <Ionicons name="repeat-outline" size={16} color={colors.teal} style={styles.icon} />
+      <Ionicons name="repeat-outline" size={16} color={colors.secondaryText} style={styles.icon} />
       <Text
         style={[styles.label, {
           fontSize: typography.magazineMeta.fontSize,
