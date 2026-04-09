@@ -61,7 +61,7 @@ function TakeInteractionBar({
   const repeatSize = isMd ? 20 : 17
 
   const handleRepost = useCallback(async () => {
-    if (!repostable || isReposting.current) return
+    if (!repostable || isReposting.current || reposted) return
     isReposting.current = true
     const prevReposted = reposted
     const prevCount = repostCount
