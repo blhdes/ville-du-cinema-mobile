@@ -1,5 +1,6 @@
 import { memo, useCallback, useMemo, useRef, useState } from 'react'
 import { Alert, LayoutAnimation, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { Image } from 'expo-image'
 import * as Haptics from 'expo-haptics'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
@@ -136,6 +137,14 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable 
             </Text>
           </Pressable>
 
+          {/* ── Repost count (appears after first repost) ── */}
+          {repostCount > 0 && (
+            <View style={styles.repostRow}>
+              <Ionicons name="repeat-outline" size={13} color={reposted ? colors.teal : colors.secondaryText} />
+              <Text style={[styles.repostCount, reposted && { color: colors.teal }]}>{repostCount}</Text>
+            </View>
+          )}
+
           </View>
           <FeedDivider />
         </Pressable>
@@ -256,6 +265,18 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       fontSize: typography.magazineMeta.fontSize,
       lineHeight: typography.magazineMeta.lineHeight,
       letterSpacing: typography.magazineMeta.letterSpacing,
+      color: colors.secondaryText,
+    },
+    repostRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 4,
+      marginTop: spacing.sm,
+    },
+    repostCount: {
+      fontFamily: fonts.system,
+      fontSize: typography.caption.fontSize,
+      lineHeight: typography.caption.lineHeight,
       color: colors.secondaryText,
     },
   })
