@@ -18,8 +18,9 @@ import { useUserLists } from '@/hooks/useUserLists'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
-import { getUserClippings, getBatchRepostStatus, type RepostStatus } from '@/services/clippings'
+import { getUserClippings, getBatchRepostStatus, getBatchClippingRepostStatus, type RepostStatus } from '@/services/clippings'
 import { publishRepostStatus } from '@/hooks/useRepostCount'
+import { publishClippingRepostStatus } from '@/hooks/useClippingRepostCount'
 import { getUserTakes } from '@/services/takes'
 import { getBatchCommentCounts } from '@/services/comments'
 import { publishCommentCount } from '@/hooks/useCommentCount'
@@ -84,6 +85,7 @@ export default function ProfileScreen() {
   const [takeLikesMap, setTakeLikesMap] = useState<Map<string, LikeStatus>>(new Map())
   const [takeCommentCounts, setTakeCommentCounts] = useState<Map<string, number>>(new Map())
   const [takeRepostStatus, setTakeRepostStatus] = useState<Map<string, RepostStatus>>(new Map())
+  const [clippingRepostStatus, setClippingRepostStatus] = useState<Map<string, RepostStatus>>(new Map())
   const [contentLoading, setContentLoading] = useState(true)
   const [clippingsError, setClippingsError] = useState(false)
   const hasLoadedOnce = useRef(false)
@@ -109,8 +111,19 @@ export default function ProfileScreen() {
       Promise.allSettled([getUserClippings(user.id), getUserTakes(user.id), getUserSavedFilms(user.id)])
         .then(async ([clippingsResult, takesResult, savedResult]) => {
           if (cancelled) return
-          if (clippingsResult.status === 'fulfilled') setClippings(clippingsResult.value)
-          else setClippingsError(true)
+          if (clippingsResult.status === 'fulfilled') {
+            const loadedClippings = clippingsResult.value
+            setClippings(loadedClippings)
+            const urls = [...new Set(loadedClippings.map((c) => c.original_url))]
+            if (urls.length > 0) {
+              getBatchClippingRepostStatus(urls).then((statusMap) => {
+                if (!cancelled) {
+                  statusMap.forEach((status, url) => publishClippingRepostStatus(url, status))
+                  setClippingRepostStatus(statusMap)
+                }
+              }).catch(() => {})
+            }
+          } else setClippingsError(true)
           if (takesResult.status === 'fulfilled') {
             const loadedTakes = takesResult.value
             const takeIds = loadedTakes.map((t) => t.id)
@@ -274,6 +287,8 @@ export default function ProfileScreen() {
             avatarUrl: clippingUser?.avatarUrl,
             displayName: clippingUser?.displayName ?? 'You',
           }}
+          initialRepostCount={clippingRepostStatus.get(clipping.original_url)?.count ?? 0}
+          initialReposted={clippingRepostStatus.get(clipping.original_url)?.reposted ?? false}
         />
       )
     }
@@ -284,7 +299,7 @@ export default function ProfileScreen() {
         user={clippingUser}
       />
     )
-  }, [handleClippingDeleted, handleTakeDeleted, clippingUser, takeLikesMap, takeCommentCounts, takeRepostStatus])
+  }, [handleClippingDeleted, handleTakeDeleted, clippingUser, takeLikesMap, takeCommentCounts, takeRepostStatus, clippingRepostStatus])
 
   const emptyState = useMemo(() => (
     <View style={styles.emptyContainer}>

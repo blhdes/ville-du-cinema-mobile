@@ -11,8 +11,9 @@ import { useTabBarInset } from '@/hooks/useTabBarInset'
 import * as Haptics from 'expo-haptics'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase/client'
-import { getUserClippings, getBatchRepostStatus, type RepostStatus } from '@/services/clippings'
+import { getUserClippings, getBatchRepostStatus, getBatchClippingRepostStatus, type RepostStatus } from '@/services/clippings'
 import { publishRepostStatus } from '@/hooks/useRepostCount'
+import { publishClippingRepostStatus } from '@/hooks/useClippingRepostCount'
 import { getUserTakes } from '@/services/takes'
 import { getBatchCommentCounts } from '@/services/comments'
 import { publishCommentCount } from '@/hooks/useCommentCount'
@@ -67,6 +68,7 @@ export default function NativeProfileScreen() {
   const [takeLikesMap, setTakeLikesMap] = useState<Map<string, LikeStatus>>(new Map())
   const [takeCommentCounts, setTakeCommentCounts] = useState<Map<string, number>>(new Map())
   const [takeRepostStatus, setTakeRepostStatus] = useState<Map<string, RepostStatus>>(new Map())
+  const [clippingRepostStatus, setClippingRepostStatus] = useState<Map<string, RepostStatus>>(new Map())
   const [contentLoading, setContentLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'takes' | 'clippings'>('all')
 
@@ -92,7 +94,19 @@ export default function NativeProfileScreen() {
       }
       if (!cancelled) setProfileLoading(false)
 
-      if (clippingsResult.status === 'fulfilled' && !cancelled) setClippings(clippingsResult.value)
+      if (clippingsResult.status === 'fulfilled' && !cancelled) {
+        const loadedClippings = clippingsResult.value
+        setClippings(loadedClippings)
+        const urls = [...new Set(loadedClippings.map((c) => c.original_url))]
+        if (urls.length > 0) {
+          getBatchClippingRepostStatus(urls).then((statusMap) => {
+            if (!cancelled) {
+              statusMap.forEach((status, url) => publishClippingRepostStatus(url, status))
+              setClippingRepostStatus(statusMap)
+            }
+          }).catch(() => {})
+        }
+      }
       if (takesResult.status === 'fulfilled') {
         const loadedTakes = takesResult.value
         const takeIds = loadedTakes.map((t) => t.id)
@@ -292,11 +306,13 @@ export default function NativeProfileScreen() {
             displayName: clippingUser?.displayName ?? 'Village User',
             userId,
           }}
+          initialRepostCount={clippingRepostStatus.get(clipping.original_url)?.count ?? 0}
+          initialReposted={clippingRepostStatus.get(clipping.original_url)?.reposted ?? false}
         />
       )
     }
     return <ClippingCard clipping={clipping} readOnly user={clippingUser} />
-  }, [clippingUser, userId, takeLikesMap, takeCommentCounts, takeRepostStatus])
+  }, [clippingUser, userId, takeLikesMap, takeCommentCounts, takeRepostStatus, clippingRepostStatus])
 
   const emptyState = useMemo(() => (
     <View style={styles.emptyContainer}>

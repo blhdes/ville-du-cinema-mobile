@@ -41,7 +41,7 @@ function ClippingRepostCard({ clipping, owner, onDeleted, initialRepostCount, in
   const isReposting = useRef(false)
 
   const handleRepost = useCallback(async () => {
-    if (isReposting.current) return
+    if (isReposting.current || reposted) return
     isReposting.current = true
     const prevReposted = reposted
     const prevCount = repostCount
