@@ -24,6 +24,7 @@ import { useUser } from '@/hooks/useUser'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
+import { formatTakeTimestamp } from '@/utils/timestamp'
 import SwipeableRow from '@/components/ui/SwipeableRow'
 import FeedDivider from '@/components/ui/FeedDivider'
 import Spinner from '@/components/ui/Spinner'
@@ -102,13 +103,7 @@ export default function TakeDetailScreen() {
     ])
   }, [removeComment])
 
-  const dateStr = take
-    ? new Date(take.created_at).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      })
-    : ''
+  const dateStr = take ? formatTakeTimestamp(take.created_at, true) : ''
 
   const listHeader = useMemo(() => {
     if (takeLoading || !take) {
@@ -171,10 +166,7 @@ export default function TakeDetailScreen() {
 
   const renderComment = useCallback(({ item }: { item: TakeCommentWithAuthor }) => {
     const isOwn = user?.id === item.comment.user_id
-    const commentDate = new Date(item.comment.created_at).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    })
+    const commentDate = formatTakeTimestamp(item.comment.created_at, false)
 
     const row = (
       <View style={styles.commentRow}>

@@ -11,6 +11,7 @@ import { useRepost, publishRepostStatus } from '@/hooks/useRepostCount'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
+import { formatTakeTimestamp } from '@/utils/timestamp'
 import SwipeableRow from '@/components/ui/SwipeableRow'
 import FeedDivider from '@/components/ui/FeedDivider'
 import TakeInteractionBar from '@/components/TakeInteractionBar'
@@ -120,11 +121,7 @@ function TakeCard({
     navigation.navigate('TakeDetail', { takeId: take.id, author })
   }, [navigation, take.id, author])
 
-  const dateStr = new Date(take.created_at).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
+  const dateStr = formatTakeTimestamp(take.created_at, false)
 
   const cardContent = (
     <Pressable onPress={handleDetailPress}>
