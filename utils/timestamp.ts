@@ -65,23 +65,22 @@ export const formatTakeTimestamp = (
     return 'just now';
   }
 
-  // 1–59 minutes  →  "1 min", "5 min", etc.
-  // Always singular "min" per spec (matches X/Twitter style).
+  // 1–59 minutes  →  "1m", "5m", "59m"
   if (elapsedMs < HOUR) {
     const mins = Math.floor(elapsedMs / MINUTE);
-    return `${mins} min`;
+    return `${mins}m`;
   }
 
-  // 1–23 hours  →  "1 h", "6 h", etc.
+  // 1–23 hours  →  "1h", "6h", "23h"
   if (elapsedMs < DAY) {
     const hours = Math.floor(elapsedMs / HOUR);
-    return `${hours} h`;
+    return `${hours}h`;
   }
 
-  // 1–6 days  →  "1 day", "5 days"
+  // 1–6 days  →  "1d", "5d"
   if (elapsedMs < 7 * DAY) {
     const days = Math.floor(elapsedMs / DAY);
-    return days === 1 ? '1 day' : `${days} days`;
+    return `${days}d`;
   }
 
   // 7+ days  →  short numerical date: d/M/yy  (e.g. "2/7/26")
