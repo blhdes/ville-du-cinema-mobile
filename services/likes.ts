@@ -1,6 +1,6 @@
 /**
  * Likes Service
- * Toggle, query, and batch-fetch like status for Takes.
+ * Toggle, query, and batch-fetch like status for Takes and Comments.
  */
 
 import { supabase } from '@/lib/supabase/client'
@@ -125,6 +125,101 @@ export async function getBatchLikeStatus(takeIds: string[]): Promise<Map<string,
     }
     for (const [takeId, count] of counts) {
       const entry = result.get(takeId)
+      if (entry) entry.count = count
+    }
+  }
+
+  return result
+}
+
+/**
+ * Toggle the current user's like on a Comment.
+ * Returns `true` if the comment is now liked, `false` if unliked.
+ */
+export async function toggleCommentLike(commentId: string): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('You must be signed in to like a comment.')
+
+  // Check if already liked
+  const { data: existing } = await supabase
+    .from('comment_likes')
+    .select('comment_id')
+    .eq('user_id', user.id)
+    .eq('comment_id', commentId)
+    .maybeSingle()
+
+  if (existing) {
+    const { error } = await supabase
+      .from('comment_likes')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('comment_id', commentId)
+    if (error) {
+      console.error('toggleCommentLike delete error:', error.message)
+      throw new Error(`Failed to unlike: ${error.message}`)
+    }
+    return false
+  }
+
+  const { error } = await supabase
+    .from('comment_likes')
+    .insert({ user_id: user.id, comment_id: commentId })
+  if (error) {
+    console.error('toggleCommentLike insert error:', error.message)
+    throw new Error(`Failed to like: ${error.message}`)
+  }
+  return true
+}
+
+/**
+ * Batch-fetch like status for multiple Comments in two queries.
+ * Used by TakeDetailScreen to avoid N+1 calls on the comment thread.
+ */
+export async function getBatchCommentLikeStatus(commentIds: string[]): Promise<Map<string, LikeStatus>> {
+  const result = new Map<string, LikeStatus>()
+  if (commentIds.length === 0) return result
+
+  // Initialize all with defaults
+  for (const id of commentIds) {
+    result.set(id, { liked: false, count: 0 })
+  }
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const [userLikesResult, allLikesResult] = await Promise.allSettled([
+    // Current user's likes among these comments
+    user
+      ? supabase
+          .from('comment_likes')
+          .select('comment_id')
+          .eq('user_id', user.id)
+          .in('comment_id', commentIds)
+      : Promise.resolve({ data: [] as { comment_id: string }[] }),
+    // All likes for these comments (for counting)
+    supabase
+      .from('comment_likes')
+      .select('comment_id')
+      .in('comment_id', commentIds),
+  ])
+
+  // Mark liked comments
+  if (userLikesResult.status === 'fulfilled') {
+    const rows = (userLikesResult.value as { data: { comment_id: string }[] | null }).data ?? []
+    for (const row of rows) {
+      const entry = result.get(row.comment_id)
+      if (entry) entry.liked = true
+    }
+  }
+
+  // Count likes per comment (client-side grouping)
+  if (allLikesResult.status === 'fulfilled') {
+    const rows = (allLikesResult.value as { data: { comment_id: string }[] | null }).data ?? []
+    const counts = new Map<string, number>()
+    for (const row of rows) {
+      counts.set(row.comment_id, (counts.get(row.comment_id) ?? 0) + 1)
+    }
+    for (const [commentId, count] of counts) {
+      const entry = result.get(commentId)
       if (entry) entry.count = count
     }
   }

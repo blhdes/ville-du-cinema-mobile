@@ -38,7 +38,7 @@ import { publishCommentCount } from '@/hooks/useCommentCount'
 import { getBatchRepostStatus, getBatchClippingRepostStatus, type RepostStatus } from '@/services/clippings'
 import { publishRepostStatus } from '@/hooks/useRepostCount'
 import { publishClippingRepostStatus } from '@/hooks/useClippingRepostCount'
-import type { Review, FeedItem, Clipping, Take, RepostFeedItem, TakeFeedItem, TakeRepostFeedItem, ClippingRepostFeedItem } from '@/types/database'
+import type { Review, FeedItem, Clipping, Take, RepostFeedItem, TakeFeedItem, TakeRepostFeedItem, ClippingRepostFeedItem, CommentRepostFeedItem } from '@/types/database'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import ErrorBanner from '@/components/ui/ErrorBanner'
@@ -47,6 +47,7 @@ import ClippingCard from '@/components/profile/ClippingCard'
 import RepostCard from '@/components/feed/RepostCard'
 import TakeRepostCard from '@/components/feed/TakeRepostCard'
 import ClippingRepostCard from '@/components/feed/ClippingRepostCard'
+import CommentRepostCard from '@/components/feed/CommentRepostCard'
 import TakeCard from '@/components/TakeCard'
 import ReviewCardSkeleton from '@/components/feed/ReviewCardSkeleton'
 import WatchNotification from '@/components/WatchNotification'
@@ -72,6 +73,7 @@ const keyExtractor = (item: FeedItem): string => {
   if (item.kind === 'repost') return `repost-${item.data.id}`
   if (item.kind === 'take-repost') return `take-repost-${item.data.id}`
   if (item.kind === 'clipping-repost') return `clipping-repost-${item.data.id}`
+  if (item.kind === 'comment-repost') return `comment-repost-${item.data.id}`
   if (item.kind === 'take') return `take-${item.data.id}`
   return `clipping-${item.data.id}`
 }
@@ -516,6 +518,7 @@ export default function FeedScreen() {
     const ownReposts = clippings.filter((c) => c.type === 'repost')
     const ownTakeReposts = clippings.filter((c) => c.type === 'take-repost')
     const ownClippingReposts = clippings.filter((c) => c.type === 'clipping-repost')
+    const ownCommentReposts = clippings.filter((c) => c.type === 'comment-repost')
 
     const clippingItems = ownQuotes.map((c): FeedItem => ({
       kind: 'clipping',
@@ -549,10 +552,19 @@ export default function FeedScreen() {
       ownerDisplayName,
     }))
 
+    const commentRepostItems: FeedItem[] = ownCommentReposts.map((c): CommentRepostFeedItem => ({
+      kind: 'comment-repost',
+      sortKey: new Date(c.created_at).getTime(),
+      data: c,
+      ownerAvatarUrl,
+      ownerDisplayName,
+    }))
+
     const villageQuotes = villageClippings.filter((c) => c.type === 'quote')
     const villageReposts = villageClippings.filter((c) => c.type === 'repost')
     const villageTakeReposts = villageClippings.filter((c) => c.type === 'take-repost')
     const villageClippingReposts = villageClippings.filter((c) => c.type === 'clipping-repost')
+    const villageCommentReposts = villageClippings.filter((c) => c.type === 'comment-repost')
 
     const villageClippingItems = villageQuotes.map((c): FeedItem => {
       const owner = villageUserMap.get(c.user_id)
@@ -606,6 +618,19 @@ export default function FeedScreen() {
       }
     })
 
+    const villageCommentRepostItems: FeedItem[] = villageCommentReposts.map((c): CommentRepostFeedItem => {
+      const owner = villageUserMap.get(c.user_id)
+      return {
+        kind: 'comment-repost',
+        sortKey: new Date(c.created_at).getTime(),
+        data: c,
+        ownerAvatarUrl: owner?.avatarUrl,
+        ownerDisplayName: owner?.displayName ?? 'Village User',
+        ownerUserId: c.user_id,
+        ownerUsername: owner?.username,
+      }
+    })
+
     const takeItems: FeedItem[] = villageTakes.map((t): TakeFeedItem => {
       const owner = villageUserMap.get(t.user_id)
       return {
@@ -619,7 +644,7 @@ export default function FeedScreen() {
       }
     })
 
-    return [...reviewItems, ...clippingItems, ...repostItems, ...takeRepostItems, ...clippingRepostItems, ...villageClippingItems, ...villageRepostItems, ...villageTakeRepostItems, ...villageClippingRepostItems, ...takeItems].sort((a, b) => b.sortKey - a.sortKey)
+    return [...reviewItems, ...clippingItems, ...repostItems, ...takeRepostItems, ...clippingRepostItems, ...commentRepostItems, ...villageClippingItems, ...villageRepostItems, ...villageTakeRepostItems, ...villageClippingRepostItems, ...villageCommentRepostItems, ...takeItems].sort((a, b) => b.sortKey - a.sortKey)
   }, [reviews, clippings, villageClippings, villageTakes, villageUserMap, profile?.avatar_url, profile?.display_name, profile?.username])
 
   // Filter watch notifications — clippings are always shown regardless
@@ -627,7 +652,7 @@ export default function FeedScreen() {
     () => preferences.showWatchNotifications
       ? feedItems
       : feedItems.filter((item) => {
-          if (item.kind === 'clipping' || item.kind === 'repost' || item.kind === 'take' || item.kind === 'take-repost' || item.kind === 'clipping-repost') return true
+          if (item.kind === 'clipping' || item.kind === 'repost' || item.kind === 'take' || item.kind === 'take-repost' || item.kind === 'clipping-repost' || item.kind === 'comment-repost') return true
           return item.data.type !== 'watch'
         }),
     [feedItems, preferences.showWatchNotifications],
@@ -701,6 +726,18 @@ export default function FeedScreen() {
       const isOwn = !item.ownerUserId
       return (
         <ClippingRepostCard
+          clipping={item.data}
+          owner={{ avatarUrl: item.ownerAvatarUrl, displayName: item.ownerDisplayName, userId: item.ownerUserId, username: item.ownerUsername }}
+          onDeleted={isOwn ? removeClipping : undefined}
+          initialRepostCount={clippingRepostStatus.get(item.data.original_url)?.count ?? 0}
+          initialReposted={clippingRepostStatus.get(item.data.original_url)?.reposted ?? false}
+        />
+      )
+    }
+    if (item.kind === 'comment-repost') {
+      const isOwn = !item.ownerUserId
+      return (
+        <CommentRepostCard
           clipping={item.data}
           owner={{ avatarUrl: item.ownerAvatarUrl, displayName: item.ownerDisplayName, userId: item.ownerUserId, username: item.ownerUsername }}
           onDeleted={isOwn ? removeClipping : undefined}

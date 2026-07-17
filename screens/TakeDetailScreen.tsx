@@ -18,8 +18,12 @@ import { useRoute, type RouteProp, useNavigation, type NavigationProp } from '@r
 import type { FeedStackParamList } from '@/navigation/types'
 import type { TakeCommentWithAuthor, Take } from '@/types/database'
 import { getTakeById } from '@/services/takes'
+import { getBatchCommentLikeStatus } from '@/services/likes'
+import { getBatchClippingRepostStatus } from '@/services/clippings'
 import { useTabBarInset } from '@/hooks/useTabBarInset'
 import { useComments } from '@/hooks/useComments'
+import { publishCommentLikeStatus } from '@/hooks/useCommentLike'
+import { publishClippingRepostStatus } from '@/hooks/useClippingRepostCount'
 import { useUser } from '@/hooks/useUser'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
@@ -29,6 +33,7 @@ import SwipeableRow from '@/components/ui/SwipeableRow'
 import FeedDivider from '@/components/ui/FeedDivider'
 import Spinner from '@/components/ui/Spinner'
 import TakeInteractionBar from '@/components/TakeInteractionBar'
+import CommentInteractionBar from '@/components/CommentInteractionBar'
 
 type TakeDetailRoute = RouteProp<FeedStackParamList, 'TakeDetail'>
 
@@ -76,6 +81,25 @@ export default function TakeDetailScreen() {
     const hide = Keyboard.addListener('keyboardWillHide', () => setKeyboardVisible(false))
     return () => { show.remove(); hide.remove() }
   }, [])
+
+  // Batch-fetch like + repost status for comments as they load, and publish
+  // into the pub/sub caches so each CommentInteractionBar picks them up.
+  // Tracks already-fetched ids so new comments don't refetch the whole thread.
+  const fetchedStatusIds = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    const newIds = comments
+      .map((c) => c.comment.id)
+      .filter((id) => !id.startsWith('optimistic-') && !fetchedStatusIds.current.has(id))
+    if (newIds.length === 0) return
+    for (const id of newIds) fetchedStatusIds.current.add(id)
+
+    getBatchCommentLikeStatus(newIds)
+      .then((statusMap) => statusMap.forEach((status, id) => publishCommentLikeStatus(id, status)))
+      .catch((error) => console.error('Failed to fetch comment like status:', error))
+    getBatchClippingRepostStatus(newIds.map((id) => `comment:${id}`))
+      .then((statusMap) => statusMap.forEach((status, url) => publishClippingRepostStatus(url, status)))
+      .catch((error) => console.error('Failed to fetch comment repost status:', error))
+  }, [comments])
 
   const remaining = MAX_COMMENT_LENGTH - commentText.length
   const isPostDisabled = isPosting || commentText.trim().length === 0
@@ -190,6 +214,14 @@ export default function TakeDetailScreen() {
             <Text style={styles.commentDate}>{commentDate}</Text>
           </View>
           <Text style={styles.commentText}>{item.comment.content}</Text>
+          {take && !item.comment.id.startsWith('optimistic-') && (
+            <CommentInteractionBar
+              comment={item.comment}
+              author={item.author}
+              take={take}
+              takeAuthor={author}
+            />
+          )}
         </View>
       </View>
     )
@@ -206,7 +238,7 @@ export default function TakeDetailScreen() {
         {row}
       </SwipeableRow>
     )
-  }, [user, handleDeleteComment, navigation, colors, styles])
+  }, [user, take, author, handleDeleteComment, navigation, colors, styles])
 
   return (
     <KeyboardAvoidingView

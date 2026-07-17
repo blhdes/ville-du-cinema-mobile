@@ -4,7 +4,7 @@
  */
 
 import { supabase } from '@/lib/supabase/client'
-import type { Clipping, Database, Review, Take, RepostAuthor } from '@/types/database'
+import type { Clipping, Database, Review, Take, TakeComment, RepostAuthor } from '@/types/database'
 import { stripHtml } from '@/utils/html'
 
 type ClippingRow = Database['public']['Tables']['user_clippings']['Row']
@@ -228,6 +228,54 @@ export async function saveRepostClipping(clipping: Clipping, originalUser: Repos
 }
 
 /**
+ * Saves a Comment as a repost in the user's clippings.
+ * Stores { comment, author, take, takeAuthor } in review_json — the parent Take
+ * gives the film context and lets the card navigate back to the thread.
+ */
+export async function saveRepostComment(
+  comment: TakeComment,
+  author: RepostAuthor,
+  take: Take,
+  takeAuthor?: RepostAuthor,
+): Promise<Clipping> {
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('You must be signed in to repost.')
+  }
+
+  // Remove previous repost of the same comment (if any) so it resurfaces as fresh
+  await supabase
+    .from('user_clippings')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('type', 'comment-repost')
+    .eq('original_url', `comment:${comment.id}`)
+
+  const { data, error } = await supabase
+    .from('user_clippings')
+    .insert({
+      user_id: user.id,
+      type: 'comment-repost',
+      quote_text: comment.content,
+      movie_title: take.movie_title,
+      author_name: author.displayName,
+      original_url: `comment:${comment.id}`,
+      review_json: JSON.parse(JSON.stringify({ comment, author, take, takeAuthor })),
+      tmdb_id: take.tmdb_id,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('saveRepostComment error:', error.message)
+    throw new Error(`Failed to save comment repost: ${error.message}`)
+  }
+
+  return toClipping(data)
+}
+
+/**
  * Fetches all clippings anchored to a specific film (by TMDB ID), newest first.
  * Used on Film Card screens to show what people have clipped about a movie.
  */
@@ -311,6 +359,8 @@ export async function getBatchRepostStatus(takeIds: string[]): Promise<Map<strin
 /**
  * Batch-fetch repost status for multiple Clippings by their original_url.
  * Mirrors getBatchRepostStatus — two queries, no N+1.
+ * Comment reposts share this keying (`comment:<id>` urls, type 'comment-repost'),
+ * so both types are counted in the same pass.
  */
 export async function getBatchClippingRepostStatus(originalUrls: string[]): Promise<Map<string, RepostStatus>> {
   const result = new Map<string, RepostStatus>()
@@ -326,13 +376,13 @@ export async function getBatchClippingRepostStatus(originalUrls: string[]): Prom
           .from('user_clippings')
           .select('original_url')
           .eq('user_id', user.id)
-          .eq('type', 'clipping-repost')
+          .in('type', ['clipping-repost', 'comment-repost'])
           .in('original_url', originalUrls)
       : Promise.resolve({ data: [] as { original_url: string }[] }),
     supabase
       .from('user_clippings')
       .select('original_url')
-      .eq('type', 'clipping-repost')
+      .in('type', ['clipping-repost', 'comment-repost'])
       .in('original_url', originalUrls),
   ])
 

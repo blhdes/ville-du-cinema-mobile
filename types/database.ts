@@ -177,6 +177,24 @@ export interface Database {
         }
         Relationships: []
       }
+      comment_likes: {
+        Row: {
+          user_id: string
+          comment_id: string
+          created_at: string
+        }
+        Insert: {
+          user_id: string
+          comment_id: string
+          created_at?: string
+        }
+        Update: {
+          user_id?: string
+          comment_id?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       saved_films: {
         Row: {
           user_id: string
@@ -386,6 +404,15 @@ export interface ClippingRepostJson {
   user: RepostAuthor
 }
 
+/** Stored in review_json for type='comment-repost' — preserves the comment, its author, and the parent Take for context. */
+export interface CommentRepostJson {
+  comment: TakeComment
+  author: RepostAuthor
+  take: Take
+  /** Author of the parent Take — lets navigation to TakeDetail render the full header. */
+  takeAuthor?: RepostAuthor
+}
+
 /** A saved review quote or reposted review from the user's Clippings archive. */
 export interface Clipping {
   id: string // uuid
@@ -395,9 +422,9 @@ export interface Clipping {
   author_name: string
   original_url: string
   created_at: string // ISO 8601 timestamp
-  type: 'quote' | 'repost' | 'take-repost' | 'clipping-repost'
-  /** Stores the original content: Review for 'repost', TakeRepostJson for 'take-repost', ClippingRepostJson for 'clipping-repost'. */
-  review_json: Review | TakeRepostJson | ClippingRepostJson | null
+  type: 'quote' | 'repost' | 'take-repost' | 'clipping-repost' | 'comment-repost'
+  /** Stores the original content: Review for 'repost', TakeRepostJson for 'take-repost', ClippingRepostJson for 'clipping-repost', CommentRepostJson for 'comment-repost'. */
+  review_json: Review | TakeRepostJson | ClippingRepostJson | CommentRepostJson | null
   tmdb_id: number | null // nullable — old clippings won't have this
 }
 
@@ -429,6 +456,13 @@ export interface TakeComment {
   user_id: string
   take_id: string
   content: string
+  created_at: string
+}
+
+/** A like on a Comment. Composite key: one like per user per comment. */
+export interface CommentLike {
+  user_id: string
+  comment_id: string
   created_at: string
 }
 
@@ -560,8 +594,20 @@ export interface ClippingRepostFeedItem {
   ownerUsername?: string
 }
 
+/** A reposted Comment entry in the unified Super-Feed. */
+export interface CommentRepostFeedItem {
+  kind: 'comment-repost'
+  /** Milliseconds since epoch — derived from created_at once at mapping time. */
+  sortKey: number
+  data: Clipping
+  ownerAvatarUrl?: string
+  ownerDisplayName: string
+  ownerUserId?: string
+  ownerUsername?: string
+}
+
 /** Discriminated union used as the single item type in the Super-Feed FlatList. */
-export type FeedItem = ReviewFeedItem | ClippingFeedItem | RepostFeedItem | TakeFeedItem | TakeRepostFeedItem | ClippingRepostFeedItem
+export type FeedItem = ReviewFeedItem | ClippingFeedItem | RepostFeedItem | TakeFeedItem | TakeRepostFeedItem | ClippingRepostFeedItem | CommentRepostFeedItem
 
 // ---------------------------------------------------------------------------
 // API request types — used to type request bodies in API route handlers.
