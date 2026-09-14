@@ -24,10 +24,12 @@ Village is a social cinema layer where film lovers build their own voice, share 
 
 ### Social
 - **Takes** — short-form posts (280 chars) anchored to a TMDB film, with likes and comments
+- **Comments** — flat, non-nested threads on Takes; comments themselves are likeable and repostable, same as a Take
+- **Clippings** — quote snippets from reviews, savable and film-anchored so they surface on the right Film Card
 - **Village profiles** — avatar, display name, bio, location, website, X, Letterboxd link
 - **Dual follow system** — follow Letterboxd users (RSS) and native Village members
 - **User search** — find Village members or look up any Letterboxd username
-- **Repost reviews** — share a Letterboxd review to your Village feed with one swipe
+- **Universal reposts** — repost a Letterboxd review, a Take, a Clipping, or a comment to your Village feed with one swipe; repost counts update live via a shared pub/sub cache
 - **Favorite Films** — pin up to 4 films on your profile (poster grid, TMDB-powered)
 - **Saved Films** — personal watchlist with "want" / "seen" filters
 
