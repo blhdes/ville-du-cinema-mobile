@@ -1,13 +1,17 @@
-import { memo, useMemo, useCallback } from 'react'
+import { memo, useMemo, useCallback, useRef } from 'react'
 import { LayoutAnimation, StyleSheet, View } from 'react-native'
 import * as Haptics from 'expo-haptics'
+import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import type { Clipping, Review } from '@/types/database'
+import type { FeedStackParamList } from '@/navigation/types'
 import { deleteClipping, saveRepost } from '@/services/clippings'
+import { useClippingRepost, publishClippingRepostStatus } from '@/hooks/useClippingRepostCount'
 import { useTheme } from '@/contexts/ThemeContext'
 import { type ThemeColors } from '@/theme'
 import ReviewCard from '@/components/ReviewCard'
 import RepostHeader from '@/components/feed/RepostHeader'
 import SwipeableRow from '@/components/ui/SwipeableRow'
+import ClippingInteractionBar from '@/components/ClippingInteractionBar'
 
 interface RepostCardProps {
   clipping: Clipping
@@ -19,23 +23,44 @@ interface RepostCardProps {
   }
   /** Called after a successful delete — removes from parent list state. */
   onDeleted?: (id: string) => void
+  initialLiked?: boolean
+  initialLikeCount?: number
+  initialCommentCount?: number
+  initialRepostCount?: number
+  initialReposted?: boolean
 }
 
-function RepostCard({ clipping, owner, onDeleted }: RepostCardProps) {
+function RepostCard({ clipping, owner, onDeleted, initialLiked, initialLikeCount, initialCommentCount, initialRepostCount, initialReposted }: RepostCardProps) {
+  const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
 
   const review = clipping.review_json as Review
 
+  const { reposted, count: repostCount } = useClippingRepost(clipping.original_url, initialReposted, initialRepostCount)
+  const isReposting = useRef(false)
+
   const handleRepost = useCallback(async () => {
+    if (isReposting.current || reposted) return
+    isReposting.current = true
+    const prevReposted = reposted
+    const prevCount = repostCount
+    publishClippingRepostStatus(clipping.original_url, { reposted: true, count: prevCount + 1 })
     try {
       await saveRepost(review, clipping.tmdb_id)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     } catch (error) {
       console.error('Failed to repost:', error)
+      publishClippingRepostStatus(clipping.original_url, { reposted: prevReposted, count: prevCount })
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+    } finally {
+      isReposting.current = false
     }
-  }, [review, clipping.tmdb_id])
+  }, [review, clipping, reposted, repostCount])
+
+  const handleDetailPress = useCallback(() => {
+    navigation.navigate('ClippingDetail', { clipping, owner })
+  }, [navigation, clipping, owner])
 
   const handleDelete = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
@@ -48,7 +73,25 @@ function RepostCard({ clipping, owner, onDeleted }: RepostCardProps) {
   const cardContent = (
     <View style={styles.surface}>
       <RepostHeader owner={owner} />
-      <ReviewCard review={review} repostable={false} compact />
+      <ReviewCard
+        review={review}
+        repostable={false}
+        compact
+        footer={
+          <ClippingInteractionBar
+            clipping={clipping}
+            owner={owner}
+            onCommentPress={handleDetailPress}
+            onRepostPress={handleRepost}
+            initialLiked={initialLiked}
+            initialLikeCount={initialLikeCount}
+            initialCommentCount={initialCommentCount}
+            initialRepostCount={initialRepostCount}
+            initialReposted={initialReposted}
+            style={styles.interactionBar}
+          />
+        }
+      />
     </View>
   )
 
@@ -85,6 +128,10 @@ function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
     surface: {
       backgroundColor: colors.background,
+    },
+    interactionBar: {
+      marginTop: 0,
+      marginBottom: 0,
     },
   })
 }

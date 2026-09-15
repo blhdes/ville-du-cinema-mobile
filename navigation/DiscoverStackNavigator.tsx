@@ -12,6 +12,7 @@ import QuotePreviewScreen from '@/screens/QuotePreviewScreen'
 import FilmCardScreen from '@/screens/FilmCardScreen'
 import CreateTakeScreen from '@/screens/CreateTakeScreen'
 import TakeDetailScreen from '@/screens/TakeDetailScreen'
+import ClippingDetailScreen from '@/screens/ClippingDetailScreen'
 import SavedFilmsScreen from '@/screens/SavedFilmsScreen'
 import type { DiscoverStackParamList } from '@/navigation/types'
 import { fonts } from '@/theme'
@@ -108,6 +109,11 @@ export default function DiscoverStackNavigator() {
       <Stack.Screen
         name="TakeDetail"
         component={TakeDetailScreen}
+        options={{ headerTitle: '' }}
+      />
+      <Stack.Screen
+        name="ClippingDetail"
+        component={ClippingDetailScreen}
         options={{ headerTitle: '' }}
       />
       <Stack.Screen

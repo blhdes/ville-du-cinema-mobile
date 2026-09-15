@@ -31,10 +31,13 @@ import { useClippings } from '@/hooks/useClippings'
 import { fetchFeed, clearFeedCache, type FeedResult } from '@/services/feed'
 import { getVillageClippings } from '@/services/clippings'
 import { getVillageTakes } from '@/services/takes'
-import { getBatchLikeStatus, type LikeStatus } from '@/services/likes'
+import { getBatchLikeStatus, getBatchClippingLikeStatus, type LikeStatus } from '@/services/likes'
 import { publishLikeStatus } from '@/hooks/useLike'
+import { publishClippingLikeStatus } from '@/hooks/useClippingLike'
 import { getBatchCommentCounts } from '@/services/comments'
 import { publishCommentCount } from '@/hooks/useCommentCount'
+import { getBatchClippingCommentCounts } from '@/services/clippingComments'
+import { publishClippingCommentCount } from '@/hooks/useClippingCommentCount'
 import { getBatchRepostStatus, getBatchClippingRepostStatus, type RepostStatus } from '@/services/clippings'
 import { publishRepostStatus } from '@/hooks/useRepostCount'
 import { publishClippingRepostStatus } from '@/hooks/useClippingRepostCount'
@@ -264,6 +267,8 @@ export default function FeedScreen() {
   const [takeCommentCounts, setTakeCommentCounts] = useState<Map<string, number>>(new Map())
   const [takeRepostStatus, setTakeRepostStatus] = useState<Map<string, RepostStatus>>(new Map())
   const [clippingRepostStatus, setClippingRepostStatus] = useState<Map<string, RepostStatus>>(new Map())
+  const [clippingLikesMap, setClippingLikesMap] = useState<Map<string, LikeStatus>>(new Map())
+  const [clippingCommentCounts, setClippingCommentCounts] = useState<Map<string, number>>(new Map())
   // Stays false until the first social-data fetch completes — gates takes out of
   // feedItems until caches are warm so cards never render with stale 0/false counts.
   const [takesReady, setTakesReady] = useState(false)
@@ -304,11 +309,27 @@ export default function FeedScreen() {
     const urls = [...new Set(clippings.map((c) => c.original_url))]
     if (urls.length === 0) {
       setClippingRepostStatus(new Map())
+      setClippingLikesMap(new Map())
+      setClippingCommentCounts(new Map())
       return
     }
-    const repostStatus = await getBatchClippingRepostStatus(urls)
-    repostStatus.forEach((status, url) => publishClippingRepostStatus(url, status))
-    setClippingRepostStatus(repostStatus)
+    const [repostResult, likeResult, commentResult] = await Promise.allSettled([
+      getBatchClippingRepostStatus(urls),
+      getBatchClippingLikeStatus(urls),
+      getBatchClippingCommentCounts(urls),
+    ])
+    if (repostResult.status === 'fulfilled') {
+      repostResult.value.forEach((status, url) => publishClippingRepostStatus(url, status))
+      setClippingRepostStatus(repostResult.value)
+    }
+    if (likeResult.status === 'fulfilled') {
+      likeResult.value.forEach((status, url) => publishClippingLikeStatus(url, status))
+      setClippingLikesMap(likeResult.value)
+    }
+    if (commentResult.status === 'fulfilled') {
+      commentResult.value.forEach((count, url) => publishClippingCommentCount(url, count))
+      setClippingCommentCounts(commentResult.value)
+    }
   }, [])
 
   // Fetch clippings + takes from followed Village users whenever the follow list changes
@@ -693,20 +714,30 @@ export default function FeedScreen() {
       )
     }
     if (item.kind === 'repost') {
+      const repostLikeData = clippingLikesMap.get(item.data.original_url)
       return (
         <RepostCard
           clipping={item.data}
           owner={{ avatarUrl: item.ownerAvatarUrl, displayName: item.ownerDisplayName, userId: item.ownerUserId, username: item.ownerUsername }}
+          initialLiked={repostLikeData?.liked ?? false}
+          initialLikeCount={repostLikeData?.count ?? 0}
+          initialCommentCount={clippingCommentCounts.get(item.data.original_url) ?? 0}
+          initialRepostCount={clippingRepostStatus.get(item.data.original_url)?.count ?? 0}
+          initialReposted={clippingRepostStatus.get(item.data.original_url)?.reposted ?? false}
         />
       )
     }
     if (item.kind === 'clipping') {
+      const clippingLikeData = clippingLikesMap.get(item.data.original_url)
       return (
         <ClippingCard
           clipping={item.data}
           onDeleted={removeClipping}
           user={{ avatarUrl: item.ownerAvatarUrl, displayName: item.ownerDisplayName, userId: item.ownerUserId, username: item.ownerUsername }}
           readOnly
+          initialLiked={clippingLikeData?.liked ?? false}
+          initialLikeCount={clippingLikeData?.count ?? 0}
+          initialCommentCount={clippingCommentCounts.get(item.data.original_url) ?? 0}
           initialRepostCount={clippingRepostStatus.get(item.data.original_url)?.count ?? 0}
           initialReposted={clippingRepostStatus.get(item.data.original_url)?.reposted ?? false}
         />
@@ -724,11 +755,15 @@ export default function FeedScreen() {
     }
     if (item.kind === 'clipping-repost') {
       const isOwn = !item.ownerUserId
+      const clippingLikeData = clippingLikesMap.get(item.data.original_url)
       return (
         <ClippingRepostCard
           clipping={item.data}
           owner={{ avatarUrl: item.ownerAvatarUrl, displayName: item.ownerDisplayName, userId: item.ownerUserId, username: item.ownerUsername }}
           onDeleted={isOwn ? removeClipping : undefined}
+          initialLiked={clippingLikeData?.liked ?? false}
+          initialLikeCount={clippingLikeData?.count ?? 0}
+          initialCommentCount={clippingCommentCounts.get(item.data.original_url) ?? 0}
           initialRepostCount={clippingRepostStatus.get(item.data.original_url)?.count ?? 0}
           initialReposted={clippingRepostStatus.get(item.data.original_url)?.reposted ?? false}
         />
@@ -750,7 +785,7 @@ export default function FeedScreen() {
       return <WatchNotification review={item.data} />
     }
     return <ReviewCard review={item.data} />
-  }, [removeClipping, takeLikesMap, takeCommentCounts, takeRepostStatus, clippingRepostStatus])
+  }, [removeClipping, takeLikesMap, takeCommentCounts, takeRepostStatus, clippingRepostStatus, clippingLikesMap, clippingCommentCounts])
 
   const renderEmpty = useCallback(() => {
     if (isLoading || isListLoading) return null

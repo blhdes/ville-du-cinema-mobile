@@ -13,6 +13,7 @@ import QuotePreviewScreen from '@/screens/QuotePreviewScreen'
 import FilmCardScreen from '@/screens/FilmCardScreen'
 import CreateTakeScreen from '@/screens/CreateTakeScreen'
 import TakeDetailScreen from '@/screens/TakeDetailScreen'
+import ClippingDetailScreen from '@/screens/ClippingDetailScreen'
 import SavedFilmsScreen from '@/screens/SavedFilmsScreen'
 import FavoriteFilmPickerScreen from '@/screens/FavoriteFilmPickerScreen'
 import FollowingScreen from '@/screens/FollowingScreen'
@@ -125,6 +126,11 @@ export default function ProfileStackNavigator() {
       <Stack.Screen
         name="TakeDetail"
         component={TakeDetailScreen}
+        options={{ headerTitle: '' }}
+      />
+      <Stack.Screen
+        name="ClippingDetail"
+        component={ClippingDetailScreen}
         options={{ headerTitle: '' }}
       />
       <Stack.Screen

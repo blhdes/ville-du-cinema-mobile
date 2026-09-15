@@ -20,11 +20,14 @@ interface ClippingRepostCardProps {
   }
   /** Called after a successful delete — removes from parent list state. */
   onDeleted?: (id: string) => void
+  initialLiked?: boolean
+  initialLikeCount?: number
+  initialCommentCount?: number
   initialRepostCount?: number
   initialReposted?: boolean
 }
 
-function ClippingRepostCard({ clipping, owner, onDeleted, initialRepostCount, initialReposted }: ClippingRepostCardProps) {
+function ClippingRepostCard({ clipping, owner, onDeleted, initialLiked, initialLikeCount, initialCommentCount, initialRepostCount, initialReposted }: ClippingRepostCardProps) {
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
 
@@ -69,7 +72,17 @@ function ClippingRepostCard({ clipping, owner, onDeleted, initialRepostCount, in
   const cardContent = (
     <View style={styles.surface}>
       <RepostHeader owner={owner} />
-      <ClippingCard clipping={originalClipping} user={originalUser} readOnly repostable={false} initialRepostCount={initialRepostCount} initialReposted={initialReposted} />
+      <ClippingCard
+        clipping={originalClipping}
+        user={originalUser}
+        readOnly
+        repostable={false}
+        initialLiked={initialLiked}
+        initialLikeCount={initialLikeCount}
+        initialCommentCount={initialCommentCount}
+        initialRepostCount={initialRepostCount}
+        initialReposted={initialReposted}
+      />
     </View>
   )
 

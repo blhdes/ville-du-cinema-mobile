@@ -10,9 +10,9 @@ import { useClippingRepost, publishClippingRepostStatus } from '@/hooks/useClipp
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
-import { Ionicons } from '@expo/vector-icons'
 import SwipeableRow from '@/components/ui/SwipeableRow'
 import FeedDivider from '@/components/ui/FeedDivider'
+import ClippingInteractionBar from '@/components/ClippingInteractionBar'
 
 interface ClippingCardProps {
   clipping: Clipping
@@ -23,11 +23,14 @@ interface ClippingCardProps {
   readOnly?: boolean
   /** Hides swipe-to-repost — used when embedded inside ClippingRepostCard. */
   repostable?: boolean
+  initialLiked?: boolean
+  initialLikeCount?: number
+  initialCommentCount?: number
   initialRepostCount?: number
   initialReposted?: boolean
 }
 
-function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable = true, initialRepostCount, initialReposted }: ClippingCardProps) {
+function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable = true, initialLiked, initialLikeCount, initialCommentCount, initialRepostCount, initialReposted }: ClippingCardProps) {
   const navigation = useNavigation<NavigationProp<FeedStackParamList>>()
   const { colors } = useTheme()
   const typography = useTypography()
@@ -41,6 +44,10 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable 
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
     setIsExpanded(true)
   }, [isExpanded])
+
+  const handleDetailPress = useCallback(() => {
+    navigation.navigate('ClippingDetail', { clipping, owner: user })
+  }, [navigation, clipping, user])
 
   const handleRepost = useCallback(async () => {
     if (isReposting.current || reposted) return
@@ -137,13 +144,20 @@ function ClippingCard({ clipping, onDeleted, user, readOnly = false, repostable 
                 {clipping.author_name}
               </Text>
             </Pressable>
-            {repostCount > 0 && (
-              <View style={styles.repostBadge}>
-                <Ionicons name="repeat-outline" size={13} color={reposted ? colors.teal : colors.secondaryText} />
-                <Text style={[styles.repostCount, reposted && { color: colors.teal }]}>{repostCount}</Text>
-              </View>
-            )}
           </View>
+
+          <ClippingInteractionBar
+            clipping={clipping}
+            owner={user}
+            repostable={repostable}
+            onCommentPress={handleDetailPress}
+            onRepostPress={repostable ? handleRepost : undefined}
+            initialLiked={initialLiked}
+            initialLikeCount={initialLikeCount}
+            initialCommentCount={initialCommentCount}
+            initialRepostCount={initialRepostCount}
+            initialReposted={initialReposted}
+          />
 
           </View>
           <FeedDivider />
@@ -259,18 +273,6 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
     attribution: {
       flex: 1,
       gap: 2,
-    },
-    repostBadge: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      gap: 3,
-      paddingBottom: 2,
-    },
-    repostCount: {
-      fontFamily: fonts.system,
-      fontSize: typography.caption.fontSize,
-      lineHeight: typography.caption.lineHeight,
-      color: colors.secondaryText,
     },
     movieTitle: {
       fontFamily: fonts.heading,

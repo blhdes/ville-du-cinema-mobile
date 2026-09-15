@@ -1,4 +1,5 @@
 import type { NavigatorScreenParams } from '@react-navigation/native'
+import type { Clipping } from '@/types/database'
 
 export type AuthStackParamList = {
   Welcome: undefined
@@ -52,6 +53,17 @@ export type TakeDetailParams = {
   }
 }
 
+export type ClippingDetailParams = {
+  clipping: Clipping
+  /** Owner display info — already resolved by the card that navigated here. */
+  owner?: {
+    avatarUrl?: string
+    displayName: string
+    userId?: string
+    username?: string
+  }
+}
+
 export type FeedStackParamList = {
   FeedDrawer: NavigatorScreenParams<FeedDrawerParamList> | undefined
   ExternalProfile: { username: string }
@@ -62,6 +74,7 @@ export type FeedStackParamList = {
   FilmCard: FilmCardParams
   CreateTake: CreateTakeParams | undefined
   TakeDetail: TakeDetailParams
+  ClippingDetail: ClippingDetailParams
   SavedFilms: SavedFilmsParams
 }
 
@@ -87,6 +100,7 @@ export type ProfileStackParamList = {
   FilmCard: FilmCardParams
   CreateTake: CreateTakeParams | undefined
   TakeDetail: TakeDetailParams
+  ClippingDetail: ClippingDetailParams
   SavedFilms: SavedFilmsParams
   FavoriteFilmPicker: FavoriteFilmPickerParams
 }
@@ -101,6 +115,7 @@ export type DiscoverStackParamList = {
   FilmCard: FilmCardParams
   CreateTake: CreateTakeParams | undefined
   TakeDetail: TakeDetailParams
+  ClippingDetail: ClippingDetailParams
   SavedFilms: SavedFilmsParams
 }
 

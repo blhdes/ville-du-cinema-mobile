@@ -246,6 +246,48 @@ export interface Database {
         }
         Relationships: []
       }
+      clipping_likes: {
+        Row: {
+          user_id: string
+          original_url: string
+          created_at: string
+        }
+        Insert: {
+          user_id: string
+          original_url: string
+          created_at?: string
+        }
+        Update: {
+          user_id?: string
+          original_url?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      clipping_comments: {
+        Row: {
+          id: string
+          user_id: string
+          original_url: string
+          content: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          original_url: string
+          content: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          original_url?: string
+          content?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       user_clippings: {
         /** Full row returned by SELECT queries. */
         Row: {
@@ -464,6 +506,33 @@ export interface CommentLike {
   user_id: string
   comment_id: string
   created_at: string
+}
+
+/** A like on a Clipping. Keyed by original_url (shared across all reposts of the same quote). */
+export interface ClippingLike {
+  user_id: string
+  original_url: string
+  created_at: string
+}
+
+/** A comment on a Clipping (280 chars, flat thread, keyed by original_url). */
+export interface ClippingComment {
+  id: string
+  user_id: string
+  original_url: string
+  content: string
+  created_at: string
+}
+
+/** A Clipping comment joined with its author's display info (resolved from user_data). */
+export interface ClippingCommentWithAuthor {
+  comment: ClippingComment
+  author: {
+    userId: string
+    displayName: string
+    avatarUrl: string | undefined
+    username: string | undefined
+  }
 }
 
 // ---------------------------------------------------------------------------

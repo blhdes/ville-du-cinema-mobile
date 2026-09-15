@@ -9,6 +9,7 @@ import { useClippingRepost, publishClippingRepostStatus } from '@/hooks/useClipp
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
+import { formatCompactCount } from '@/utils/formatCount'
 
 interface CommentInteractionBarProps {
   comment: TakeComment
@@ -62,7 +63,7 @@ function CommentInteractionBar({ comment, author, take, takeAuthor }: CommentInt
           color={liked ? colors.red : colors.secondaryText}
         />
         <Text style={[styles.count, liked && { color: colors.red }]}>
-          {likeCount > 0 ? likeCount : ''}
+          {likeCount > 0 ? formatCompactCount(likeCount) : ''}
         </Text>
       </Pressable>
 
@@ -78,7 +79,7 @@ function CommentInteractionBar({ comment, author, take, takeAuthor }: CommentInt
           color={reposted ? colors.teal : colors.secondaryText}
         />
         <Text style={[styles.count, reposted && { color: colors.teal }]}>
-          {repostCount > 0 ? repostCount : ''}
+          {repostCount > 0 ? formatCompactCount(repostCount) : ''}
         </Text>
       </Pressable>
     </View>
@@ -92,7 +93,7 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
     bar: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: spacing.lg,
+      gap: spacing.sm,
       marginTop: spacing.xs,
     },
     button: {

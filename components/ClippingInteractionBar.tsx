@@ -1,28 +1,28 @@
 import { memo, useCallback, useMemo, useRef } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
-import type { Take } from '@/types/database'
-import { saveRepostTake } from '@/services/clippings'
-import { useLike } from '@/hooks/useLike'
-import { useCommentCount } from '@/hooks/useCommentCount'
-import { useRepost, publishRepostStatus } from '@/hooks/useRepostCount'
+import type { Clipping, RepostAuthor } from '@/types/database'
+import { saveRepostClipping } from '@/services/clippings'
+import { useClippingLike } from '@/hooks/useClippingLike'
+import { useClippingCommentCount } from '@/hooks/useClippingCommentCount'
+import { useClippingRepost, publishClippingRepostStatus } from '@/hooks/useClippingRepostCount'
 import { useTheme } from '@/contexts/ThemeContext'
 import { fonts, spacing, type ThemeColors } from '@/theme'
 import { useTypography, type ScaledTypography } from '@/hooks/useTypography'
 import { formatCompactCount } from '@/utils/formatCount'
 
-interface TakeInteractionBarProps {
-  take: Take
-  author?: { avatarUrl?: string; displayName: string; userId?: string; username?: string }
+interface ClippingInteractionBarProps {
+  clipping: Clipping
+  owner?: RepostAuthor
   /** false = show count only, no action (embedded inside a repost card). Default: true. */
   repostable?: boolean
   /** Called when the comment icon is pressed. */
   onCommentPress?: () => void
   /**
    * When provided, overrides the bar's internal repost handler.
-   * Use this when a parent (e.g. TakeCard) owns the swipe-to-repost action and
-   * needs the same isReposting guard to cover both swipe and button.
+   * Use this when a parent (e.g. ClippingCard) owns the swipe-to-repost action
+   * and needs the same isReposting guard to cover both swipe and button.
    */
   onRepostPress?: () => void
   initialLiked?: boolean
@@ -32,11 +32,13 @@ interface TakeInteractionBarProps {
   initialReposted?: boolean
   /** 'sm' for feed cards (16px icons), 'md' for detail screen (20px icons). Default: 'sm'. */
   size?: 'sm' | 'md'
+  /** Overrides the bar's own margins — used when it shares a row with another element (e.g. the Letterboxd link in RepostCard). */
+  style?: StyleProp<ViewStyle>
 }
 
-function TakeInteractionBar({
-  take,
-  author,
+function ClippingInteractionBar({
+  clipping,
+  owner,
   repostable = true,
   onCommentPress,
   onRepostPress,
@@ -46,14 +48,15 @@ function TakeInteractionBar({
   initialRepostCount,
   initialReposted,
   size = 'sm',
-}: TakeInteractionBarProps) {
+  style,
+}: ClippingInteractionBarProps) {
   const { colors } = useTheme()
   const typography = useTypography()
   const styles = useMemo(() => createStyles(colors, typography, size), [colors, typography, size])
 
-  const { liked, count: likeCount, toggle: toggleLike } = useLike(take.id, initialLiked, initialLikeCount)
-  const commentCount = useCommentCount(take.id, initialCommentCount)
-  const { reposted, count: repostCount } = useRepost(take.id, initialReposted, initialRepostCount)
+  const { liked, count: likeCount, toggle: toggleLike } = useClippingLike(clipping.original_url, initialLiked, initialLikeCount)
+  const commentCount = useClippingCommentCount(clipping.original_url, initialCommentCount)
+  const { reposted, count: repostCount } = useClippingRepost(clipping.original_url, initialReposted, initialRepostCount)
   const isReposting = useRef(false)
 
   const isMd = size === 'md'
@@ -66,26 +69,26 @@ function TakeInteractionBar({
     isReposting.current = true
     const prevReposted = reposted
     const prevCount = repostCount
-    publishRepostStatus(take.id, { reposted: true, count: prevCount + 1 })
+    publishClippingRepostStatus(clipping.original_url, { reposted: true, count: prevCount + 1 })
     try {
-      await saveRepostTake(take, {
-        displayName: author?.displayName ?? 'Unknown',
-        userId: author?.userId,
-        avatarUrl: author?.avatarUrl,
-        username: author?.username,
+      await saveRepostClipping(clipping, {
+        displayName: owner?.displayName ?? clipping.author_name,
+        userId: owner?.userId,
+        avatarUrl: owner?.avatarUrl,
+        username: owner?.username,
       })
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     } catch (error) {
-      console.error('Failed to repost take:', error)
-      publishRepostStatus(take.id, { reposted: prevReposted, count: prevCount })
+      console.error('Failed to repost clipping:', error)
+      publishClippingRepostStatus(clipping.original_url, { reposted: prevReposted, count: prevCount })
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
     } finally {
       isReposting.current = false
     }
-  }, [take, author, repostable, reposted, repostCount])
+  }, [clipping, owner, repostable, reposted, repostCount])
 
   return (
-    <View style={styles.bar}>
+    <View style={[styles.bar, style]}>
       {/* Like */}
       <Pressable
         onPress={toggleLike}
@@ -146,7 +149,7 @@ function TakeInteractionBar({
   )
 }
 
-export default memo(TakeInteractionBar)
+export default memo(ClippingInteractionBar)
 
 function createStyles(colors: ThemeColors, typography: ScaledTypography, size: 'sm' | 'md') {
   const isMd = size === 'md'

@@ -1,4 +1,4 @@
-import { memo, useState, useMemo, useCallback } from 'react'
+import { memo, useState, useMemo, useCallback, type ReactNode } from 'react'
 import { Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import Svg, { Circle, Path } from 'react-native-svg'
 import { Image } from 'expo-image'
@@ -24,6 +24,8 @@ interface ReviewCardProps {
   repostable?: boolean
   /** Reduces top padding — used when embedded inside a parent card (e.g. RepostCard). */
   compact?: boolean
+  /** Extra content rendered above the trailing divider — used by RepostCard for its interaction bar. */
+  footer?: ReactNode
 }
 
 const MAX_PREVIEW_LENGTH = 300
@@ -98,7 +100,7 @@ function LetterboxdDots({ color, bgColor }: { color: string; bgColor: string }) 
   )
 }
 
-function ReviewCard({ review, hideAuthor = false, repostable = true, compact = false }: ReviewCardProps) {
+function ReviewCard({ review, hideAuthor = false, repostable = true, compact = false, footer }: ReviewCardProps) {
   const [expanded, setExpanded] = useState(false)
   const { width } = useWindowDimensions()
   const [contentWidth, setContentWidth] = useState(() => width - HORIZONTAL_PAD * 2)
@@ -309,14 +311,18 @@ function ReviewCard({ review, hideAuthor = false, repostable = true, compact = f
         </Pressable>
       ) : null}
 
-      {/* Letterboxd source link */}
-      <Pressable
-        onPress={() => Linking.openURL(review.link)}
-        hitSlop={8}
-        style={({ pressed }) => [styles.linkButton, pressed && { opacity: 0.4 }]}
-      >
-        <LetterboxdDots color={colors.foreground} bgColor={colors.background} />
-      </Pressable>
+      {/* Footer row: interaction bar (left) + Letterboxd source link (right) — kept on
+          one row so a repost card doesn't grow an extra line per card. */}
+      <View style={styles.footerRow}>
+        <View style={styles.footerLeft}>{footer}</View>
+        <Pressable
+          onPress={() => Linking.openURL(review.link)}
+          hitSlop={8}
+          style={({ pressed }) => pressed && { opacity: 0.4 }}
+        >
+          <LetterboxdDots color={colors.foreground} bgColor={colors.background} />
+        </Pressable>
+      </View>
 
     </View>
     <FeedDivider />
@@ -390,10 +396,14 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       color: colors.teal,
       marginTop: spacing.sm,
     },
-    linkButton: {
+    footerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
       marginTop: spacing.lg,
       paddingVertical: spacing.xs,
-      alignSelf: 'flex-end',
+    },
+    footerLeft: {
+      flex: 1,
     },
     dropCapRow: {
       flexDirection: 'row',
