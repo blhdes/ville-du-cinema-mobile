@@ -227,6 +227,38 @@ supabase migration up 20260327_add_tmdb_id_to_clippings
 
 ---
 
+## Clipping & Repost Social Parity (2026-09-15)
+
+Not a numbered phase in this file — a follow-up fix once Phase 3's likes/comments and the social-polish work in between (universal reposts, comment likes/reposts — undocumented here, see git log) had already shipped. Clippings and reposted Letterboxd reviews were the only feed content left with just swipe-to-repost and no like or comment thread, which felt inconsistent once you'd used Takes.
+
+**Commits:** `af975f4`, `775d29c`
+
+### Added
+- `supabase/migrations/20260915_create_clipping_likes_and_comments.sql` — `clipping_likes` and `clipping_comments` tables, both keyed by `original_url` rather than a row id
+- `components/ClippingInteractionBar.tsx` — heart/comment/repost bar mirroring `TakeInteractionBar`
+- `screens/ClippingDetailScreen.tsx` — flat comment thread for a Clipping, registered as `ClippingDetail` on the Feed/Profile/Discover stacks
+- `services/clippingComments.ts`, `hooks/useClippingLike.ts`, `hooks/useClippingCommentCount.ts`, `hooks/useClippingComments.ts` — mirror the existing Take/Comment services and hooks
+- `utils/formatCount.ts` — compact count formatting (1600 → "1.6k") applied to all three interaction bars
+
+### Modified
+- `components/profile/ClippingCard.tsx`, `components/feed/ClippingRepostCard.tsx`, `components/feed/RepostCard.tsx` — wired in `ClippingInteractionBar`
+- `components/ReviewCard.tsx` — added an optional `footer` prop so the interaction bar shares one row with the Letterboxd source link instead of stacking below it
+- `screens/FeedScreen.tsx` — batch-fetches clipping like/comment status alongside the existing repost-status batch
+- `components/TakeInteractionBar.tsx`, `components/CommentInteractionBar.tsx`, `components/ClippingInteractionBar.tsx` — icon gap tightened 24px → 8px
+
+### Design decisions
+- **Keyed by `original_url`, not a row id** — every repost of a Clipping inserts a brand-new `user_clippings` row (`saveRepostClipping`) rather than referencing the original by id. Repost status was already deduplicated by `original_url` (`getBatchClippingRepostStatus`); likes and comments follow the same key so a like or comment lands on one shared thread no matter which repost you're viewing it from.
+- **Plain Letterboxd reposts reuse the same tables** — a `type: 'repost'` row is still a `Clipping`, so `RepostCard` (wrapping `ReviewCard`) gets `ClippingInteractionBar` for free instead of a parallel Review-specific bar.
+- **Clipping comments are flat, no likes-on-comments** — matches Takes' original (pre-social-polish) shape. Extending Clipping comments to be likeable/repostable themselves, like Take comments now are, would need its own follow-up.
+
+### Migrations
+```sql
+-- Paste contents of supabase/migrations/20260915_create_clipping_likes_and_comments.sql
+-- into the Supabase SQL Editor
+```
+
+---
+
 ## Upcoming Phases
 
 See `docs/village-social-layer.md` for the full vision and roadmap.
