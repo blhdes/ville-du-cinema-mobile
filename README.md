@@ -113,7 +113,7 @@ village/
 ├── services/                   # Feed (RSS), TMDB, Takes, Likes, Comments, Clippings, SavedFilms
 ├── supabase/migrations/        # SQL migration files
 ├── theme/                      # Design tokens, color palettes, font registry
-├── docs/                       # Changelog, compliance audit, planning docs
+├── docs/                       # Changelog, compliance audit, planning docs, device build guide
 └── types/                      # Shared TypeScript definitions (database, TMDB)
 ```
 
@@ -160,6 +160,11 @@ EXPO_PUBLIC_TMDB_API_KEY=your-tmdb-api-key
 npx expo prebuild --clean
 npm run ios
 ```
+
+> To build and run on a physical iPhone instead of the Simulator (required — see `docs/ios-device-build.md` for the full workflow, dependency-health checks, and cache-cleaning steps):
+> ```bash
+> npx expo run:ios --device "<device name>"
+> ```
 
 ---
 
