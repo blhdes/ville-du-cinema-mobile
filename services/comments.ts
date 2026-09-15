@@ -31,9 +31,11 @@ export async function getComments(takeId: string): Promise<TakeComment[]> {
 }
 
 /**
- * Create a comment on a Take.
+ * Create a comment on a Take, or a reply to another comment when
+ * `parentCommentId` is given. Replies can't themselves be replied to —
+ * enforced by the UI only ever passing a top-level comment's id here.
  */
-export async function createComment(takeId: string, content: string): Promise<TakeComment> {
+export async function createComment(takeId: string, content: string, parentCommentId?: string): Promise<TakeComment> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('You must be signed in to comment.')
 
@@ -43,6 +45,7 @@ export async function createComment(takeId: string, content: string): Promise<Ta
       user_id: user.id,
       take_id: takeId,
       content,
+      parent_comment_id: parentCommentId ?? null,
     })
     .select()
     .single()

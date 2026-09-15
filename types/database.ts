@@ -160,6 +160,7 @@ export interface Database {
           take_id: string
           content: string
           created_at: string
+          parent_comment_id: string | null
         }
         Insert: {
           id?: string
@@ -167,6 +168,7 @@ export interface Database {
           take_id: string
           content: string
           created_at?: string
+          parent_comment_id?: string | null
         }
         Update: {
           id?: string
@@ -174,6 +176,7 @@ export interface Database {
           take_id?: string
           content?: string
           created_at?: string
+          parent_comment_id?: string | null
         }
         Relationships: []
       }
@@ -492,13 +495,15 @@ export interface TakeLike {
   created_at: string
 }
 
-/** A comment on a Take (280 chars, flat thread). */
+/** A comment on a Take (280 chars). `parent_comment_id` is set for a reply — the
+ * UI never lets a reply itself be replied to, so nesting stays one level deep. */
 export interface TakeComment {
   id: string
   user_id: string
   take_id: string
   content: string
   created_at: string
+  parent_comment_id: string | null
 }
 
 /** A like on a Comment. Composite key: one like per user per comment. */
@@ -545,7 +550,8 @@ export type SavedFilm = Database['public']['Tables']['saved_films']['Row']
 /** A film pinned as one of the user's top-4 favorites on their profile. */
 export type FavoriteFilm = Database['public']['Tables']['favorite_films']['Row']
 
-/** A comment joined with its author's display info (resolved from user_data). */
+/** A comment joined with its author's display info (resolved from user_data).
+ * `replies` is populated only on top-level comments, one level deep. */
 export interface TakeCommentWithAuthor {
   comment: TakeComment
   author: {
@@ -554,6 +560,7 @@ export interface TakeCommentWithAuthor {
     avatarUrl: string | undefined
     username: string | undefined
   }
+  replies?: TakeCommentWithAuthor[]
 }
 
 // ---------------------------------------------------------------------------

@@ -55,6 +55,10 @@ export default function TakeDetailScreen() {
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
 
   const { comments, isLoading: commentsLoading, addComment, removeComment } = useComments(takeId)
+  const totalCommentCount = useMemo(
+    () => comments.reduce((sum, c) => sum + 1 + (c.replies?.length ?? 0), 0),
+    [comments],
+  )
 
   // We need the Take data. Fetch it by ID since we only pass takeId in params.
   const [take, setTake] = useState<Take | null>(null)
@@ -72,6 +76,7 @@ export default function TakeDetailScreen() {
   const [commentText, setCommentText] = useState('')
   const [isPosting, setIsPosting] = useState(false)
   const [inputKey, setInputKey] = useState(0)
+  const [replyingTo, setReplyingTo] = useState<{ commentId: string; authorName: string } | null>(null)
   const maxInputHeight = 7 * typography.body.lineHeight + (Platform.OS === 'ios' ? spacing.sm * 2 : 0)
   const inputRef = useRef<TextInput>(null)
   const inputScrollRef = useRef<ScrollView>(null)
@@ -88,7 +93,7 @@ export default function TakeDetailScreen() {
   const fetchedStatusIds = useRef<Set<string>>(new Set())
   useEffect(() => {
     const newIds = comments
-      .map((c) => c.comment.id)
+      .flatMap((c) => [c.comment.id, ...(c.replies?.map((r) => r.comment.id) ?? [])])
       .filter((id) => !id.startsWith('optimistic-') && !fetchedStatusIds.current.has(id))
     if (newIds.length === 0) return
     for (const id of newIds) fetchedStatusIds.current.add(id)
@@ -108,9 +113,10 @@ export default function TakeDetailScreen() {
     if (isPostDisabled) return
     setIsPosting(true)
     try {
-      await addComment(commentText.trim())
+      await addComment(commentText.trim(), replyingTo?.commentId)
       setCommentText('')
       setInputKey((k) => k + 1)
+      setReplyingTo(null)
       inputRef.current?.blur()
     } catch (error) {
       console.error('Comment post failed:', error)
@@ -118,7 +124,16 @@ export default function TakeDetailScreen() {
     } finally {
       setIsPosting(false)
     }
-  }, [isPostDisabled, commentText, addComment])
+  }, [isPostDisabled, commentText, addComment, replyingTo])
+
+  const handleReplyPress = useCallback((commentId: string, authorName: string) => {
+    setReplyingTo({ commentId, authorName })
+    inputRef.current?.focus()
+  }, [])
+
+  const handleCancelReply = useCallback(() => {
+    setReplyingTo(null)
+  }, [])
 
   const handleDeleteComment = useCallback((commentId: string) => {
     Alert.alert('Delete comment', 'Are you sure you want to delete this comment?', [
@@ -188,12 +203,12 @@ export default function TakeDetailScreen() {
     )
   }, [take, takeLoading, author, dateStr, navigation, styles, inputRef])
 
-  const renderComment = useCallback(({ item }: { item: TakeCommentWithAuthor }) => {
+  const renderCommentRow = useCallback((item: TakeCommentWithAuthor, isReply: boolean) => {
     const isOwn = user?.id === item.comment.user_id
     const commentDate = formatTakeTimestamp(item.comment.created_at, false)
 
     const row = (
-      <View style={styles.commentRow}>
+      <View style={[styles.commentRow, isReply && styles.replyRow]}>
         {item.author.avatarUrl ? (
           <Image source={{ uri: item.author.avatarUrl }} style={styles.commentAvatar} cachePolicy="memory-disk" />
         ) : (
@@ -220,6 +235,7 @@ export default function TakeDetailScreen() {
               author={item.author}
               take={take}
               takeAuthor={author}
+              onReplyPress={isReply ? undefined : () => handleReplyPress(item.comment.id, item.author.displayName)}
             />
           )}
         </View>
@@ -238,7 +254,16 @@ export default function TakeDetailScreen() {
         {row}
       </SwipeableRow>
     )
-  }, [user, take, author, handleDeleteComment, navigation, colors, styles])
+  }, [user, take, author, handleDeleteComment, handleReplyPress, navigation, colors, styles])
+
+  const renderComment = useCallback(({ item }: { item: TakeCommentWithAuthor }) => (
+    <View>
+      {renderCommentRow(item, false)}
+      {item.replies?.map((reply) => (
+        <View key={reply.comment.id}>{renderCommentRow(reply, true)}</View>
+      ))}
+    </View>
+  ), [renderCommentRow])
 
   return (
     <KeyboardAvoidingView
@@ -256,7 +281,7 @@ export default function TakeDetailScreen() {
             {listHeader}
             <FeedDivider />
             <Text style={styles.commentsLabel}>
-              {commentsLoading ? 'Comments' : `Comments (${comments.length})`}
+              {commentsLoading ? 'Comments' : `Comments (${totalCommentCount})`}
             </Text>
             {commentsLoading && (
               <View style={styles.commentsLoading}>
@@ -274,6 +299,17 @@ export default function TakeDetailScreen() {
 
       {/* Sticky comment input bar */}
       <View style={[styles.inputBar, { paddingBottom: inputBarPaddingBottom }]}>
+        {replyingTo && (
+          <View style={styles.replyingBanner}>
+            <Text style={styles.replyingText} numberOfLines={1}>
+              Replying to {replyingTo.authorName}
+            </Text>
+            <Pressable onPress={handleCancelReply} hitSlop={8}>
+              <Ionicons name="close" size={16} color={colors.secondaryText} />
+            </Pressable>
+          </View>
+        )}
+        <View style={styles.inputRow}>
         <ScrollView
           ref={inputScrollRef}
           style={[styles.inputScroll, { maxHeight: maxInputHeight }]}
@@ -315,6 +351,7 @@ export default function TakeDetailScreen() {
               color={isPostDisabled ? colors.border : colors.teal}
             />
           </Pressable>
+        </View>
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -421,6 +458,10 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
       paddingHorizontal: HORIZONTAL_PAD,
       paddingVertical: spacing.sm + 2,
     },
+    replyRow: {
+      paddingLeft: HORIZONTAL_PAD + 34,
+      paddingVertical: spacing.sm,
+    },
     commentAvatar: {
       width: 26,
       height: 26,
@@ -459,13 +500,28 @@ function createStyles(colors: ThemeColors, typography: ScaledTypography) {
 
     // Sticky input bar
     inputBar: {
-      flexDirection: 'row',
-      alignItems: 'flex-end',
       paddingHorizontal: HORIZONTAL_PAD,
       paddingTop: spacing.sm,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.border,
       backgroundColor: colors.background,
+    },
+    inputRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+    },
+    replyingBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingBottom: spacing.sm,
+    },
+    replyingText: {
+      fontFamily: fonts.system,
+      fontSize: typography.caption.fontSize,
+      lineHeight: typography.caption.lineHeight,
+      color: colors.secondaryText,
+      flex: 1,
     },
     inputScroll: {
       flexGrow: 1,

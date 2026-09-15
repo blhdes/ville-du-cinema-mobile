@@ -10,9 +10,14 @@ import type { TakeComment, TakeCommentWithAuthor } from '@/types/database'
 export interface UseCommentsReturn {
   comments: TakeCommentWithAuthor[]
   isLoading: boolean
-  addComment: (content: string) => Promise<void>
+  addComment: (content: string, parentCommentId?: string) => Promise<void>
   removeComment: (commentId: string) => void
   refetch: () => Promise<void>
+}
+
+/** Total comments including replies — what the comment-count badge shows. */
+function countAll(comments: TakeCommentWithAuthor[]): number {
+  return comments.reduce((sum, c) => sum + 1 + (c.replies?.length ?? 0), 0)
 }
 
 /**
@@ -31,7 +36,7 @@ export function useComments(takeId: string): UseCommentsReturn {
 
   // Keep countRef in sync so addComment/removeComment can publish without
   // reading count inside a state updater (which would cause setState-in-render)
-  useEffect(() => { countRef.current = comments.length }, [comments])
+  useEffect(() => { countRef.current = countAll(comments) }, [comments])
 
   const fetchAndResolve = useCallback(async () => {
     setIsLoading(true)
@@ -59,17 +64,27 @@ export function useComments(takeId: string): UseCommentsReturn {
       }
 
       if (!isMounted.current) return
-      setComments(
-        raw.map((c) => ({
-          comment: c,
-          author: {
-            userId: c.user_id,
-            displayName: authorMap.get(c.user_id)?.displayName ?? 'Village User',
-            avatarUrl: authorMap.get(c.user_id)?.avatarUrl,
-            username: authorMap.get(c.user_id)?.username,
-          },
-        })),
-      )
+
+      const toEntry = (c: TakeComment): TakeCommentWithAuthor => ({
+        comment: c,
+        author: {
+          userId: c.user_id,
+          displayName: authorMap.get(c.user_id)?.displayName ?? 'Village User',
+          avatarUrl: authorMap.get(c.user_id)?.avatarUrl,
+          username: authorMap.get(c.user_id)?.username,
+        },
+      })
+
+      // Nest replies one level under their parent — raw is already
+      // created_at-ascending, so replies stay in post order within each parent.
+      const topLevel = raw.filter((c) => !c.parent_comment_id).map(toEntry)
+      for (const reply of raw.filter((c) => c.parent_comment_id)) {
+        const parent = topLevel.find((t) => t.comment.id === reply.parent_comment_id)
+        if (!parent) continue // parent not found (e.g. deleted) — drop the orphaned reply
+        parent.replies = [...(parent.replies ?? []), toEntry(reply)]
+      }
+
+      setComments(topLevel)
     } finally {
       if (isMounted.current) setIsLoading(false)
     }
@@ -79,10 +94,9 @@ export function useComments(takeId: string): UseCommentsReturn {
     fetchAndResolve()
   }, [fetchAndResolve])
 
-  const addComment = useCallback(async (content: string) => {
+  const addComment = useCallback(async (content: string, parentCommentId?: string) => {
     if (!user) throw new Error('Not signed in')
 
-    // Optimistic insert at the end
     const optimisticId = `optimistic-${Date.now()}`
     const optimistic: TakeCommentWithAuthor = {
       comment: {
@@ -91,6 +105,7 @@ export function useComments(takeId: string): UseCommentsReturn {
         take_id: takeId,
         content,
         created_at: new Date().toISOString(),
+        parent_comment_id: parentCommentId ?? null,
       },
       author: {
         userId: user.id,
@@ -100,23 +115,40 @@ export function useComments(takeId: string): UseCommentsReturn {
       },
     }
 
-    setComments((prev) => [...prev, optimistic])
+    // Optimistic insert — new top-level comment at the end, or a reply
+    // appended under its parent.
+    setComments((prev) =>
+      parentCommentId
+        ? prev.map((c) => c.comment.id === parentCommentId
+            ? { ...c, replies: [...(c.replies ?? []), optimistic] }
+            : c)
+        : [...prev, optimistic],
+    )
     publishCommentCount(takeId, countRef.current + 1)
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
 
+    const replaceOptimistic = (prev: TakeCommentWithAuthor[]): TakeCommentWithAuthor[] =>
+      prev.map((c) => {
+        if (c.comment.id === optimisticId) return { ...c, comment: real }
+        if (c.replies?.some((r) => r.comment.id === optimisticId)) {
+          return { ...c, replies: c.replies.map((r) => (r.comment.id === optimisticId ? { ...r, comment: real } : r)) }
+        }
+        return c
+      })
+
+    const removeOptimistic = (prev: TakeCommentWithAuthor[]): TakeCommentWithAuthor[] =>
+      prev
+        .filter((c) => c.comment.id !== optimisticId)
+        .map((c) => (c.replies ? { ...c, replies: c.replies.filter((r) => r.comment.id !== optimisticId) } : c))
+
+    let real: TakeComment
     try {
-      const real = await createComment(takeId, content)
-      // Replace optimistic entry with the real one
-      if (isMounted.current) {
-        setComments((prev) =>
-          prev.map((c) => (c.comment.id === optimisticId ? { ...c, comment: real } : c)),
-        )
-      }
+      real = await createComment(takeId, content, parentCommentId)
+      if (isMounted.current) setComments(replaceOptimistic)
     } catch (error) {
       console.error('Failed to post comment:', error)
-      // Roll back
       if (isMounted.current) {
-        setComments((prev) => prev.filter((c) => c.comment.id !== optimisticId))
+        setComments(removeOptimistic)
         publishCommentCount(takeId, countRef.current - 1)
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
@@ -124,7 +156,11 @@ export function useComments(takeId: string): UseCommentsReturn {
   }, [takeId, user, profile])
 
   const removeComment = useCallback((commentId: string) => {
-    setComments((prev) => prev.filter((c) => c.comment.id !== commentId))
+    setComments((prev) =>
+      prev
+        .filter((c) => c.comment.id !== commentId)
+        .map((c) => (c.replies ? { ...c, replies: c.replies.filter((r) => r.comment.id !== commentId) } : c)),
+    )
     publishCommentCount(takeId, countRef.current - 1)
     deleteComment(commentId).catch((error) => {
       console.error('Failed to delete comment:', error)

@@ -19,9 +19,11 @@ interface CommentInteractionBarProps {
   take: Take
   /** Author of the parent Take — preserved so the repost card can navigate to the full thread. */
   takeAuthor?: RepostAuthor
+  /** Shown only on top-level comments — replies can't themselves be replied to. */
+  onReplyPress?: () => void
 }
 
-function CommentInteractionBar({ comment, author, take, takeAuthor }: CommentInteractionBarProps) {
+function CommentInteractionBar({ comment, author, take, takeAuthor, onReplyPress }: CommentInteractionBarProps) {
   const { colors } = useTheme()
   const typography = useTypography()
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography])
@@ -82,6 +84,17 @@ function CommentInteractionBar({ comment, author, take, takeAuthor }: CommentInt
           {repostCount > 0 ? formatCompactCount(repostCount) : ''}
         </Text>
       </Pressable>
+
+      {/* Reply — top-level comments only */}
+      {onReplyPress && (
+        <Pressable
+          onPress={onReplyPress}
+          hitSlop={8}
+          style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+        >
+          <Ionicons name="arrow-undo-outline" size={14} color={colors.secondaryText} />
+        </Pressable>
+      )}
     </View>
   )
 }
